@@ -1,7 +1,7 @@
 package com.omniresto.backend.controller;
 
 import com.omniresto.backend.domain.enums.TableStatus;
-import com.omniresto.backend.dto.TableDto;
+import com.omniresto.backend.model.table.response.TableResponse;
 import com.omniresto.backend.service.TableService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ public class TableController {
     private final TableService tableService;
 
     @GetMapping
-    public ResponseEntity<List<TableDto>> getTablesByBranch(
+    public ResponseEntity<List<TableResponse>> getTablesByBranch(
             @RequestParam String branchId,
             @RequestParam(required = false) TableStatus status
     ) {
@@ -26,7 +26,7 @@ public class TableController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<TableDto> updateTableStatus(
+    public ResponseEntity<TableResponse> updateTableStatus(
             @PathVariable String id,
             @RequestParam TableStatus status
     ) {

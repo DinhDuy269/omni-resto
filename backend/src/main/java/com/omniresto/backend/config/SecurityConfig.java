@@ -1,15 +1,20 @@
 package com.omniresto.backend.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -42,26 +47,79 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // Khai báo rõ ràng toàn bộ danh sách API Endpoints để tránh lỗi access_denied
-                .requestMatchers(
-                    "/api/branches/**",
-                    "/api/menu-items/**",
-                    "/api/orders/**",
-                    "/api/users/**",
-                    "/api/tables/**",
-                    "/api/**",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/v3/api-docs/**",
-                    "/actuator/**"
-                ).permitAll()
-                .anyRequest().permitAll()
-            );
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(this::configureAuthorizeHttpRequests)
+            .exceptionHandling(exceptionHandling -> exceptionHandling
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    String msg = accessDeniedException.getMessage() != null ? accessDeniedException.getMessage() : "Access is denied";
+                    response.getWriter().write("{\"error\":\"access_denied\",\"error_description\":\"" + msg + "\"}");
+                })
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"" + HttpStatus.UNAUTHORIZED.getReasonPhrase() + "\"}");
+                })
+            )
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
+
+    private void configureAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
+        authorizeRequests
+            .requestMatchers(branchApiPatterns()).permitAll()
+            .requestMatchers(menuApiPatterns()).permitAll()
+            .requestMatchers(orderApiPatterns()).permitAll()
+            .requestMatchers(userApiPatterns()).permitAll()
+            .requestMatchers(tableApiPatterns()).permitAll()
+            .anyRequest().authenticated();
+    }
+
+    // region branch
+    private static RequestMatcher[] branchApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/branches"),
+            new AntPathRequestMatcher("/api/branches/**")
+        };
+    }
+    // endregion
+
+    // region menu
+    private static RequestMatcher[] menuApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/menu-items"),
+            new AntPathRequestMatcher("/api/menu-items/**")
+        };
+    }
+    // endregion
+
+    // region order
+    private static RequestMatcher[] orderApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/orders"),
+            new AntPathRequestMatcher("/api/orders/**")
+        };
+    }
+    // endregion
+
+    // region user
+    private static RequestMatcher[] userApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/users"),
+            new AntPathRequestMatcher("/api/users/**")
+        };
+    }
+    // endregion
+
+    // region table
+    private static RequestMatcher[] tableApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/tables"),
+            new AntPathRequestMatcher("/api/tables/**")
+        };
+    }
+    // endregion
 }

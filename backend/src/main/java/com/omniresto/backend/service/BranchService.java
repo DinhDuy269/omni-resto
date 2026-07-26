@@ -2,12 +2,14 @@ package com.omniresto.backend.service;
 
 import com.omniresto.backend.domain.BranchEntity;
 import com.omniresto.backend.domain.enums.BranchStatus;
-import com.omniresto.backend.dto.BranchDto;
+import com.omniresto.backend.model.branch.request.BranchRequest;
+import com.omniresto.backend.model.branch.response.BranchResponse;
 import com.omniresto.backend.repository.BranchRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -16,54 +18,58 @@ public class BranchService {
 
     private final BranchRepository branchRepository;
 
-    public List<BranchDto> getAllBranches() {
+    public List<BranchResponse> getAllBranches() {
         return branchRepository.findAll().stream()
-                .map(this::mapToDto)
+                .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
-    public BranchDto getBranchById(String id) {
-        BranchEntity entity = branchRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Branch not found with id: " + id));
-        return mapToDto(entity);
+    public BranchResponse getBranchById(String id) {
+        return branchRepository.findById(id)
+                .map(this::mapToResponse)
+                .orElse(null);
     }
 
-    public BranchDto createBranch(BranchDto dto) {
+    public BranchResponse createBranch(BranchRequest request) {
         BranchEntity entity = BranchEntity.builder()
-                .code(dto.getCode())
-                .name(dto.getName())
-                .address(dto.getAddress())
-                .phone(dto.getPhone())
-                .managerName(dto.getManagerName())
-                .status(dto.getStatus() != null ? dto.getStatus() : BranchStatus.active)
-                .tablesCount(dto.getTablesCount() != null ? dto.getTablesCount() : 20)
-                .dailyRevenue(dto.getDailyRevenue())
-                .rating(dto.getRating() != null ? dto.getRating() : 5.0)
+                .code(request.getCode())
+                .name(request.getName())
+                .address(request.getAddress())
+                .phone(request.getPhone())
+                .managerName(request.getManagerName())
+                .status(request.getStatus() != null ? request.getStatus() : BranchStatus.active)
+                .tablesCount(request.getTablesCount() != null ? request.getTablesCount() : 0)
+                .dailyRevenue(request.getDailyRevenue())
+                .rating(request.getRating() != null ? request.getRating() : 5.0)
                 .build();
+        entity.setId("br-" + UUID.randomUUID().toString().substring(0, 8));
 
         BranchEntity saved = branchRepository.save(entity);
-        return mapToDto(saved);
+        return mapToResponse(saved);
     }
 
-    public BranchDto updateBranchStatus(String id, BranchStatus status) {
+    public BranchResponse updateBranchStatus(String id, BranchStatus status) {
         BranchEntity entity = branchRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Branch not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Branch not found: " + id));
         entity.setStatus(status);
-        return mapToDto(branchRepository.save(entity));
+        BranchEntity updated = branchRepository.save(entity);
+        return mapToResponse(updated);
     }
 
-    private BranchDto mapToDto(BranchEntity entity) {
-        return BranchDto.builder()
-                .id(entity.getId())
-                .code(entity.getCode())
-                .name(entity.getName())
-                .address(entity.getAddress())
-                .phone(entity.getPhone())
-                .managerName(entity.getManagerName())
-                .status(entity.getStatus())
-                .tablesCount(entity.getTablesCount())
-                .dailyRevenue(entity.getDailyRevenue())
-                .rating(entity.getRating())
-                .build();
+    private BranchResponse mapToResponse(BranchEntity entity) {
+        BranchResponse res = new BranchResponse();
+        res.setId(entity.getId());
+        res.setCode(entity.getCode());
+        res.setName(entity.getName());
+        res.setAddress(entity.getAddress());
+        res.setPhone(entity.getPhone());
+        res.setManagerName(entity.getManagerName() != null ? entity.getManagerName() : "N/A");
+        res.setStatus(entity.getStatus());
+        res.setTablesCount(entity.getTablesCount());
+        res.setActiveOrdersCount(0);
+        res.setDailyRevenue(entity.getDailyRevenue());
+        res.setRating(entity.getRating());
+        res.setCreatedAt(entity.getCreatedAt());
+        return res;
     }
 }

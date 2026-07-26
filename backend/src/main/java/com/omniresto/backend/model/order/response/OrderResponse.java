@@ -1,43 +1,30 @@
-package com.omniresto.backend.dto;
+package com.omniresto.backend.model.order.response;
 
+import com.fasterxml.jackson.annotation.JsonRootName;
 import com.omniresto.backend.domain.enums.OrderStatus;
 import com.omniresto.backend.domain.enums.OrderType;
 import com.omniresto.backend.domain.enums.PaymentMethod;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class OrderDto {
+@Getter
+@Setter
+@JsonRootName("order")
+public class OrderResponse {
     private String id;
     private String orderNumber;
     private String branchId;
     private String branchName;
-    private String tableId;
-    private String tableNo;
     private OrderType orderType;
+    private String tableNo;
     private OrderStatus status;
     private BigDecimal totalAmount;
     private String customerName;
     private PaymentMethod paymentMethod;
+    private List<OrderItemResponse> items;
     private LocalDateTime createdAt;
-    private List<OrderItemDto> items;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class OrderItemDto {
-        private String id;
-        private String menuItemId;
-        private String itemName;
-        private Integer quantity;
-        private BigDecimal unitPrice;
-        private String notes;
-    }
 }

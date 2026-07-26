@@ -31,61 +31,41 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      {/* Top Bright Banner Header */}
+      {/* Top Banner Header */}
       <div
+        className="card"
         style={{
-          background: 'linear-gradient(135deg, #fffbe6 0%, #fef3c7 100%)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '32px 40px',
-          border: '1px solid #fde68a',
-          color: '#78350f',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          boxShadow: 'var(--shadow-sm)',
-          position: 'relative',
-          overflow: 'hidden',
+          padding: '20px 24px',
         }}
       >
-        <div style={{ zIndex: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <Sparkles size={22} color="var(--primary)" />
-            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+            <Sparkles size={16} color="var(--primary)" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase' }}>
               Hệ Thống Trụ Sở Chính (HQ)
             </span>
           </div>
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 8px 0', letterSpacing: '-0.5px', color: '#78350f' }}>
+          <h2 style={{ fontSize: '1.375rem', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-main)' }}>
             Chào mừng trở lại, Lê Minh Tuấn 👋
           </h2>
-          <p style={{ color: '#92400e', fontSize: '1rem', fontWeight: 500, margin: 0 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
             Hệ thống OmniResto đang hoạt động ổn định trên {activeBranchesCount}/{branches.length} chi nhánh toàn quốc.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '14px', zIndex: 2 }}>
-          <button className="btn btn-primary" onClick={() => navigate('/admin/menu')}>
-            <UtensilsCrossed size={19} />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/admin/menu')}>
+            <UtensilsCrossed size={16} />
             Quản Lý Thực Đơn
           </button>
-          <button className="btn btn-secondary" onClick={() => navigate('/admin/branches')}>
-            <Store size={19} />
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/branches')}>
+            <Store size={16} />
             Xem Chi Nhánh
           </button>
         </div>
-
-        {/* Decorative Light Background Glow */}
-        <div
-          style={{
-            position: 'absolute',
-            right: '-30px',
-            bottom: '-30px',
-            width: '260px',
-            height: '260px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(217,119,6,0.15) 0%, rgba(255,255,255,0) 70%)',
-            pointerEvents: 'none',
-          }}
-        />
       </div>
 
       {/* 4 KPI Metrics Grid - Spacious */}

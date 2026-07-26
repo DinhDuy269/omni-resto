@@ -1,18 +1,17 @@
-package com.omniresto.backend.dto;
+package com.omniresto.backend.model.request;
 
 import com.omniresto.backend.domain.enums.RoleType;
 import com.omniresto.backend.domain.enums.UserStatus;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class UserDto {
-    private String id;
+@Getter
+@Setter
+public class UserRequest {
     private String fullName;
     private String email;
     private String phone;
+    private String password;
     private RoleType role;
     private String branchId;
     private String branchName;

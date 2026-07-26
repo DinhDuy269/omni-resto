@@ -63,7 +63,6 @@ export const Sidebar: React.FC = () => {
         </div>
         <div>
           <span className="sidebar-brand-title">OmniResto</span>
-          <span className="sidebar-brand-badge">ADMIN HQ</span>
         </div>
       </div>
 
@@ -103,19 +102,6 @@ export const Sidebar: React.FC = () => {
           </div>
         ))}
       </nav>
-
-      {/* Active Logged-in User Profile Footer */}
-      <div className="sidebar-footer">
-        <div className="user-profile-card">
-          <img src={currentAdmin.avatar} alt={currentAdmin.fullName} className="user-avatar" />
-          <div className="user-info">
-            <span className="user-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {currentAdmin.fullName} {currentAdmin.role === 'admin' && <Crown size={14} color="var(--primary)" />}
-            </span>
-            <span className="user-role">{ROLE_LABELS[currentAdmin.role] || 'Nhân Viên'}</span>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };

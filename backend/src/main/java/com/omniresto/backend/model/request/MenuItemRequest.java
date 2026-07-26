@@ -1,16 +1,14 @@
-package com.omniresto.backend.dto;
+package com.omniresto.backend.model.request;
 
 import com.omniresto.backend.domain.enums.MenuStatus;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class MenuItemDto {
-    private String id;
+@Getter
+@Setter
+public class MenuItemRequest {
     private String code;
     private String name;
     private String categoryId;
@@ -19,5 +17,6 @@ public class MenuItemDto {
     private String description;
     private MenuStatus status;
     private Boolean isBestSeller;
+    private String image;
     private String imageUrl;
 }

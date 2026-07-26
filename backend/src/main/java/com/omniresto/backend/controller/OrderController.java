@@ -1,7 +1,8 @@
 package com.omniresto.backend.controller;
 
 import com.omniresto.backend.domain.enums.OrderStatus;
-import com.omniresto.backend.dto.OrderDto;
+import com.omniresto.backend.model.order.request.OrderRequest;
+import com.omniresto.backend.model.order.response.OrderResponse;
 import com.omniresto.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,25 +19,20 @@ public class OrderController {
     private final OrderService orderService;
 
     @GetMapping
-    public ResponseEntity<List<OrderDto>> getAllOrders(
+    public ResponseEntity<List<OrderResponse>> getAllOrders(
             @RequestParam(required = false) String branchId,
             @RequestParam(required = false) OrderStatus status
     ) {
         return ResponseEntity.ok(orderService.getAllOrders(branchId, status));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<OrderDto> getOrderById(@PathVariable String id) {
-        return ResponseEntity.ok(orderService.getOrderById(id));
-    }
-
     @PostMapping
-    public ResponseEntity<OrderDto> createOrder(@RequestBody OrderDto dto) {
-        return ResponseEntity.ok(orderService.createOrder(dto));
+    public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest request) {
+        return ResponseEntity.ok(orderService.createOrder(request));
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<OrderDto> updateOrderStatus(
+    public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable String id,
             @RequestParam OrderStatus status
     ) {

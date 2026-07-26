@@ -1,20 +1,18 @@
-package com.omniresto.backend.dto;
+package com.omniresto.backend.model.table.request;
 
 import com.omniresto.backend.domain.enums.TableStatus;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class TableDto {
-    private String id;
-    private String branchId;
+@Getter
+@Setter
+public class TableRequest {
     private String tableNo;
+    private String branchId;
     private Integer capacity;
     private TableStatus status;
-    private String currentOrderId;
     private BigDecimal currentOrderAmount;
+    private String occupiedSince;
 }

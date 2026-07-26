@@ -1,15 +1,17 @@
 package com.omniresto.backend.service;
 
-import com.omniresto.backend.domain.BranchEntity;
 import com.omniresto.backend.domain.UserEntity;
+import com.omniresto.backend.domain.enums.RoleType;
 import com.omniresto.backend.domain.enums.UserStatus;
-import com.omniresto.backend.dto.UserDto;
-import com.omniresto.backend.repository.BranchRepository;
+import com.omniresto.backend.model.user.request.UserRequest;
+import com.omniresto.backend.model.user.response.UserResponse;
 import com.omniresto.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -17,58 +19,57 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final BranchRepository branchRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public List<UserDto> getAllUsers() {
-        return userRepository.findAll().stream().map(this::mapToDto).collect(Collectors.toList());
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
-    public UserDto getUserById(String id) {
-        UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        return mapToDto(entity);
+    public UserResponse getUserById(String id) {
+        return userRepository.findById(id)
+                .map(this::mapToResponse)
+                .orElse(null);
     }
 
-    public UserDto createUser(UserDto dto) {
+    public UserResponse createUser(UserRequest request) {
         UserEntity entity = UserEntity.builder()
-                .fullName(dto.getFullName())
-                .email(dto.getEmail())
-                .phone(dto.getPhone())
-                .password("password123") // Default password
-                .role(dto.getRole())
-                .branchId(dto.getBranchId())
-                .status(UserStatus.active)
-                .avatar(dto.getAvatar())
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .password(passwordEncoder.encode(request.getPassword() != null ? request.getPassword() : "123456"))
+                .role(request.getRole() != null ? request.getRole() : RoleType.store_manager)
+                .branchId(request.getBranchId() != null ? request.getBranchId() : "br-01")
+                .status(request.getStatus() != null ? request.getStatus() : UserStatus.active)
+                .avatar(request.getAvatar() != null ? request.getAvatar() : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop")
                 .build();
+        entity.setId("usr-" + UUID.randomUUID().toString().substring(0, 8));
 
-        return mapToDto(userRepository.save(entity));
+        UserEntity saved = userRepository.save(entity);
+        return mapToResponse(saved);
     }
 
-    public UserDto updateUserStatus(String id, UserStatus status) {
+    public UserResponse updateUserStatus(String id, UserStatus status) {
         UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("User not found: " + id));
         entity.setStatus(status);
-        return mapToDto(userRepository.save(entity));
+        UserEntity updated = userRepository.save(entity);
+        return mapToResponse(updated);
     }
 
-    private UserDto mapToDto(UserEntity entity) {
-        String branchName = "Trụ Sở HQ";
-        if (entity.getBranchId() != null && !"ALL".equalsIgnoreCase(entity.getBranchId())) {
-            branchName = branchRepository.findById(entity.getBranchId())
-                    .map(BranchEntity::getName)
-                    .orElse("Chi nhánh " + entity.getBranchId());
-        }
-
-        return UserDto.builder()
-                .id(entity.getId())
-                .fullName(entity.getFullName())
-                .email(entity.getEmail())
-                .phone(entity.getPhone())
-                .role(entity.getRole())
-                .branchId(entity.getBranchId())
-                .branchName(branchName)
-                .status(entity.getStatus())
-                .avatar(entity.getAvatar())
-                .build();
+    private UserResponse mapToResponse(UserEntity entity) {
+        UserResponse res = new UserResponse();
+        res.setId(entity.getId());
+        res.setFullName(entity.getFullName());
+        res.setEmail(entity.getEmail());
+        res.setPhone(entity.getPhone());
+        res.setRole(entity.getRole());
+        res.setBranchId(entity.getBranchId());
+        res.setBranchName(entity.getBranchId() != null && entity.getBranchId().equals("ALL") ? "Trụ Sở HQ" : "OmniResto - Hoàn Kiếm");
+        res.setStatus(entity.getStatus());
+        res.setAvatar(entity.getAvatar());
+        res.setCreatedAt(entity.getCreatedAt());
+        return res;
     }
 }

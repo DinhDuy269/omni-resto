@@ -1,16 +1,19 @@
 package com.omniresto.backend.service;
 
-import com.omniresto.backend.domain.BranchEntity;
 import com.omniresto.backend.domain.OrderEntity;
 import com.omniresto.backend.domain.OrderItemEntity;
 import com.omniresto.backend.domain.enums.OrderStatus;
-import com.omniresto.backend.dto.OrderDto;
-import com.omniresto.backend.repository.BranchRepository;
+import com.omniresto.backend.model.order.request.OrderRequest;
+import com.omniresto.backend.model.order.response.OrderItemResponse;
+import com.omniresto.backend.model.order.response.OrderResponse;
+import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -20,111 +23,103 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final BranchRepository branchRepository;
+    private final OrderItemRepository orderItemRepository;
 
-    public List<OrderDto> getAllOrders(String branchId, OrderStatus status) {
+    public List<OrderResponse> getAllOrders(String branchId, OrderStatus status) {
         List<OrderEntity> orders;
-
-        if (branchId != null && !branchId.isBlank() && !"ALL".equalsIgnoreCase(branchId)) {
-            if (status != null) {
-                orders = orderRepository.findByBranchIdAndStatus(branchId, status);
-            } else {
-                orders = orderRepository.findByBranchId(branchId);
-            }
+        if (branchId != null && !branchId.equals("ALL")) {
+            orders = orderRepository.findByBranchId(branchId);
         } else {
-            if (status != null) {
-                orders = orderRepository.findByStatus(status);
-            } else {
-                orders = orderRepository.findAll();
-            }
+            orders = orderRepository.findAll();
         }
 
-        return orders.stream().map(this::mapToDto).collect(Collectors.toList());
+        if (status != null) {
+            orders = orders.stream()
+                    .filter(o -> o.getStatus() == status)
+                    .collect(Collectors.toList());
+        }
+
+        return orders.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
-    public OrderDto getOrderById(String id) {
-        OrderEntity entity = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
-        return mapToDto(entity);
-    }
-
-    public OrderDto createOrder(OrderDto dto) {
-        String generatedNumber = "ORD-" + System.currentTimeMillis() % 100000;
+    @Transactional
+    public OrderResponse createOrder(OrderRequest request) {
+        String orderId = "ord-" + UUID.randomUUID().toString().substring(0, 8);
+        String orderNum = "ORD-" + (System.currentTimeMillis() % 100000);
 
         OrderEntity entity = OrderEntity.builder()
-                .orderNumber(dto.getOrderNumber() != null ? dto.getOrderNumber() : generatedNumber)
-                .branchId(dto.getBranchId())
-                .tableId(dto.getTableId())
-                .tableNo(dto.getTableNo())
-                .orderType(dto.getOrderType())
-                .status(OrderStatus.pending)
-                .customerName(dto.getCustomerName())
-                .paymentMethod(dto.getPaymentMethod())
-                .totalAmount(BigDecimal.ZERO)
+                .orderNumber(orderNum)
+                .branchId(request.getBranchId() != null ? request.getBranchId() : "br-01")
+                .orderType(request.getOrderType())
+                .tableNo(request.getTableNo())
+                .status(request.getStatus() != null ? request.getStatus() : OrderStatus.pending)
+                .totalAmount(request.getTotalAmount())
+                .paymentMethod(request.getPaymentMethod())
+                .customerName(request.getCustomerName())
                 .build();
+        entity.setId(orderId);
 
-        if (dto.getItems() != null) {
-            BigDecimal calculatedTotal = BigDecimal.ZERO;
-            for (OrderDto.OrderItemDto itemDto : dto.getItems()) {
-                BigDecimal lineTotal = itemDto.getUnitPrice().multiply(BigDecimal.valueOf(itemDto.getQuantity()));
-                calculatedTotal = calculatedTotal.add(lineTotal);
+        OrderEntity saved = orderRepository.save(entity);
 
-                OrderItemEntity itemEntity = OrderItemEntity.builder()
-                        .menuItemId(itemDto.getMenuItemId() != null ? itemDto.getMenuItemId() : UUID.randomUUID().toString())
-                        .itemName(itemDto.getItemName())
-                        .quantity(itemDto.getQuantity())
-                        .unitPrice(itemDto.getUnitPrice())
-                        .notes(itemDto.getNotes())
+        List<OrderItemEntity> itemEntities = new ArrayList<>();
+        if (request.getItems() != null) {
+            request.getItems().forEach(itemReq -> {
+                OrderItemEntity item = OrderItemEntity.builder()
+                        .order(saved)
+                        .menuItemId(itemReq.getMenuItemId())
+                        .itemName(itemReq.getName() != null ? itemReq.getName() : "Món Ăn Special")
+                        .quantity(itemReq.getQuantity())
+                        .unitPrice(itemReq.getPrice())
+                        .notes(itemReq.getNotes())
                         .build();
-
-                entity.addItem(itemEntity);
-            }
-            entity.setTotalAmount(calculatedTotal);
+                item.setId("item-" + UUID.randomUUID().toString().substring(0, 8));
+                itemEntities.add(orderItemRepository.save(item));
+            });
         }
 
-        return mapToDto(orderRepository.save(entity));
+        return mapToResponseWithItems(saved, itemEntities);
     }
 
-    public OrderDto updateOrderStatus(String id, OrderStatus status) {
+    public OrderResponse updateOrderStatus(String id, OrderStatus status) {
         OrderEntity entity = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Order not found: " + id));
         entity.setStatus(status);
-        return mapToDto(orderRepository.save(entity));
+        OrderEntity updated = orderRepository.save(entity);
+        return mapToResponse(updated);
     }
 
-    private OrderDto mapToDto(OrderEntity entity) {
-        String branchName = "Trụ sở HQ";
-        if (entity.getBranchId() != null) {
-            branchName = branchRepository.findById(entity.getBranchId())
-                    .map(BranchEntity::getName)
-                    .orElse("Chi nhánh " + entity.getBranchId());
-        }
+    private OrderResponse mapToResponse(OrderEntity entity) {
+        List<OrderItemEntity> items = orderItemRepository.findByOrderId(entity.getId());
+        return mapToResponseWithItems(entity, items);
+    }
 
-        List<OrderDto.OrderItemDto> itemDtos = entity.getItems().stream().map(i ->
-                OrderDto.OrderItemDto.builder()
-                        .id(i.getId())
-                        .menuItemId(i.getMenuItemId())
-                        .itemName(i.getItemName())
-                        .quantity(i.getQuantity())
-                        .unitPrice(i.getUnitPrice())
-                        .notes(i.getNotes())
-                        .build()
-        ).collect(Collectors.toList());
+    private OrderResponse mapToResponseWithItems(OrderEntity entity, List<OrderItemEntity> items) {
+        List<OrderItemResponse> itemResponses = items.stream().map(i -> {
+            OrderItemResponse res = new OrderItemResponse();
+            res.setId(i.getId());
+            res.setMenuItemId(i.getMenuItemId());
+            res.setName(i.getItemName());
+            res.setQuantity(i.getQuantity());
+            res.setPrice(i.getUnitPrice());
+            res.setNotes(i.getNotes());
+            return res;
+        }).collect(Collectors.toList());
 
-        return OrderDto.builder()
-                .id(entity.getId())
-                .orderNumber(entity.getOrderNumber())
-                .branchId(entity.getBranchId())
-                .branchName(branchName)
-                .tableId(entity.getTableId())
-                .tableNo(entity.getTableNo())
-                .orderType(entity.getOrderType())
-                .status(entity.getStatus())
-                .totalAmount(entity.getTotalAmount())
-                .customerName(entity.getCustomerName())
-                .paymentMethod(entity.getPaymentMethod())
-                .createdAt(entity.getCreatedAt())
-                .items(itemDtos)
-                .build();
+        OrderResponse res = new OrderResponse();
+        res.setId(entity.getId());
+        res.setOrderNumber(entity.getOrderNumber());
+        res.setBranchId(entity.getBranchId());
+        res.setBranchName("OmniResto - Hoàn Kiếm");
+        res.setOrderType(entity.getOrderType());
+        res.setTableNo(entity.getTableNo());
+        res.setStatus(entity.getStatus());
+        res.setTotalAmount(entity.getTotalAmount());
+        res.setPaymentMethod(entity.getPaymentMethod());
+        res.setCustomerName(entity.getCustomerName());
+        res.setItems(itemResponses);
+        res.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt() : LocalDateTime.now());
+        return res;
     }
 }

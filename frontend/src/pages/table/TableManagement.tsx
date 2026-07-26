@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Search, Plus } from 'lucide-react';
 import { useAdminStore } from '../../store/adminStore';
 import { StatusBadge } from '../../components/common/StatusBadge';
 
@@ -20,15 +20,27 @@ export const TableManagement: React.FC = () => {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Header */}
+      {/* Page Action Header Toolbar (Below Top Header) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
+          <h2 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-main)' }}>
             Sơ Đồ Bàn & Đặt Bàn Live ({selectedBranch.name})
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
             Quản lý trực quan vị trí bàn, trạng thái sử dụng và doanh thu tức thời tại bàn
           </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="search-bar" style={{ width: '260px' }}>
+            <Search size={16} color="var(--text-muted)" />
+            <input type="text" className="search-input" placeholder="Tìm kiếm bàn, vị trí..." />
+          </div>
+
+          <button className="btn btn-primary">
+            <Plus size={16} />
+            <span>Tạo Đơn Hàng Mới</span>
+          </button>
         </div>
       </div>
 
