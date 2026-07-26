@@ -1,0 +1,16 @@
+.admin-layout {
+  min-height: 100vh;
+  background-color: var(--bg-app);
+  display: flex;
+}
+
+.admin-main-content {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--header-height);
+  flex: 1;
+  padding: 36px 44px 60px 44px;
+  width: calc(100% - var(--sidebar-width));
+  max-width: 1800px;
+  box-sizing: border-box;
+  transition: margin-left var(--transition-normal);
+}
