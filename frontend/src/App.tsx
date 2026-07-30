@@ -1,5 +1,5 @@
 import { AppRouter } from './router';
-import { BackendConnectionGate } from './components/common/BackendConnectionGate';
+import { BackendConnectionGate } from './shared/components/BackendConnectionGate';
 
 function App() {
   return (

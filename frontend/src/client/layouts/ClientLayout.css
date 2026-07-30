@@ -1,0 +1,201 @@
+/* ─────────────────────────────────────────────────────────────────
+   ClientLayout.css
+   Layout wrapper cho toàn bộ client-facing pages
+   ───────────────────────────────────────────────────────────────── */
+
+.client-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: var(--c-font);
+  background-color: var(--c-bg);
+  color: var(--c-text-body);
+}
+
+/* ─── Header ──────────────────────────────────────────────────────── */
+
+.client-header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  height: var(--c-header-h);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--c-border-light);
+  box-shadow: 0 1px 12px rgba(100, 50, 20, 0.06);
+}
+
+.client-header-inner {
+  max-width: var(--c-max-w);
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Logo */
+.client-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--c-text-main);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  transition: color var(--c-t-fast);
+}
+
+.client-logo:hover { color: var(--c-primary); }
+
+.client-logo svg { color: var(--c-primary); }
+
+.client-logo-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--c-primary);
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 2px;
+  vertical-align: super;
+}
+
+/* Branch context badge */
+.client-branch-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  background: var(--c-surface-warm);
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-r-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--c-text-body);
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.client-branch-badge svg { color: var(--c-primary); flex-shrink: 0; }
+
+/* Cart button — Fitts's Law: large enough to tap easily */
+.client-cart-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  height: 44px;
+  background: var(--c-surface-warm);
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--c-r-full);
+  cursor: pointer;
+  transition: all var(--c-t-fast);
+  position: relative;
+  font-family: var(--c-font);
+  font-weight: 600;
+  color: var(--c-text-body);
+  font-size: 0.875rem;
+}
+
+.client-cart-btn:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  background: var(--c-primary-light);
+  box-shadow: var(--c-shadow-orange);
+}
+
+.client-cart-btn--active {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+  box-shadow: var(--c-shadow-orange);
+}
+
+.client-cart-btn--active:hover {
+  background: var(--c-primary-hover);
+  color: #fff;
+}
+
+.client-cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  background: var(--c-accent);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  animation: c-badge-pop 0.3s var(--c-t-fast);
+}
+
+.client-cart-btn--active .client-cart-badge {
+  background: #fff;
+  color: var(--c-primary);
+}
+
+.client-cart-amount {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+/* ─── Main ────────────────────────────────────────────────────────── */
+
+.client-main {
+  flex: 1;
+  width: 100%;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────── */
+
+.client-footer {
+  border-top: 1px solid var(--c-border-light);
+  background: var(--c-surface);
+  padding: 28px 24px;
+  margin-top: auto;
+}
+
+.client-footer-inner {
+  max-width: var(--c-max-w);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.client-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--c-primary);
+}
+
+.client-footer p {
+  font-size: 0.8125rem;
+  color: var(--c-text-muted);
+  margin: 0;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .client-header-inner { padding: 0 16px; }
+  .client-branch-badge { display: none; }
+  .client-cart-amount  { display: none; }
+}

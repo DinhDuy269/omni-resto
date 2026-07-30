@@ -1,20 +1,32 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AdminLayout } from '../layouts/AdminLayout';
-import { AdminDashboard } from '../pages/dashboard/AdminDashboard';
-import { BranchManagement } from '../pages/branch/BranchManagement';
-import { MasterMenuManagement } from '../pages/menu/MasterMenuManagement';
-import { ChainOrdersManagement } from '../pages/order/ChainOrdersManagement';
-import { StaffManagement } from '../pages/auth/StaffManagement';
-import { TableManagement } from '../pages/table/TableManagement';
+
+// ── Admin imports ─────────────────────────────────────────────────────────────
+import { AdminLayout } from '../admin/layouts/AdminLayout';
+import { AdminDashboard } from '../admin/pages/dashboard/AdminDashboard';
+import { BranchManagement } from '../admin/pages/branch/BranchManagement';
+import { MasterMenuManagement } from '../admin/pages/menu/MasterMenuManagement';
+import { ChainOrdersManagement } from '../admin/pages/order/ChainOrdersManagement';
+import { StaffManagement } from '../admin/pages/auth/StaffManagement';
+import { TableManagement } from '../admin/pages/table/TableManagement';
+
+// ── Client imports ────────────────────────────────────────────────────────────
+import { ClientLayout } from '../client/layouts/ClientLayout';
+import ClientHome from '../client/pages/home/ClientHome';
+import ClientMenu from '../client/pages/menu/ClientMenu';
+import ClientCart from '../client/pages/cart/ClientCart';
+import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
 
 export const AppRouter: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Root redirect → Admin */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
 
-        {/* Admin Flow */}
+        {/* ══════════════════════════════════════════════════
+            ADMIN FLOW — Enterprise management interface
+            ══════════════════════════════════════════════════ */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="branches" element={<BranchManagement />} />
@@ -46,9 +58,21 @@ export const AppRouter: React.FC = () => {
           />
         </Route>
 
-        {/* Fallback */}
+        {/* ══════════════════════════════════════════════════
+            CLIENT FLOW — Customer-facing ordering interface
+            ══════════════════════════════════════════════════ */}
+        <Route path="/client" element={<ClientLayout />}>
+          <Route index element={<ClientHome />} />
+          <Route path="menu" element={<ClientMenu />} />
+          <Route path="cart" element={<ClientCart />} />
+          <Route path="order/:orderId" element={<ClientOrderTracking />} />
+          <Route path="*" element={<Navigate to="/client" replace />} />
+        </Route>
+
+        {/* Global fallback */}
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>
     </BrowserRouter>
   );
 };
+
