@@ -20,7 +20,6 @@ const ClientCart: React.FC = () => {
   const {
     cart, updateQuantity, removeFromCart,
     orderMode, setOrderMode,
-    selectedBranchId, selectedBranchName,
     placeOrder,
   } = useClientStore();
   const totalAmount = useClientStore(selectTotalAmount);
@@ -50,8 +49,6 @@ const ClientCart: React.FC = () => {
 
   const handlePlaceOrder = () => {
     const placed = placeOrder({
-      branchId:        selectedBranchId || 'br-01',
-      branchName:      selectedBranchName || 'OmniResto',
       orderMode,
       tableNo:         orderMode === 'DINE_IN' ? tableNo : undefined,
       customerName:    customerName || undefined,

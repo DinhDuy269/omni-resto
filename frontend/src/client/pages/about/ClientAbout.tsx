@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Award, ChefHat, MapPin, Heart, Star, Users, Clock, Flame, ChevronRight } from 'lucide-react';
 
 const STATS = [
-  { icon: <MapPin size={22} />, value: '4+', label: 'Chi nhánh', color: '#e8533d' },
+  { icon: <MapPin size={22} />, value: '100+', label: 'Món đặc sắc', color: '#e8533d' },
   { icon: <Users size={22} />, value: '50,000+', label: 'Thực khách', color: '#2563eb' },
   { icon: <Star size={22} />, value: '4.9★', label: 'Đánh giá TB', color: '#d97706' },
   { icon: <Clock size={22} />, value: '10+', label: 'Năm kinh nghiệm', color: '#7c3aed' },

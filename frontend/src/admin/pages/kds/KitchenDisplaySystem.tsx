@@ -5,17 +5,14 @@ import type { OrderStatus } from '../../../shared/types/admin';
 import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 
 export const KitchenDisplaySystem: React.FC = () => {
-  const { orders, updateOrderStatus, selectedBranchId, handleWebSocketOrderEvent } = useAdminStore();
+  const { orders, updateOrderStatus, handleWebSocketOrderEvent } = useAdminStore();
   const [filterStatus, setFilterStatus] = useState<string>('KITCHEN_ACTIVE');
 
   // Real-time WebSocket connection hook
-  const { isConnected } = useWebSocket(selectedBranchId, handleWebSocketOrderEvent);
+  const { isConnected } = useWebSocket(handleWebSocketOrderEvent);
 
   // Filter orders relevant for Kitchen (PENDING, PREPARING, READY)
   const kitchenOrders = orders.filter((order) => {
-    const matchesBranch = selectedBranchId === 'ALL' || order.branchId === selectedBranchId;
-    if (!matchesBranch) return false;
-
     if (filterStatus === 'KITCHEN_ACTIVE') {
       return order.status === 'PENDING' || order.status === 'PREPARING' || order.status === 'READY';
     }
@@ -212,7 +209,7 @@ export const KitchenDisplaySystem: React.FC = () => {
                   </div>
 
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
-                    <Clock size={14} /> Tố: {order.createdAt || 'Mới nhận'} • Chi nhánh: {order.branchName}
+                    <Clock size={14} /> {order.createdAt || 'Mới nhận'}
                   </div>
 
                   {/* Divider */}

@@ -5,7 +5,6 @@ import type { Reservation, ReservationRequest, ReservationStatus } from '../type
 
 /** Query params for GET /api/reservations */
 export interface ReservationFilterParams {
-  branchId?: string;
   date?: string;         // ISO date: "2025-12-31"
   status?: ReservationStatus;
 }
@@ -30,8 +29,6 @@ function normalizeReservation(raw: Record<string, unknown>): Reservation {
 
   return {
     id: String(raw.id),
-    branchId: String(raw.branchId),
-    branchName: String(raw.branchName ?? ''),
     customerName: String(raw.customerName),
     customerPhone: String(raw.customerPhone),
     customerEmail: raw.customerEmail ? String(raw.customerEmail) : undefined,

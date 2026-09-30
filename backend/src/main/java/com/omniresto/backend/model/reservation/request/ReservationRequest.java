@@ -11,7 +11,6 @@ import java.time.LocalTime;
 @Setter
 public class ReservationRequest {
 
-    private String branchId;
 
     @NotBlank(message = "Họ tên khách hàng không được để trống")
     @Size(max = 100, message = "Họ tên không được vượt quá 100 ký tự")

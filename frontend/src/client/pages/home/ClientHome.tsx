@@ -1,45 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, ArrowRight, Clock, Users, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Utensils, CalendarCheck, Clock, ShieldCheck, HeartHandshake } from 'lucide-react';
 import { useAdminStore } from '../../../admin/store/adminStore';
-import { useClientStore } from '../../store/clientStore';
 
 /**
- * ClientHome — Landing page
- *
- * Layout: Z-Pattern scanning
- *   Zone 1 (Top): Hero — Logo → tagline → CTAs → social proof
- *   Zone 2 (Mid-left): Branch selection cards
- *   Zone 3 (Mid-right): Category shortcuts
- *   Zone 4 (Bottom): Best sellers preview (Serial Position Effect)
- *
- * UX Principles:
- * - Z-Pattern: Logo top-left → CTA top-right → branches → best sellers
- * - Color Psychology: Warm orange hero → appetite stimulation
- * - Social Proof: Rating + review count in hero
- * - Progressive Disclosure: Home → select branch → menu
- * - Fitts's Law: Branch cards large enough to tap; CTA buttons prominent
- * - Serial Position Effect: Best sellers at end of page (memorable)
+ * ClientHome — Single Restaurant Landing Page
  */
 const ClientHome: React.FC = () => {
   const navigate = useNavigate();
-  const { branches, menuItems } = useAdminStore();
-  const { setSelectedBranch } = useClientStore();
+  const { menuItems } = useAdminStore();
 
-  const activeBranches = branches.filter((b) => b.status === 'ACTIVE');
-  const bestSellers    = menuItems.filter((m) => m.isBestSeller).slice(0, 4);
-
-  const handleSelectBranch = (id: string, name: string) => {
-    setSelectedBranch(id, name);
-    navigate('/client/menu');
-  };
+  const bestSellers = menuItems.filter((m) => m.isBestSeller).slice(0, 4);
 
   return (
     <div style={{ fontFamily: 'var(--c-font)' }}>
 
       {/* ════════════════════════════════════════════════════════════
-          ZONE 1 — HERO  (Z-Pattern top sweep)
-          Color Psychology: Warm orange gradient over food image
+          ZONE 1 — HERO
           ════════════════════════════════════════════════════════════ */}
       <section
         style={{
@@ -58,7 +35,7 @@ const ClientHome: React.FC = () => {
           }}
         />
 
-        {/* Warm gradient overlay — ensures text legibility */}
+        {/* Warm gradient overlay */}
         <div style={{
           position: 'absolute', inset: 0,
           background: 'linear-gradient(105deg, rgba(18,8,2,0.82) 0%, rgba(18,8,2,0.55) 55%, rgba(18,8,2,0.2) 100%)',
@@ -70,14 +47,14 @@ const ClientHome: React.FC = () => {
           background: 'radial-gradient(ellipse at 70% 50%, rgba(232,93,38,0.15) 0%, transparent 60%)',
         }} />
 
-        {/* Hero content — left aligned (F-pattern natural start) */}
+        {/* Hero content */}
         <div style={{
           position: 'relative', zIndex: 1,
           maxWidth: 'var(--c-max-w)', margin: '0 auto',
           padding: '80px 24px', width: '100%',
         }}>
           <div style={{ maxWidth: 580 }}>
-            {/* Eyebrow label — context primer */}
+            {/* Eyebrow label */}
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20,
               background: 'rgba(232,93,38,0.25)', border: '1px solid rgba(232,93,38,0.4)',
@@ -85,11 +62,11 @@ const ClientHome: React.FC = () => {
             }}>
               <Sparkles size={13} color="var(--c-accent)" strokeWidth={2.5} />
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Hệ thống nhà hàng cao cấp
+                Nhà hàng ẩm thực cao cấp
               </span>
             </div>
 
-            {/* Main heading — Cormorant Garamond display font, sang trọng */}
+            {/* Main heading */}
             <h1 style={{
               fontFamily: 'var(--c-font-display)',
               fontSize: 'clamp(2.4rem, 5.5vw, 3.75rem)',
@@ -109,18 +86,18 @@ const ClientHome: React.FC = () => {
               fontSize: 'clamp(0.9375rem, 2vw, 1.125rem)',
               color: 'rgba(255,255,255,0.82)', lineHeight: 1.65, marginBottom: 32, maxWidth: 460,
             }}>
-              Đặt bàn, gọi món trực tuyến tại {activeBranches.length} chi nhánh OmniResto trên toàn quốc. 
-              Trải nghiệm ẩm thực Việt chuẩn vị từ nguyên liệu tươi sạch.
+              Đặt bàn và gọi món trực tuyến tại OmniResto. 
+              Trải nghiệm ẩm thực Việt chuẩn vị truyền thống từ nguyên liệu tươi sạch thượng hạng.
             </p>
 
-            {/* CTAs — Fitts's Law: large buttons, high contrast */}
+            {/* CTAs */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 36 }}>
               <button
                 id="hero-order-btn"
                 className="c-btn c-btn-primary c-btn-lg"
                 onClick={() => navigate('/client/menu')}
               >
-                🍜 Đặt món ngay
+                🍜 Xem Thực Đơn & Đặt Món
                 <ArrowRight size={18} strokeWidth={2.2} />
               </button>
               <button
@@ -133,29 +110,16 @@ const ClientHome: React.FC = () => {
                 }}
                 onClick={() => navigate('/client/reservation')}
               >
-                📅 Đặt bàn
-              </button>
-              <button
-                className="c-btn c-btn-lg"
-                style={{
-                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)',
-                  border: '1.5px solid rgba(255,255,255,0.2)',
-                  backdropFilter: 'blur(8px)',
-                }}
-                onClick={() => {
-                  document.getElementById('branches-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                <MapPin size={16} /> Chọn chi nhánh
+                📅 Đặt Bàn Ngay
               </button>
             </div>
 
-            {/* Social proof — builds trust (anchoring cognition) */}
+            {/* Social proof */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
               {[
                 { icon: '⭐', value: '4.9/5', label: '2,400+ đánh giá' },
-                { icon: '🏪', value: `${activeBranches.length} chi nhánh`, label: 'Toàn quốc' },
-                { icon: '⚡', value: '15 phút', label: 'Phục vụ nhanh' },
+                { icon: '🍲', value: `${menuItems.length}+ món`, label: 'Đặc sắc ẩm thực' },
+                { icon: '⚡', value: '15 phút', label: 'Phục vụ nhanh chóng' },
               ].map((item) => (
                 <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
@@ -171,13 +135,9 @@ const ClientHome: React.FC = () => {
       </section>
 
       {/* ════════════════════════════════════════════════════════════
-          ZONE 2 — BRANCH SELECTION
-          Progressive Disclosure: select branch before seeing menu
+          ZONE 2 — RESTAURANT EXPERIENCE & HIGHLIGHTS
           ════════════════════════════════════════════════════════════ */}
-      <section
-        id="branches-section"
-        style={{ background: 'var(--c-bg)', padding: '64px 24px' }}
-      >
+      <section style={{ background: 'var(--c-bg)', padding: '64px 24px' }}>
         <div style={{ maxWidth: 'var(--c-max-w)', margin: '0 auto' }}>
           {/* Section header */}
           <div style={{ textAlign: 'center', marginBottom: 40 }}>
@@ -185,128 +145,104 @@ const ClientHome: React.FC = () => {
               display: 'inline-block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-primary)',
               letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8,
             }}>
-              📍 Chọn địa điểm
+              ✨ Trải nghiệm OmniResto
             </span>
             <h2 style={{
               fontSize: 'clamp(1.375rem, 3vw, 1.875rem)', fontWeight: 800,
               color: 'var(--c-text-main)', margin: '0 0 8px',
             }}>
-              Chi Nhánh Đang Phục Vụ
+              Dịch Vụ Ẩm Thực Đẳng Cấp
             </h2>
             <p style={{ color: 'var(--c-text-muted)', fontSize: '0.9375rem', maxWidth: 480, margin: '0 auto' }}>
-              Chọn chi nhánh gần bạn để xem thực đơn và đặt bàn trực tuyến
+              Không gian sang trọng, nguyên liệu tươi sạch và quy trình phục vụ chuyên nghiệp
             </p>
           </div>
 
-          {/* Branch cards grid */}
+          {/* Highlights grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: 20,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: 24,
           }}>
-            {activeBranches.map((branch, i) => (
-              <article
-                key={branch.id}
-                className="c-animate-fade-up"
-                style={{
-                  background: 'var(--c-surface)', border: '1px solid var(--c-border)',
-                  borderRadius: 'var(--c-r-lg)', overflow: 'hidden',
-                  boxShadow: 'var(--c-shadow-sm)', cursor: 'pointer',
-                  transition: 'all var(--c-t-normal)',
-                  animationDelay: `${i * 80}ms`,
-                }}
-                onClick={() => handleSelectBranch(branch.id, branch.name)}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--c-shadow-lg)';
-                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--c-primary)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.transform = '';
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--c-shadow-sm)';
-                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--c-border)';
-                }}
-                aria-label={`Chọn ${branch.name}`}
-              >
-                {/* Branch header strip */}
-                <div style={{
-                  background: 'linear-gradient(135deg, var(--c-primary) 0%, #c44d1b 100%)',
-                  padding: '16px 20px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}>
-                  <span style={{
-                    fontSize: '1.25rem', fontWeight: 900, color: 'rgba(255,255,255,0.35)',
-                    letterSpacing: '-0.02em',
-                  }}>
-                    {branch.code}
-                  </span>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    background: 'rgba(255,255,255,0.2)', borderRadius: 'var(--c-r-full)',
-                    padding: '4px 10px',
-                  }}>
-                    <Star size={12} fill="#fbbf24" stroke="none" />
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#fff' }}>{branch.rating}</span>
+            {[
+              {
+                icon: Utensils,
+                title: 'Ẩm Thực Tinh Hoa',
+                desc: 'Thực đơn đa dạng với công thức gia truyền, kết hợp hài hòa phong vị ba miền Bắc - Trung - Nam.',
+                color: 'var(--c-primary)',
+              },
+              {
+                icon: CalendarCheck,
+                title: 'Đặt Bàn Nhanh Chóng',
+                desc: 'Hệ thống giữ chỗ trực tuyến tiện lợi, xác nhận tức thì và hỗ trợ chọn vị trí bàn yêu thích.',
+                color: '#2563eb',
+              },
+              {
+                icon: Clock,
+                title: 'Phục Vụ Nhanh Chuẩn',
+                desc: 'Tích hợp hệ thống màn hình bếp thông minh giúp món ăn luôn nóng hổi và chuẩn vị trong 15 phút.',
+                color: '#16a34a',
+              },
+              {
+                icon: ShieldCheck,
+                title: 'Nguyên Liệu Tươi Sạch',
+                desc: '100% nguyên liệu tự nhiên tươi ngon được tuyển chọn mỗi ngày từ các nông trại đạt chuẩn vệ sinh ATTP.',
+                color: '#d97706',
+              },
+            ].map((feature, idx) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    background: 'var(--c-surface)',
+                    border: '1px solid var(--c-border)',
+                    borderRadius: 'var(--c-r-lg)',
+                    padding: '28px 24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    boxShadow: 'var(--c-shadow-sm)',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = 'var(--c-shadow-md)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.transform = 'none';
+                    (e.currentTarget as HTMLElement).style.boxShadow = 'var(--c-shadow-sm)';
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      backgroundColor: `${feature.color}15`,
+                      color: feature.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Icon size={24} />
                   </div>
-                </div>
-
-                {/* Branch details */}
-                <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <h3 style={{
-                    fontSize: '1rem', fontWeight: 700, color: 'var(--c-text-main)',
-                    margin: 0, lineHeight: 1.3,
-                  }}>
-                    {branch.name}
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--c-text-main)', margin: 0 }}>
+                    {feature.title}
                   </h3>
-
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                    <MapPin size={14} color="var(--c-primary)" style={{ marginTop: 2, flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.8125rem', color: 'var(--c-text-muted)', lineHeight: 1.45 }}>
-                      {branch.address}
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Users size={13} color="var(--c-text-muted)" />
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--c-text-muted)' }}>
-                        {branch.tablesCount} bàn
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Clock size={13} color="var(--c-primary)" />
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--c-primary)', fontWeight: 600 }}>
-                        Đang mở
-                      </span>
-                    </div>
-                  </div>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--c-text-muted)', lineHeight: 1.5, margin: 0 }}>
+                    {feature.desc}
+                  </p>
                 </div>
-
-                {/* CTA row */}
-                <div style={{
-                  padding: '12px 20px', borderTop: '1px solid var(--c-border-light)',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  background: 'var(--c-surface-warm)',
-                }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--c-primary)' }}>
-                    Xem thực đơn
-                  </span>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: 'var(--c-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <ChevronRight size={14} color="#fff" strokeWidth={2.5} />
-                  </div>
-                </div>
-              </article>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════════
           ZONE 3 — BEST SELLERS
-          Serial Position Effect: memorable items at end of page
           ════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'var(--c-surface)', padding: '64px 24px' }}>
         <div style={{ maxWidth: 'var(--c-max-w)', margin: '0 auto' }}>

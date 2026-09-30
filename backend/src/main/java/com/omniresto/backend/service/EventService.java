@@ -4,7 +4,6 @@ import com.omniresto.backend.domain.EventEntity;
 import com.omniresto.backend.domain.enums.EventStatus;
 import com.omniresto.backend.model.event.request.EventRequest;
 import com.omniresto.backend.model.event.response.EventResponse;
-import com.omniresto.backend.repository.BranchRepository;
 import com.omniresto.backend.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 public class EventService {
 
     private final EventRepository eventRepository;
-    private final BranchRepository branchRepository;
 
     /** Get all upcoming/ongoing events (for client page) */
     public List<EventResponse> getActiveEvents() {
@@ -66,7 +64,6 @@ public class EventService {
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .location(request.getLocation())
-                .branchId(request.getBranchId())
                 .imageUrl(request.getImageUrl())
                 .price(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO)
                 .maxCapacity(request.getMaxCapacity())
@@ -89,7 +86,6 @@ public class EventService {
         if (request.getStartTime() != null)     entity.setStartTime(request.getStartTime());
         if (request.getEndTime() != null)       entity.setEndTime(request.getEndTime());
         if (request.getLocation() != null)      entity.setLocation(request.getLocation());
-        if (request.getBranchId() != null)      entity.setBranchId(request.getBranchId());
         if (request.getImageUrl() != null)      entity.setImageUrl(request.getImageUrl());
         if (request.getPrice() != null)         entity.setPrice(request.getPrice());
         if (request.getMaxCapacity() != null)   entity.setMaxCapacity(request.getMaxCapacity());
@@ -128,8 +124,6 @@ public class EventService {
         res.setStartTime(entity.getStartTime());
         res.setEndTime(entity.getEndTime());
         res.setLocation(entity.getLocation());
-        res.setBranchId(entity.getBranchId());
-        res.setBranchName(resolveBranchName(entity.getBranchId()));
         res.setImageUrl(entity.getImageUrl());
         res.setPrice(entity.getPrice());
         res.setMaxCapacity(entity.getMaxCapacity());
@@ -139,12 +133,5 @@ public class EventService {
         res.setTags(entity.getTags());
         res.setCreatedAt(entity.getCreatedAt());
         return res;
-    }
-
-    private String resolveBranchName(String branchId) {
-        if (branchId == null) return null;
-        return branchRepository.findById(branchId)
-                .map(b -> b.getName())
-                .orElse(null);
     }
 }

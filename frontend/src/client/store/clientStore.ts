@@ -5,11 +5,6 @@ import { useAdminStore } from '../../admin/store/adminStore';
 // ─── State Interface ──────────────────────────────────────────────────────────
 
 interface ClientState {
-  // Branch context (set when user selects a branch on home page)
-  selectedBranchId: string;
-  selectedBranchName: string;
-  setSelectedBranch: (id: string, name: string) => void;
-
   // Cart management
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
@@ -47,11 +42,6 @@ export const selectTotalAmount = (s: ClientState) =>
 let orderCounter = 8000;
 
 export const useClientStore = create<ClientState>((set, get) => ({
-  // Branch
-  selectedBranchId: '',
-  selectedBranchName: '',
-  setSelectedBranch: (id, name) => set({ selectedBranchId: id, selectedBranchName: name }),
-
   // Cart
   cart: [],
 
@@ -104,11 +94,9 @@ export const useClientStore = create<ClientState>((set, get) => ({
   placeOrder: (draft) => {
     orderCounter += 1;
     const state = get();
-    const branchCode = draft.branchId ? draft.branchId.split('-').slice(1).join('').toUpperCase() : 'HK';
     const order: PlacedOrder = {
       id: `client-${Date.now()}`,
-      orderNumber: `ORD-${branchCode}-${orderCounter}`,
-      branchName: draft.branchName || 'OmniResto - Hoàn Kiếm',
+      orderNumber: `ORD-${orderCounter}`,
       orderMode: draft.orderMode,
       tableNo: draft.tableNo,
       customerName: draft.customerName,
@@ -124,8 +112,6 @@ export const useClientStore = create<ClientState>((set, get) => ({
     useAdminStore.getState().addOrderFromClient({
       id: order.id,
       orderNumber: order.orderNumber,
-      branchId: draft.branchId || 'br-01',
-      branchName: order.branchName,
       orderType: order.orderMode,
       tableNo: order.tableNo,
       status: 'PENDING',

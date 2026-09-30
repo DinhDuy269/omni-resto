@@ -11,7 +11,7 @@ const ALL_CATEGORY = 'Tất cả';
  */
 export const ClientMenu: React.FC = () => {
   const { menuItems } = useAdminStore();
-  const { selectedBranchName, openCart } = useClientStore();
+  const { openCart } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
 
@@ -61,11 +61,9 @@ export const ClientMenu: React.FC = () => {
             <h1 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--c-text-main)', margin: 0 }}>
               Thực Đơn
             </h1>
-            {selectedBranchName && (
-              <span style={{ fontSize: '0.8125rem', color: 'var(--c-text-muted)' }}>
-                📍 {selectedBranchName}
-              </span>
-            )}
+            <span style={{ fontSize: '0.8125rem', color: 'var(--c-text-muted)' }}>
+              Nhà hàng OmniResto
+            </span>
           </div>
 
           {/* Search — Hick's Law: narrow down choices fast */}

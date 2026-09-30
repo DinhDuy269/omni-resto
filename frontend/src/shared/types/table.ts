@@ -3,7 +3,6 @@ export type TableStatus = 'available' | 'occupied' | 'reserved' | 'cleaning' | '
 export interface TableInfo {
   id: string;
   tableNo: string;
-  branchId: string;
   capacity: number;
   status: TableStatus;
   currentOrderAmount?: number;
@@ -12,7 +11,6 @@ export interface TableInfo {
 
 export interface TableRequest {
   tableNo: string;
-  branchId: string;
   capacity: number;
 }
 

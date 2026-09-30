@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 @Setter
 public class TableRequest {
     private String tableNo;
-    private String branchId;
     private Integer capacity;
     private TableStatus status;
     private BigDecimal currentOrderAmount;

@@ -46,7 +46,6 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         mockOrderEntity = OrderEntity.builder()
-                .branchId("br-01")
                 .orderNumber("ORD-1234")
                 .orderType(OrderType.dine_in)
                 .tableNo("Bàn 01")
@@ -62,7 +61,6 @@ class OrderServiceTest {
     void createOrder_Success() {
         // Arrange
         OrderRequest request = new OrderRequest();
-        request.setBranchId("br-01");
         request.setOrderType(OrderType.dine_in);
         request.setTableNo("Bàn 01");
         request.setTotalAmount(BigDecimal.valueOf(150000));
@@ -84,11 +82,9 @@ class OrderServiceTest {
         // Assert
         assertNotNull(response);
         assertEquals("ORD-1234", response.getOrderNumber());
-        assertEquals("br-01", response.getBranchId());
 
         // Verify WebSocket message conversion & sending
         verify(messagingTemplate, times(1)).convertAndSend(eq("/topic/orders"), any(Object.class));
-        verify(messagingTemplate, times(1)).convertAndSend(eq("/topic/orders/br-01"), any(Object.class));
     }
 
     @Test

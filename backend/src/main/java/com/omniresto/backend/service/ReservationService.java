@@ -1,11 +1,9 @@
 package com.omniresto.backend.service;
 
-import com.omniresto.backend.domain.BranchEntity;
 import com.omniresto.backend.domain.ReservationEntity;
 import com.omniresto.backend.domain.enums.ReservationStatus;
 import com.omniresto.backend.model.reservation.request.ReservationRequest;
 import com.omniresto.backend.model.reservation.response.ReservationResponse;
-import com.omniresto.backend.repository.BranchRepository;
 import com.omniresto.backend.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,28 +18,25 @@ import java.util.stream.Collectors;
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
-    private final BranchRepository branchRepository;
 
     /**
-     * Get all reservations, optionally filtered by branchId, date, and/or status.
+     * Get all reservations, optionally filtered by date and/or status.
      */
     public List<ReservationResponse> getAllReservations(String branchId, LocalDate date, ReservationStatus status) {
+        return getAllReservations(date, status);
+    }
+
+    public List<ReservationResponse> getAllReservations(LocalDate date, ReservationStatus status) {
         List<ReservationEntity> reservations;
 
-        if (branchId != null && !branchId.equals("ALL") && date != null) {
-            reservations = reservationRepository.findByBranchIdAndReservationDate(branchId, date);
-        } else if (branchId != null && !branchId.equals("ALL")) {
-            reservations = reservationRepository.findByBranchId(branchId);
+        if (date != null && status != null) {
+            reservations = reservationRepository.findByReservationDateAndStatus(date, status);
         } else if (date != null) {
             reservations = reservationRepository.findByReservationDate(date);
+        } else if (status != null) {
+            reservations = reservationRepository.findByStatus(status);
         } else {
             reservations = reservationRepository.findAll();
-        }
-
-        if (status != null) {
-            reservations = reservations.stream()
-                    .filter(r -> r.getStatus() == status)
-                    .collect(Collectors.toList());
         }
 
         return reservations.stream()
@@ -63,17 +58,7 @@ public class ReservationService {
      */
     @Transactional
     public ReservationResponse createReservation(ReservationRequest request) {
-        // Resolve branchId: default to first available branch if not provided
-        String branchId = request.getBranchId();
-        if (branchId == null || branchId.isBlank()) {
-            branchId = branchRepository.findAll().stream()
-                    .findFirst()
-                    .map(b -> b.getId())
-                    .orElse("br-01");
-        }
-
         ReservationEntity entity = ReservationEntity.builder()
-                .branchId(branchId)
                 .customerName(request.getCustomerName().trim())
                 .customerPhone(request.getCustomerPhone().replaceAll("\\s+", ""))
                 .customerEmail(request.getCustomerEmail())
@@ -129,8 +114,6 @@ public class ReservationService {
     private ReservationResponse mapToResponse(ReservationEntity entity) {
         ReservationResponse res = new ReservationResponse();
         res.setId(entity.getId());
-        res.setBranchId(entity.getBranchId());
-        res.setBranchName(resolveBranchName(entity.getBranchId()));
         res.setCustomerName(entity.getCustomerName());
         res.setCustomerPhone(entity.getCustomerPhone());
         res.setCustomerEmail(entity.getCustomerEmail());
@@ -142,15 +125,5 @@ public class ReservationService {
         res.setStatus(entity.getStatus());
         res.setCreatedAt(entity.getCreatedAt());
         return res;
-    }
-
-    /**
-     * Resolves branch name from BranchRepository; falls back to "OmniResto" if not found.
-     */
-    private String resolveBranchName(String branchId) {
-        if (branchId == null) return "OmniResto";
-        return branchRepository.findById(branchId)
-                .map(BranchEntity::getName)
-                .orElse("OmniResto");
     }
 }

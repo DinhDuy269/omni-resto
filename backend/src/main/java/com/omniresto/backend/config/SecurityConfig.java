@@ -70,7 +70,6 @@ public class SecurityConfig {
 
     private void configureAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
         authorizeRequests
-            .requestMatchers(branchApiPatterns()).permitAll()
             .requestMatchers(menuApiPatterns()).permitAll()
             .requestMatchers(orderApiPatterns()).permitAll()
             .requestMatchers(userApiPatterns()).permitAll()
@@ -86,16 +85,6 @@ public class SecurityConfig {
             .requestMatchers(new AntPathRequestMatcher("/swagger-ui.html")).permitAll()
             .anyRequest().authenticated();
     }
-
-    // region branch
-    private static RequestMatcher[] branchApiPatterns() {
-        return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/branches"),
-            new AntPathRequestMatcher("/api/branches/**")
-        };
-    }
-    // endregion
-
     // region menu
     private static RequestMatcher[] menuApiPatterns() {
         return new RequestMatcher[]{

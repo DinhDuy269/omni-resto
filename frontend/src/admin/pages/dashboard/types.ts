@@ -1,5 +1,5 @@
 export interface DashboardMetrics {
-  totalBranches: number;
+  totalTables: number;
   totalOrders: number;
   totalRevenue: number;
   activeStaff: number;

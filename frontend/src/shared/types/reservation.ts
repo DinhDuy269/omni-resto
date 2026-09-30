@@ -2,8 +2,6 @@ export type ReservationStatus = 'pending' | 'confirmed' | 'seated' | 'completed'
 
 export interface Reservation {
   id: string;
-  branchId: string;
-  branchName: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
@@ -17,7 +15,6 @@ export interface Reservation {
 }
 
 export interface ReservationRequest {
-  branchId: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;

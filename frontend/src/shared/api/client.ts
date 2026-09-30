@@ -61,7 +61,7 @@ export const toQueryString = (params?: Record<string, unknown>): string => {
 
 export const checkBackendConnection = async (): Promise<boolean> => {
   try {
-    const res = await apiClient.get('/branches', { timeout: 3000 });
+    const res = await apiClient.get('/menu-items', { timeout: 3000 });
     return res.status >= 200 && res.status < 400;
   } catch (error: unknown) {
     if (axios.isAxiosError(error) && error.response && error.response.status) {

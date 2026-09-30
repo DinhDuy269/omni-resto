@@ -9,6 +9,5 @@ import java.util.List;
 
 @Repository
 public interface TableRepository extends JpaRepository<TableEntity, String> {
-    List<TableEntity> findByBranchId(String branchId);
-    List<TableEntity> findByBranchIdAndStatus(String branchId, TableStatus status);
+    List<TableEntity> findByStatus(TableStatus status);
 }

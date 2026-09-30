@@ -4,10 +4,8 @@ import { useAdminStore } from '../../store/adminStore';
 import { StatusBadge } from '../../components/StatusBadge';
 
 export const TableManagement: React.FC = () => {
-  const { tables, branches, selectedBranchId } = useAdminStore();
+  const { tables } = useAdminStore();
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
-
-  const selectedBranch = branches.find((b) => b.id === selectedBranchId) || branches[0];
 
   const filteredTables = tables.filter((t) => {
     return filterStatus === 'ALL' || t.status === filterStatus;
@@ -24,7 +22,7 @@ export const TableManagement: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-main)' }}>
-            Sơ Đồ Bàn & Đặt Bàn Live ({selectedBranch.name})
+            Sơ Đồ Bàn & Đặt Bàn Live
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
             Quản lý trực quan vị trí bàn, trạng thái sử dụng và doanh thu tức thời tại bàn

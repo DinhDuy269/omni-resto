@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Users, Phone, Mail, User, MessageSquare, CheckCircle, ChevronRight, Flame, AlertCircle } from 'lucide-react';
-import { useAdminStore } from '../../../admin/store/adminStore';
+import { Calendar, Clock, Users, Phone, Mail, User, MessageSquare, CheckCircle, Flame, ChevronRight } from 'lucide-react';
 import { useReservationStore } from '../../../admin/store/reservationStore';
 
 // ─── Time slot options ────────────────────────────────────────────────────────
@@ -16,10 +15,7 @@ type Step = 'details' | 'confirm' | 'success';
 
 const ClientReservation: React.FC = () => {
   const navigate = useNavigate();
-  const { branches } = useAdminStore();
   const { addReservation } = useReservationStore();
-
-  const activeBranches = branches.filter((b) => b.status === 'ACTIVE');
 
   // ─── Form state ─────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];
@@ -28,7 +24,6 @@ const ClientReservation: React.FC = () => {
   const [confirmedId, setConfirmedId] = useState('');
 
   const [form, setForm] = useState({
-    branchId: activeBranches[0]?.id ?? 'br-01',
     customerName: '',
     customerPhone: '',
     customerEmail: '',
@@ -64,10 +59,7 @@ const ClientReservation: React.FC = () => {
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      const selectedBranch = activeBranches.find((b) => b.id === form.branchId);
       const newRes = await addReservation({
-        branchId: form.branchId,
-        branchName: selectedBranch?.name ?? 'OmniResto',
         customerName: form.customerName,
         customerPhone: form.customerPhone.replace(/\s/g, ''),
         customerEmail: form.customerEmail || undefined,
@@ -86,8 +78,6 @@ const ClientReservation: React.FC = () => {
     }
   };
 
-  const selectedBranch = activeBranches.find((b) => b.id === form.branchId);
-
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   if (step === 'success') {
@@ -98,25 +88,28 @@ const ClientReservation: React.FC = () => {
       }}>
         <div className="c-animate-fade-up" style={{
           maxWidth: 520, width: '100%', textAlign: 'center',
-          background: 'var(--c-surface)', borderRadius: 'var(--c-r-xl)',
-          border: '1px solid var(--c-border)', padding: '56px 40px',
+          background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+          borderRadius: 'var(--c-r-xl)', padding: '48px 36px',
           boxShadow: 'var(--c-shadow-lg)',
         }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            background: 'rgba(34,197,94,0.12)', border: '2px solid #22c55e',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 24px', boxShadow: '0 8px 24px rgba(34,197,94,0.35)',
+            margin: '0 auto 24px',
           }}>
-            <CheckCircle size={36} color="#fff" strokeWidth={2} />
+            <CheckCircle size={38} color="#16a34a" strokeWidth={2.2} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--c-text-main)', marginBottom: 12 }}>
-            Đặt bàn thành công! 🎉
+
+          <h1 style={{
+            fontFamily: 'var(--c-font-display)', fontStyle: 'italic',
+            fontSize: '1.875rem', fontWeight: 700, color: 'var(--c-text-main)', margin: '0 0 12px',
+          }}>
+            Đặt Bàn Thành Công!
           </h1>
-          <p style={{ color: 'var(--c-text-muted)', lineHeight: 1.7, marginBottom: 8 }}>
-            Yêu cầu đặt bàn của bạn đã được ghi nhận.
-          </p>
-          <p style={{ color: 'var(--c-text-muted)', fontSize: '0.875rem', lineHeight: 1.7, marginBottom: 32 }}>
+
+          <p style={{ color: 'var(--c-text-muted)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: 28 }}>
+            Cảm ơn quý khách <strong>{form.customerName}</strong>.
             Chúng tôi sẽ xác nhận qua số điện thoại <strong style={{ color: 'var(--c-text-main)' }}>{form.customerPhone}</strong> trong vòng 30 phút.
           </p>
 
@@ -126,7 +119,7 @@ const ClientReservation: React.FC = () => {
             marginBottom: 32, textAlign: 'left',
           }}>
             {[
-              { icon: '🏪', label: 'Chi nhánh', value: selectedBranch?.name },
+              { icon: '🏪', label: 'Địa điểm', value: 'Nhà Hàng OmniResto' },
               { icon: '👥', label: 'Số người', value: `${form.partySize} người` },
               { icon: '📅', label: 'Ngày', value: new Date(form.reservationDate).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
               { icon: '⏰', label: 'Giờ', value: form.reservationTime },
@@ -143,9 +136,8 @@ const ClientReservation: React.FC = () => {
             <button className="c-btn c-btn-primary c-btn-lg" onClick={() => navigate('/client/menu')}>
               🍜 Xem thực đơn
             </button>
-            <button className="c-btn c-btn-lg" style={{ background: 'transparent', border: '1.5px solid var(--c-border)', color: 'var(--c-text-main)' }}
-              onClick={() => { setStep('details'); setForm({ ...form, customerName: '', customerPhone: '', notes: '' }); }}>
-              Đặt bàn mới
+            <button className="c-btn c-btn-outline c-btn-md" onClick={() => navigate('/client')}>
+              Về trang chủ
             </button>
           </div>
         </div>
@@ -154,48 +146,54 @@ const ClientReservation: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--c-bg)', fontFamily: 'var(--c-font)' }}>
+    <div style={{ fontFamily: 'var(--c-font)', background: 'var(--c-bg)', minHeight: '100vh' }}>
 
-      {/* ── Hero Banner ─────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', height: 220, overflow: 'hidden' }}>
-        <img
-          src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1400&auto=format&fit=crop&q=80"
-          alt=""
-          aria-hidden
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(18,8,2,0.82) 0%, rgba(18,8,2,0.5) 100%)' }} />
+      {/* ── Page Header Banner ──────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #180d05 0%, #2d1305 100%)',
+        padding: '48px 24px 36px', textAlign: 'center', color: '#fff',
+      }}>
         <div style={{
-          position: 'relative', zIndex: 1, height: '100%',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 10,
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'rgba(232,93,38,0.25)', border: '1px solid rgba(232,93,38,0.4)',
+          borderRadius: 'var(--c-r-full)', padding: '4px 14px', marginBottom: 12,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fbbf24', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            <Flame size={14} /> Đặt bàn trực tuyến
-          </div>
-          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', fontWeight: 900, color: '#fff', margin: 0, textAlign: 'center' }}>
-            Đặt Bàn Tại OmniResto
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9375rem', margin: 0 }}>
-            Xác nhận trong vòng 30 phút
-          </p>
+          <Flame size={13} color="var(--c-accent)" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Đặt bàn trực tuyến
+          </span>
         </div>
-      </section>
+        <h1 style={{
+          fontFamily: 'var(--c-font-display)', fontStyle: 'italic',
+          fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 600, margin: '0 0 8px',
+        }}>
+          Giữ Chỗ Tại OmniResto
+        </h1>
+        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9375rem', margin: 0 }}>
+          Trải nghiệm không gian ẩm thực sang trọng và chu đáo
+        </p>
 
-      {/* ── Step indicator ──────────────────────────────────────────────────── */}
-      <div style={{ background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)', padding: '0 24px' }}>
-        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex' }}>
+        {/* Step indicator */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 28 }}>
           {[
-            { key: 'details', label: '1. Thông tin' },
+            { key: 'details', label: '1. Thông tin đặt chỗ' },
             { key: 'confirm', label: '2. Xác nhận' },
-          ].map((s, i) => (
+          ].map((s) => (
             <div key={s.key} style={{
-              padding: '14px 0', flex: 1, textAlign: 'center', fontSize: '0.875rem', fontWeight: 600,
-              color: step === s.key ? 'var(--c-primary)' : 'var(--c-text-muted)',
-              borderBottom: `2.5px solid ${step === s.key ? 'var(--c-primary)' : 'transparent'}`,
-              transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: 6,
+              color: step === s.key ? '#fff' : 'rgba(255,255,255,0.4)',
+              fontWeight: step === s.key ? 700 : 400,
+              fontSize: '0.875rem',
             }}>
-              {s.label}
+              <span style={{
+                width: 22, height: 22, borderRadius: '50%',
+                background: step === s.key ? 'var(--c-primary)' : 'rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.75rem', fontWeight: 700,
+              }}>
+                {s.label[0]}
+              </span>
+              <span>{s.label.slice(3)}</span>
             </div>
           ))}
         </div>
@@ -207,38 +205,10 @@ const ClientReservation: React.FC = () => {
         {step === 'details' && (
           <div className="c-animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-            {/* Branch selector */}
-            <div style={{ background: 'var(--c-surface)', borderRadius: 'var(--c-r-lg)', border: '1px solid var(--c-border)', padding: '24px' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--c-text-main)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800 }}>1</span>
-                Chọn chi nhánh
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {activeBranches.map((b) => (
-                  <label key={b.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-                    borderRadius: 'var(--c-r-md)', border: `1.5px solid ${form.branchId === b.id ? 'var(--c-primary)' : 'var(--c-border)'}`,
-                    background: form.branchId === b.id ? 'rgba(232,93,38,0.06)' : 'var(--c-bg)',
-                    cursor: 'pointer', transition: 'all 0.18s',
-                  }}>
-                    <input type="radio" name="branch" value={b.id} checked={form.branchId === b.id}
-                      onChange={() => setValue('branchId', b.id)} style={{ accentColor: 'var(--c-primary)' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--c-text-main)' }}>{b.name}</div>
-                      <div style={{ fontSize: '0.8125rem', color: 'var(--c-text-muted)', marginTop: 2 }}>{b.address}</div>
-                    </div>
-                    {form.branchId === b.id && (
-                      <CheckCircle size={18} color="var(--c-primary)" />
-                    )}
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {/* Date / Time / Party */}
             <div style={{ background: 'var(--c-surface)', borderRadius: 'var(--c-r-lg)', border: '1px solid var(--c-border)', padding: '24px' }}>
               <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--c-text-main)', margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800 }}>2</span>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800 }}>1</span>
                 Thời gian & số người
               </h2>
 
@@ -250,112 +220,147 @@ const ClientReservation: React.FC = () => {
                   </label>
                   <input
                     type="date"
-                    value={form.reservationDate}
                     min={today}
+                    value={form.reservationDate}
                     onChange={(e) => setValue('reservationDate', e.target.value)}
-                    style={{ ...inputStyle, borderColor: errors.reservationDate ? 'var(--c-danger)' : 'var(--c-border)' }}
+                    style={inputStyle(Boolean(errors.reservationDate))}
                   />
-                  {errors.reservationDate && <p style={errStyle}>{errors.reservationDate}</p>}
+                  {errors.reservationDate && <p style={errorStyle}>{errors.reservationDate}</p>}
                 </div>
 
                 {/* Party size */}
                 <div>
                   <label style={labelStyle}>
-                    <Users size={14} /> Số người <span style={{ color: 'var(--c-danger)' }}>*</span>
+                    <Users size={14} /> Số khách <span style={{ color: 'var(--c-danger)' }}>*</span>
                   </label>
                   <select
                     value={form.partySize}
                     onChange={(e) => setValue('partySize', Number(e.target.value))}
-                    style={inputStyle}
+                    style={inputStyle(false)}
                   >
                     {PARTY_SIZES.map((n) => (
-                      <option key={n} value={n}>{n} người</option>
+                      <option key={n} value={n}>{n} người{n === 10 ? ' +' : ''}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Time slots */}
+              {/* Time slot picker */}
               <div>
                 <label style={labelStyle}>
-                  <Clock size={14} /> Giờ đặt bàn <span style={{ color: 'var(--c-danger)' }}>*</span>
+                  <Clock size={14} /> Chọn giờ <span style={{ color: 'var(--c-danger)' }}>*</span>
                 </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-                  {TIME_SLOTS.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setValue('reservationTime', t)}
-                      style={{
-                        padding: '8px 16px', borderRadius: 'var(--c-r-full)', fontSize: '0.875rem',
-                        fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                        border: `1.5px solid ${form.reservationTime === t ? 'var(--c-primary)' : 'var(--c-border)'}`,
-                        background: form.reservationTime === t ? 'var(--c-primary)' : 'transparent',
-                        color: form.reservationTime === t ? '#fff' : 'var(--c-text-main)',
-                      }}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(68px, 1fr))',
+                  gap: 8, marginTop: 8,
+                }}>
+                  {TIME_SLOTS.map((t) => {
+                    const isSelected = form.reservationTime === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setValue('reservationTime', t)}
+                        style={{
+                          padding: '9px 0', textAlign: 'center',
+                          borderRadius: 'var(--c-r-md)',
+                          border: `1.5px solid ${isSelected ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                          background: isSelected ? 'var(--c-primary)' : 'var(--c-bg)',
+                          color: isSelected ? '#fff' : 'var(--c-text-main)',
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: '0.875rem',
+                          cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
                 </div>
-                {errors.reservationTime && <p style={errStyle}>{errors.reservationTime}</p>}
+                {errors.reservationTime && <p style={errorStyle}>{errors.reservationTime}</p>}
               </div>
             </div>
 
-            {/* Contact info */}
+            {/* Customer info */}
             <div style={{ background: 'var(--c-surface)', borderRadius: 'var(--c-r-lg)', border: '1px solid var(--c-border)', padding: '24px' }}>
               <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--c-text-main)', margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800 }}>3</span>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800 }}>2</span>
                 Thông tin liên hệ
               </h2>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Full name */}
                 <div>
-                  <label style={labelStyle}><User size={14} /> Họ và tên <span style={{ color: 'var(--c-danger)' }}>*</span></label>
+                  <label style={labelStyle}>
+                    <User size={14} /> Họ và tên <span style={{ color: 'var(--c-danger)' }}>*</span>
+                  </label>
                   <input
+                    type="text"
                     placeholder="Nguyễn Văn A"
                     value={form.customerName}
                     onChange={(e) => setValue('customerName', e.target.value)}
-                    style={{ ...inputStyle, borderColor: errors.customerName ? 'var(--c-danger)' : 'var(--c-border)' }}
+                    style={inputStyle(Boolean(errors.customerName))}
                   />
-                  {errors.customerName && <p style={errStyle}>{errors.customerName}</p>}
+                  {errors.customerName && <p style={errorStyle}>{errors.customerName}</p>}
                 </div>
-                <div>
-                  <label style={labelStyle}><Phone size={14} /> Số điện thoại <span style={{ color: 'var(--c-danger)' }}>*</span></label>
-                  <input
-                    placeholder="0901 234 567"
-                    value={form.customerPhone}
-                    onChange={(e) => setValue('customerPhone', e.target.value)}
-                    style={{ ...inputStyle, borderColor: errors.customerPhone ? 'var(--c-danger)' : 'var(--c-border)' }}
-                  />
-                  {errors.customerPhone && <p style={errStyle}>{errors.customerPhone}</p>}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  {/* Phone */}
+                  <div>
+                    <label style={labelStyle}>
+                      <Phone size={14} /> Số điện thoại <span style={{ color: 'var(--c-danger)' }}>*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="0912 345 678"
+                      value={form.customerPhone}
+                      onChange={(e) => setValue('customerPhone', e.target.value)}
+                      style={inputStyle(Boolean(errors.customerPhone))}
+                    />
+                    {errors.customerPhone && <p style={errorStyle}>{errors.customerPhone}</p>}
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label style={labelStyle}>
+                      <Mail size={14} /> Email <span style={{ color: 'var(--c-text-light)', fontSize: '0.75rem' }}>(không bắt buộc)</span>
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="email@example.com"
+                      value={form.customerEmail}
+                      onChange={(e) => setValue('customerEmail', e.target.value)}
+                      style={inputStyle(Boolean(errors.customerEmail))}
+                    />
+                    {errors.customerEmail && <p style={errorStyle}>{errors.customerEmail}</p>}
+                  </div>
                 </div>
+
+                {/* Notes */}
                 <div>
-                  <label style={labelStyle}><Mail size={14} /> Email <span style={{ color: 'var(--c-text-muted)', fontWeight: 400 }}>(tuỳ chọn)</span></label>
-                  <input
-                    placeholder="email@example.com"
-                    type="email"
-                    value={form.customerEmail}
-                    onChange={(e) => setValue('customerEmail', e.target.value)}
-                    style={{ ...inputStyle, borderColor: errors.customerEmail ? 'var(--c-danger)' : 'var(--c-border)' }}
-                  />
-                  {errors.customerEmail && <p style={errStyle}>{errors.customerEmail}</p>}
-                </div>
-                <div>
-                  <label style={labelStyle}><MessageSquare size={14} /> Ghi chú <span style={{ color: 'var(--c-text-muted)', fontWeight: 400 }}>(tuỳ chọn)</span></label>
+                  <label style={labelStyle}>
+                    <MessageSquare size={14} /> Yêu cầu đặc biệt <span style={{ color: 'var(--c-text-light)', fontSize: '0.75rem' }}>(không bắt buộc)</span>
+                  </label>
                   <textarea
-                    placeholder="Ví dụ: Cần ghế trẻ em, dị ứng hải sản, dịp sinh nhật..."
+                    rows={3}
+                    placeholder="Ví dụ: Bàn gần cửa sổ, tiệc sinh nhật, cần ghế trẻ em..."
                     value={form.notes}
                     onChange={(e) => setValue('notes', e.target.value)}
-                    rows={3}
-                    style={{ ...inputStyle, resize: 'vertical', minHeight: 80 }}
+                    style={{ ...inputStyle(false), resize: 'vertical' }}
                   />
                 </div>
               </div>
             </div>
 
-            <button id="reservation-continue-btn" className="c-btn c-btn-primary c-btn-lg" onClick={handleContinue}
-              style={{ width: '100%', justifyContent: 'center' }}>
-              Xem lại thông tin
+            {/* Submit button */}
+            <button
+              id="reservation-continue-btn"
+              type="button"
+              className="c-btn c-btn-primary c-btn-lg"
+              onClick={handleContinue}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              Tiếp tục — Kiểm tra thông tin
               <ChevronRight size={18} />
             </button>
           </div>
@@ -369,7 +374,7 @@ const ClientReservation: React.FC = () => {
               </h2>
 
               {[
-                { icon: '🏪', label: 'Chi nhánh', value: selectedBranch?.name },
+                { icon: '🏪', label: 'Địa điểm', value: 'Nhà Hàng OmniResto' },
                 { icon: '📅', label: 'Ngày', value: new Date(form.reservationDate).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
                 { icon: '⏰', label: 'Giờ', value: form.reservationTime },
                 { icon: '👥', label: 'Số người', value: `${form.partySize} người` },
@@ -409,27 +414,31 @@ const ClientReservation: React.FC = () => {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
 };
 
-// ─── Shared inline styles ────────────────────────────────────────────────────
+// ─── Shared inline styles ─────────────────────────────────────────────────────
+
 const labelStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 6,
-  fontSize: '0.8125rem', fontWeight: 600, color: 'var(--c-text-main)',
-  marginBottom: 8,
+  fontSize: '0.8125rem', fontWeight: 700, color: 'var(--c-text-main)',
+  marginBottom: 6,
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 14px', borderRadius: 'var(--c-r-md)',
-  border: '1.5px solid var(--c-border)', background: 'var(--c-bg)',
-  color: 'var(--c-text-main)', fontSize: '0.9375rem', fontFamily: 'var(--c-font)',
-  outline: 'none', boxSizing: 'border-box',
-};
+const inputStyle = (hasError: boolean): React.CSSProperties => ({
+  width: '100%', boxSizing: 'border-box',
+  padding: '10px 14px', borderRadius: 'var(--c-r-md)',
+  border: `1.5px solid ${hasError ? 'var(--c-danger)' : 'var(--c-border)'}`,
+  background: 'var(--c-surface)', color: 'var(--c-text-main)',
+  fontFamily: 'var(--c-font)', fontSize: '0.9375rem',
+  outline: 'none', transition: 'border-color 0.15s',
+});
 
-const errStyle: React.CSSProperties = {
-  margin: '6px 0 0', fontSize: '0.8125rem', color: 'var(--c-danger)',
+const errorStyle: React.CSSProperties = {
+  fontSize: '0.75rem', color: 'var(--c-danger)', marginTop: 4, margin: '4px 0 0',
 };
 
 export default ClientReservation;

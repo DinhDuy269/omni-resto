@@ -62,14 +62,14 @@ export const AdminLayout: React.FC = () => {
             }}
             onClick={() => {
               setIsQuickActionModalOpen(false);
-              navigate('/admin/branches');
+              navigate('/admin/tables');
             }}
           >
             <strong style={{ fontSize: '1rem', color: 'var(--info)', display: 'block', marginBottom: '4px' }}>
-              🏢 Mở Chi Nhánh Mới
+              🪑 Quản Lý Sơ Đồ Bàn
             </strong>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-              Thêm địa điểm điểm bán mới
+              Cập nhật và sắp xếp bàn ăn
             </span>
           </button>
         </div>

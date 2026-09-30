@@ -30,17 +30,15 @@ public class OrderService {
     private final SimpMessagingTemplate messagingTemplate;
 
     public List<OrderResponse> getAllOrders(String branchId, OrderStatus status) {
+        return getAllOrders(status);
+    }
+
+    public List<OrderResponse> getAllOrders(OrderStatus status) {
         List<OrderEntity> orders;
-        if (branchId != null && !branchId.equals("ALL")) {
-            orders = orderRepository.findByBranchId(branchId);
+        if (status != null) {
+            orders = orderRepository.findByStatus(status);
         } else {
             orders = orderRepository.findAll();
-        }
-
-        if (status != null) {
-            orders = orders.stream()
-                    .filter(o -> o.getStatus() == status)
-                    .collect(Collectors.toList());
         }
 
         return orders.stream()
@@ -61,7 +59,6 @@ public class OrderService {
 
         OrderEntity entity = OrderEntity.builder()
                 .orderNumber(orderNum)
-                .branchId(request.getBranchId() != null ? request.getBranchId() : "br-01")
                 .orderType(request.getOrderType())
                 .tableNo(request.getTableNo())
                 .status(request.getStatus() != null ? request.getStatus() : OrderStatus.pending)
@@ -117,9 +114,6 @@ public class OrderService {
                     .order(orderResponse)
                     .build();
             messagingTemplate.convertAndSend("/topic/orders", message);
-            if (orderResponse.getBranchId() != null) {
-                messagingTemplate.convertAndSend("/topic/orders/" + orderResponse.getBranchId(), message);
-            }
         } catch (Exception e) {
             // Log error silently without failing business transaction
             System.err.println("Failed to broadcast WebSocket event: " + e.getMessage());
@@ -146,8 +140,6 @@ public class OrderService {
         OrderResponse res = new OrderResponse();
         res.setId(entity.getId());
         res.setOrderNumber(entity.getOrderNumber());
-        res.setBranchId(entity.getBranchId());
-        res.setBranchName("OmniResto - Hoàn Kiếm");
         res.setOrderType(entity.getOrderType());
         res.setTableNo(entity.getTableNo());
         res.setStatus(entity.getStatus());

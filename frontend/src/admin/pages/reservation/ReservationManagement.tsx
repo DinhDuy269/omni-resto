@@ -3,7 +3,6 @@ import {
   Calendar, Search, Users, Phone, Clock, Trash2,
   RefreshCw, Wifi, WifiOff, Mail,
 } from 'lucide-react';
-import { useAdminStore } from '../../store/adminStore';
 import { useReservationStore } from '../../store/reservationStore';
 import type { Reservation, ReservationStatus } from '../../../shared/types/reservation';
 
@@ -36,7 +35,6 @@ const NEXT_ACTIONS: Record<ReservationStatus, { status: ReservationStatus; label
 };
 
 export const ReservationManagement: React.FC = () => {
-  const { selectedBranchId } = useAdminStore();
   const {
     reservations, loading, isApiMode,
     initialize, updateReservationStatus, assignTable, deleteReservation,
@@ -59,27 +57,18 @@ export const ReservationManagement: React.FC = () => {
 
   // ─── Derived data ──────────────────────────────────────────────────────────
   const filtered = reservations.filter((r) => {
-    const matchBranch  = selectedBranchId === 'ALL' || r.branchId === selectedBranchId;
     const matchStatus  = statusTab === 'ALL' || r.status === statusTab;
     const matchDate    = !dateFilter || r.reservationDate === dateFilter;
     const matchSearch  = !searchQuery
       || r.customerName.toLowerCase().includes(searchQuery.toLowerCase())
       || r.customerPhone.includes(searchQuery)
       || r.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchBranch && matchStatus && matchDate && matchSearch;
+    return matchStatus && matchDate && matchSearch;
   }).sort((a, b) => a.reservationDate.localeCompare(b.reservationDate) || a.reservationTime.localeCompare(b.reservationTime));
 
-  const pendingCount = reservations.filter(r =>
-    (selectedBranchId === 'ALL' || r.branchId === selectedBranchId) && r.status === 'pending'
-  ).length;
-
-  const todayCount = reservations.filter(r =>
-    (selectedBranchId === 'ALL' || r.branchId === selectedBranchId) && r.reservationDate === today
-  ).length;
-
-  const confirmedCount = reservations.filter(r =>
-    (selectedBranchId === 'ALL' || r.branchId === selectedBranchId) && r.status === 'confirmed' && r.reservationDate === today
-  ).length;
+  const pendingCount = reservations.filter(r => r.status === 'pending').length;
+  const todayCount = reservations.filter(r => r.reservationDate === today).length;
+  const confirmedCount = reservations.filter(r => r.status === 'confirmed' && r.reservationDate === today).length;
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleAssignTable = async (id: string) => {
@@ -320,9 +309,8 @@ export const ReservationManagement: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 3 }}>Chi nhánh</div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)' }}>{rsv.branchName}</div>
-                    <div style={{ fontSize: '0.8125rem', color: rsv.tableNo ? 'var(--primary)' : 'var(--text-muted)', marginTop: 4, fontWeight: rsv.tableNo ? 600 : 400 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 3 }}>Bàn ăn</div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: rsv.tableNo ? 'var(--primary)' : 'var(--text-main)' }}>
                       {rsv.tableNo ? `🪑 ${rsv.tableNo}` : 'Chưa phân bàn'}
                     </div>
                   </div>

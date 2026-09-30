@@ -26,6 +26,7 @@ export const MasterMenuManagement: React.FC = () => {
     category: 'Phở & Bún' as MenuCategory,
     basePrice: 79000,
     description: '',
+    ingredients: '',
     isBestSeller: false,
     image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
   });
@@ -48,6 +49,7 @@ export const MasterMenuManagement: React.FC = () => {
       category: formData.category,
       basePrice: Number(formData.basePrice),
       description: formData.description,
+      ingredients: formData.ingredients.trim() || undefined,
       status: 'AVAILABLE',
       isBestSeller: formData.isBestSeller,
       image: formData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
@@ -60,6 +62,7 @@ export const MasterMenuManagement: React.FC = () => {
       category: 'Phở & Bún',
       basePrice: 79000,
       description: '',
+      ingredients: '',
       isBestSeller: false,
       image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
     });
@@ -202,13 +205,33 @@ export const MasterMenuManagement: React.FC = () => {
                 </h3>
               </div>
 
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.5', flex: 1 }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.5', flex: 1, margin: 0 }}>
                 {dish.description}
               </p>
 
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: '8px' }}>
+              {dish.ingredients && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '4px 0' }}>
+                  {dish.ingredients.split(',').map((ing, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: '0.72rem',
+                        background: 'rgba(232, 93, 38, 0.08)',
+                        color: 'var(--primary)',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {ing.trim()}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: '4px' }}>
                 <span style={{ fontSize: '0.84rem', color: 'var(--text-light)', fontWeight: 600 }}>
-                  Áp dụng: <strong>{dish.branchesCount} chi nhánh</strong>
+                  Phục vụ: <strong>{dish.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Tạm hết'}</strong>
                 </span>
                 <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>
                   {dish.basePrice.toLocaleString('vi-VN')} đ
@@ -296,11 +319,25 @@ export const MasterMenuManagement: React.FC = () => {
             <label className="form-label">Mô Tả & Thành Phần Món Ăn</label>
             <textarea
               className="form-textarea"
-              rows={3}
-              placeholder="Mô tả hương vị, nguyên liệu công thức chuẩn..."
+              rows={2}
+              placeholder="Mô tả hương vị, nét đặc trưng của món ăn..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Thành Phần & Nguyên Liệu (Phân cách bằng dấu phẩy)</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="VD: Thịt bò Wagyu, Nấm hương, Hành lá, Nước hầm xương 24h..."
+              value={formData.ingredients}
+              onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+            />
+            <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
+              💡 Hệ thống sẽ tự động tách thành các tag nguyên liệu trên bảng chọn món của thực khách.
+            </small>
           </div>
 
           <div className="form-group">

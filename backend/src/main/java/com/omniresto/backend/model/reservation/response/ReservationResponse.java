@@ -12,8 +12,6 @@ import java.time.LocalTime;
 @Setter
 public class ReservationResponse {
     private String id;
-    private String branchId;
-    private String branchName;
     private String customerName;
     private String customerPhone;
     private String customerEmail;

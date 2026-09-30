@@ -11,13 +11,9 @@ import java.util.List;
 @Repository
 public interface ReservationRepository extends JpaRepository<ReservationEntity, String> {
 
-    List<ReservationEntity> findByBranchId(String branchId);
-
-    List<ReservationEntity> findByBranchIdAndStatus(String branchId, ReservationStatus status);
-
     List<ReservationEntity> findByReservationDate(LocalDate date);
 
-    List<ReservationEntity> findByBranchIdAndReservationDate(String branchId, LocalDate date);
+    List<ReservationEntity> findByReservationDateAndStatus(LocalDate date, ReservationStatus status);
 
     List<ReservationEntity> findByStatus(ReservationStatus status);
 }

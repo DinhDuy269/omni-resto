@@ -18,11 +18,11 @@ public class TableController {
     private final TableService tableService;
 
     @GetMapping
-    public ResponseEntity<List<TableResponse>> getTablesByBranch(
-            @RequestParam String branchId,
+    public ResponseEntity<List<TableResponse>> getAllTables(
+            @RequestParam(required = false) String branchId,
             @RequestParam(required = false) TableStatus status
     ) {
-        return ResponseEntity.ok(tableService.getTablesByBranch(branchId, status));
+        return ResponseEntity.ok(tableService.getAllTables(status));
     }
 
     @PatchMapping("/{id}/status")

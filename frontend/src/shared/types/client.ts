@@ -18,8 +18,6 @@ export type OrderMode = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
 export type ClientPaymentMethod = 'CASH' | 'CARD' | 'QR_CODE';
 
 export interface ClientOrderDraft {
-  branchId: string;
-  branchName: string;
   orderMode: OrderMode;
   tableNo?: string;
   customerName?: string;
@@ -34,7 +32,6 @@ export type PlacedOrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'COMPLETED';
 export interface PlacedOrder {
   id: string;
   orderNumber: string;
-  branchName: string;
   orderMode: OrderMode;
   tableNo?: string;
   customerName?: string;

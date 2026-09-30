@@ -7,7 +7,6 @@ export interface OrderEventMessage {
 }
 
 export const useWebSocket = (
-  branchId: string = 'ALL',
   onOrderEvent?: (event: OrderEventMessage) => void
 ) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -39,9 +38,7 @@ export const useWebSocket = (
           if (isMounted && onOrderEvent) {
             try {
               const data: OrderEventMessage = JSON.parse(event.data);
-              if (branchId === 'ALL' || data.order.branchId === branchId) {
-                onOrderEvent(data);
-              }
+              onOrderEvent(data);
             } catch (err) {
               console.warn('Failed to parse WebSocket message:', err);
             }
@@ -72,7 +69,7 @@ export const useWebSocket = (
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (socketRef.current) socketRef.current.close();
     };
-  }, [branchId]);
+  }, []);
 
   return { isConnected };
 };

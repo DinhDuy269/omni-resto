@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 public class TableResponse {
     private String id;
     private String tableNo;
-    private String branchId;
     private Integer capacity;
     private TableStatus status;
     private BigDecimal currentOrderAmount;

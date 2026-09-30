@@ -13,4 +13,5 @@ public interface MenuItemRepository extends JpaRepository<MenuItemEntity, String
     Optional<MenuItemEntity> findByCode(String code);
     List<MenuItemEntity> findByCategoryId(String categoryId);
     List<MenuItemEntity> findByStatus(MenuStatus status);
+    List<MenuItemEntity> findByMealPeriodsContainingIgnoreCase(String period);
 }

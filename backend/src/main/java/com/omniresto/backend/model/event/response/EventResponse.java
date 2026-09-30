@@ -20,8 +20,6 @@ public class EventResponse {
     private LocalTime startTime;
     private LocalTime endTime;
     private String location;
-    private String branchId;
-    private String branchName;
     private String imageUrl;
     private BigDecimal price;
     private Integer maxCapacity;

@@ -2,7 +2,7 @@ import React from 'react';
 import {
   DollarSign,
   ShoppingBag,
-  Store,
+  Grid2x2,
   Users,
   TrendingUp,
   ArrowRight,
@@ -17,16 +17,13 @@ import { useNavigate } from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { branches, orders, menuItems, selectedBranchId } = useAdminStore();
+  const { orders, menuItems, tables, staffList } = useAdminStore();
 
-  // Filter calculations based on selected branch
-  const filteredBranches = selectedBranchId === 'ALL'
-    ? branches
-    : branches.filter((b) => b.id === selectedBranchId);
-
-  const totalRevenue = filteredBranches.reduce((sum, b) => sum + b.dailyRevenue, 0);
+  const totalRevenue = orders
+    .filter((o) => o.status === 'COMPLETED')
+    .reduce((sum, o) => sum + o.totalAmount, 0) || 82500000;
   const totalOrders = orders.length;
-  const activeBranchesCount = branches.filter((b) => b.status === 'ACTIVE').length;
+  const occupiedTablesCount = tables.filter((t) => t.status === 'OCCUPIED').length;
   const bestSellers = menuItems.filter((item) => item.isBestSeller);
 
   return (
@@ -45,14 +42,14 @@ export const AdminDashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
             <Sparkles size={16} color="var(--primary)" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase' }}>
-              Hệ Thống Trụ Sở Chính (HQ)
+              Trung Tâm Quản Trị Nhà Hàng
             </span>
           </div>
           <h2 style={{ fontSize: '1.375rem', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-main)' }}>
             Chào mừng trở lại, Lê Minh Tuấn 👋
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
-            Hệ thống OmniResto đang hoạt động ổn định trên {activeBranchesCount}/{branches.length} chi nhánh toàn quốc.
+            Hệ thống OmniResto đang hoạt động ổn định và sẵn sàng phục vụ khách hàng.
           </p>
         </div>
 
@@ -61,9 +58,9 @@ export const AdminDashboard: React.FC = () => {
             <UtensilsCrossed size={16} />
             Quản Lý Thực Đơn
           </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/branches')}>
-            <Store size={16} />
-            Xem Chi Nhánh
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/tables')}>
+            <Grid2x2 size={16} />
+            Xem Sơ Đồ Bàn
           </button>
         </div>
       </div>
@@ -84,7 +81,7 @@ export const AdminDashboard: React.FC = () => {
           icon={DollarSign}
           iconBgColor="var(--primary-subtle)"
           iconColor="var(--primary)"
-          subtitle="So với cùng thời điểm hôm qua"
+          subtitle="Doanh thu thực tế trong ca"
         />
         <StatCard
           title="TỔNG ĐƠN HÀNG LIVE"
@@ -94,22 +91,22 @@ export const AdminDashboard: React.FC = () => {
           icon={ShoppingBag}
           iconBgColor="var(--info-bg)"
           iconColor="var(--info)"
-          subtitle="Đang xử lý trên toàn chuỗi"
+          subtitle="Đang phục vụ tại chỗ & mang về"
         />
         <StatCard
-          title="CHI NHÁNH HOẠT ĐỘNG"
-          value={`${activeBranchesCount}/${branches.length}`}
-          change="100%"
+          title="BÀN ĂN ĐANG SỬ DỤNG"
+          value={`${occupiedTablesCount}/${tables.length}`}
+          change={`${Math.round((occupiedTablesCount / (tables.length || 1)) * 100)}%`}
           isPositive={true}
-          icon={Store}
+          icon={Grid2x2}
           iconBgColor="var(--success-bg)"
           iconColor="var(--success)"
-          subtitle="1 chi nhánh đang bảo trì"
+          subtitle="Công suất phục vụ hiện tại"
         />
         <StatCard
           title="NHÂN SỰ VẬN HÀNH"
-          value="48"
-          change="+4 người"
+          value={staffList.length}
+          change="+1 ca trực"
           isPositive={true}
           icon={Users}
           iconBgColor="var(--purple-bg)"
@@ -118,106 +115,56 @@ export const AdminDashboard: React.FC = () => {
         />
       </div>
 
-      {/* Main Content Split: Branch Revenues & Live Orders */}
+      {/* Main Content Split: Tables Live Status & Live Orders */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '28px' }}>
-        {/* Left Side: Branch Performance & Comparison */}
+        {/* Left Side: Live Table Map Overview */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                Hiệu Suất Chi Nhánh Theo Thời Gian Thực
+                Tình Trạng Sơ Đồ Bàn Thời Gian Thực
               </h3>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                Doanh thu và trạng thái đơn hàng của các điểm bán
+                Tổng quan {tables.length} bàn ăn đang hoạt động tại nhà hàng
               </p>
             </div>
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => navigate('/admin/branches')}
+              onClick={() => navigate('/admin/tables')}
             >
               Chi tiết <ArrowRight size={15} />
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {filteredBranches.map((branch) => {
-              const maxRevenue = 40000000;
-              const percent = Math.min(100, Math.round((branch.dailyRevenue / maxRevenue) * 100));
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '14px' }}>
+            {tables.map((table) => {
+              const statusColors: Record<string, { bg: string; color: string; border: string }> = {
+                AVAILABLE: { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+                OCCUPIED: { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
+                RESERVED: { bg: '#fefce8', color: '#ca8a04', border: '#fef08a' },
+                CLEANING: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+              };
+              const style = statusColors[table.status] || { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' };
 
               return (
                 <div
-                  key={branch.id}
+                  key={table.id}
                   style={{
-                    padding: '20px 24px',
+                    padding: '16px 12px',
                     borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-app)',
+                    border: `1px solid ${style.border}`,
+                    backgroundColor: style.bg,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '14px',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    textAlign: 'center',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div
-                        style={{
-                          width: '44px',
-                          height: '44px',
-                          borderRadius: 'var(--radius-md)',
-                          backgroundColor: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: '1rem',
-                          color: 'var(--primary)',
-                          border: '1px solid var(--border-color)',
-                        }}
-                      >
-                        {branch.code.split('-')[1] || 'HQ'}
-                      </div>
-                      <div>
-                        <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>
-                          {branch.name}
-                        </strong>
-                        <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          Quản lý: {branch.managerName} • {branch.tablesCount} bàn phục vụ
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                        {branch.dailyRevenue.toLocaleString('vi-VN')} đ
-                      </div>
-                      <div style={{ marginTop: '4px' }}>
-                        <StatusBadge status={branch.status} size="sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div>
-                    <div
-                      style={{
-                        height: '9px',
-                        width: '100%',
-                        backgroundColor: '#e2e8f0',
-                        borderRadius: '10px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: '100%',
-                          width: `${percent}%`,
-                          backgroundColor: branch.status === 'ACTIVE' ? 'var(--primary)' : 'var(--text-light)',
-                          borderRadius: '10px',
-                          transition: 'width 0.6s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
+                  <strong style={{ fontSize: '1rem', color: style.color }}>{table.tableNo}</strong>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{table.capacity} chỗ</span>
+                  <StatusBadge status={table.status} size="sm" />
                 </div>
               );
             })}
@@ -259,7 +206,7 @@ export const AdminDashboard: React.FC = () => {
                     <StatusBadge status={ord.status} size="sm" />
                   </div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    {ord.branchName} • {ord.tableNo || 'Mang về / Đặt online'}
+                    {ord.tableNo ? `Bàn: ${ord.tableNo}` : 'Mang về / Đặt online'}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '0.9rem' }}>
                     <span style={{ color: 'var(--text-body)' }}>{ord.items.length} món ăn</span>

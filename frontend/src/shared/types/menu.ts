@@ -8,10 +8,10 @@ export interface MenuItem {
   category: MenuCategory;
   basePrice: number;
   description: string;
+  ingredients?: string;
   status: MenuStatus;
   isBestSeller: boolean;
   image: string;
-  branchesCount: number;
 }
 
 export interface MenuItemRequest {
@@ -20,6 +20,7 @@ export interface MenuItemRequest {
   category: MenuCategory;
   basePrice: number;
   description?: string;
+  ingredients?: string;
   image?: string;
 }
 

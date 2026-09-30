@@ -2,7 +2,6 @@ package com.omniresto.backend.service;
 
 import com.omniresto.backend.domain.TableEntity;
 import com.omniresto.backend.domain.enums.TableStatus;
-import com.omniresto.backend.model.table.request.TableRequest;
 import com.omniresto.backend.model.table.response.TableResponse;
 import com.omniresto.backend.repository.TableRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +17,15 @@ public class TableService {
 
     private final TableRepository tableRepository;
 
-    public List<TableResponse> getTablesByBranch(String branchId, TableStatus status) {
-        List<TableEntity> tables = tableRepository.findByBranchId(branchId);
-        if (status != null) {
-            tables = tables.stream().filter(t -> t.getStatus() == status).collect(Collectors.toList());
-        }
+    public List<TableResponse> getAllTables(TableStatus status) {
+        List<TableEntity> tables = status != null
+                ? tableRepository.findByStatus(status)
+                : tableRepository.findAll();
         return tables.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    public List<TableResponse> getTablesByBranch(String branchId, TableStatus status) {
+        return getAllTables(status);
     }
 
     public TableResponse updateTableStatus(String id, TableStatus status) {
@@ -38,7 +40,6 @@ public class TableService {
         TableResponse res = new TableResponse();
         res.setId(entity.getId());
         res.setTableNo(entity.getTableNo());
-        res.setBranchId(entity.getBranchId());
         res.setCapacity(entity.getCapacity());
         res.setStatus(entity.getStatus());
         res.setCurrentOrderAmount(BigDecimal.valueOf(150000));

@@ -12,8 +12,6 @@ export interface OrderItemInfo {
 export interface Order {
   id: string;
   orderNumber: string;
-  branchId: string;
-  branchName: string;
   orderType: OrderType;
   tableNo?: string;
   status: OrderStatus;
@@ -25,7 +23,6 @@ export interface Order {
 }
 
 export interface OrderRequest {
-  branchId: string;
   orderType: OrderType;
   tableNo?: string;
   items: OrderItemInfo[];

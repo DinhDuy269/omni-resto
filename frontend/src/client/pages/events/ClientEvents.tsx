@@ -13,7 +13,6 @@ interface Event {
   startTime?: string;
   endTime?: string;
   location?: string;
-  branchName?: string;
   imageUrl?: string;
   price: number;
   maxCapacity?: number;
@@ -118,7 +117,6 @@ function normalizeEvent(raw: Record<string, unknown>): Event {
     startTime: toTimeStr(raw.startTime),
     endTime: toTimeStr(raw.endTime),
     location: raw.location ? String(raw.location) : undefined,
-    branchName: raw.branchName ? String(raw.branchName) : undefined,
     imageUrl: raw.imageUrl ? String(raw.imageUrl) : undefined,
     price: Number(raw.price ?? 0),
     maxCapacity: raw.maxCapacity ? Number(raw.maxCapacity) : undefined,

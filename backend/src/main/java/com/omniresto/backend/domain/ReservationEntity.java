@@ -17,9 +17,6 @@ import java.time.LocalTime;
 @Builder
 public class ReservationEntity extends BaseEntity {
 
-    @Column(name = "branch_id", nullable = false, length = 36)
-    private String branchId;
-
     @Column(name = "customer_name", nullable = false, length = 100)
     private String customerName;
 

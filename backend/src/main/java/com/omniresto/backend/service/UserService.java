@@ -40,7 +40,6 @@ public class UserService {
                 .phone(request.getPhone())
                 .password(passwordEncoder.encode(request.getPassword() != null ? request.getPassword() : "123456"))
                 .role(request.getRole() != null ? request.getRole() : RoleType.store_manager)
-                .branchId(request.getBranchId() != null ? request.getBranchId() : "br-01")
                 .status(request.getStatus() != null ? request.getStatus() : UserStatus.active)
                 .avatar(request.getAvatar() != null ? request.getAvatar() : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop")
                 .build();
@@ -65,8 +64,6 @@ public class UserService {
         res.setEmail(entity.getEmail());
         res.setPhone(entity.getPhone());
         res.setRole(entity.getRole());
-        res.setBranchId(entity.getBranchId());
-        res.setBranchName(entity.getBranchId() != null && entity.getBranchId().equals("ALL") ? "Trụ Sở HQ" : "OmniResto - Hoàn Kiếm");
         res.setStatus(entity.getStatus());
         res.setAvatar(entity.getAvatar());
         res.setCreatedAt(entity.getCreatedAt());

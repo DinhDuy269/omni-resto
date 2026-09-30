@@ -1,11 +1,11 @@
 import { AppRouter } from './router';
-// import { BackendConnectionGate } from './shared/components/BackendConnectionGate';
+import { ErrorBoundary } from './shared/components/ErrorBoundary';
 
 function App() {
   return (
-    // <BackendConnectionGate>
-    <AppRouter />
-    // </BackendConnectionGate>
+    <ErrorBoundary fallbackTitle="Không thể khởi tạo ứng dụng">
+      <AppRouter />
+    </ErrorBoundary>
   );
 }
 

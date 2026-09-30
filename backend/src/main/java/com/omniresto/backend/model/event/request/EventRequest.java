@@ -31,7 +31,6 @@ public class EventRequest {
     @Size(max = 300)
     private String location;
 
-    private String branchId;
 
     @Size(max = 500)
     private String imageUrl;

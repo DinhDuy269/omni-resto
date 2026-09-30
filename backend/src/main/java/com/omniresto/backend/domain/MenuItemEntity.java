@@ -26,10 +26,14 @@ public class MenuItemEntity extends BaseEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private CategoryEntity category;
 
-    @Column(name = "base_price", nullable = false, precision = 12, scale = 2)
+    @Column(name = "price", nullable = false, precision = 12, scale = 2)
     private BigDecimal basePrice;
 
+    @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(columnDefinition = "TEXT")
+    private String ingredients;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -40,6 +44,18 @@ public class MenuItemEntity extends BaseEntity {
     @Builder.Default
     private Boolean isBestSeller = false;
 
+    @Column(name = "meal_periods", length = 100)
+    @Builder.Default
+    private String mealPeriods = "MORNING,NOON,EVENING";
+
     @Column(name = "image_url", length = 500)
     private String imageUrl;
+
+    public BigDecimal getPrice() {
+        return basePrice;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.basePrice = price;
+    }
 }

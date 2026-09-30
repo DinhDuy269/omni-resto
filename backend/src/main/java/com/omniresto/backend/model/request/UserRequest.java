@@ -13,8 +13,6 @@ public class UserRequest {
     private String phone;
     private String password;
     private RoleType role;
-    private String branchId;
-    private String branchName;
     private UserStatus status;
     private String avatar;
 }

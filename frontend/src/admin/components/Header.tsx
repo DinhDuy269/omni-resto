@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Bell, Store, Calendar, ChevronDown, User, Package, LogOut, HelpCircle } from 'lucide-react';
-import { useAdminStore } from '../store/adminStore';
 import { Modal } from '../../shared/components/Modal';
 import './Header.css';
 
@@ -9,7 +8,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = () => {
-  const { branches, selectedBranchId, setSelectedBranchId } = useAdminStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -29,24 +27,24 @@ export const Header: React.FC<HeaderProps> = () => {
   return (
     <>
       <header className="header">
-        {/* Left: Branch Selector Only */}
+        {/* Left: Restaurant Info & Status */}
         <div className="header-left">
-          <div className="branch-selector-wrapper">
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--bg-main)',
+              border: '1px solid var(--border-color)',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              color: 'var(--text-main)',
+            }}
+          >
             <Store size={16} color="var(--primary)" />
-            <span className="branch-selector-label">Chi nhánh:</span>
-            <select
-              className="branch-selector"
-              value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
-            >
-              <option value="ALL">Tất cả Chi Nhánh (Trụ Sở HQ)</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.code})
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} color="var(--primary)" />
+            <span>Hệ Thống Nhà Hàng OmniResto</span>
           </div>
 
           <div

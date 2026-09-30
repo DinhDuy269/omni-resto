@@ -4,19 +4,17 @@ import { useAdminStore } from '../../store/adminStore';
 import { StatusBadge } from '../../components/StatusBadge';
 
 export const ChainOrdersManagement: React.FC = () => {
-  const { orders, selectedBranchId, updateOrderStatus } = useAdminStore();
+  const { orders, updateOrderStatus } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusTab, setStatusTab] = useState<string>('ALL');
 
   const filteredOrders = orders.filter((ord) => {
-    const matchesBranch = selectedBranchId === 'ALL' || ord.branchId === selectedBranchId;
     const matchesStatus = statusTab === 'ALL' || ord.status === statusTab;
     const matchesSearch =
       ord.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ord.branchName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (ord.customerName && ord.customerName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    return matchesBranch && matchesStatus && matchesSearch;
+    return matchesStatus && matchesSearch;
   });
 
   const getStatusCount = (status: string) => {
@@ -29,10 +27,10 @@ export const ChainOrdersManagement: React.FC = () => {
       {/* Header */}
       <div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
-          Quản Lý Đơn Hàng Live Toàn Chuỗi ({filteredOrders.length})
+          Quản Lý Đơn Hàng Live ({filteredOrders.length})
         </h2>
         <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-          Theo dõi luồng chế biến, giao hàng và thanh toán trực tiếp từ các điểm bán
+          Theo dõi luồng chế biến, giao hàng và thanh toán trực tiếp tại nhà hàng
         </p>
       </div>
 
@@ -153,7 +151,7 @@ export const ChainOrdersManagement: React.FC = () => {
                     </div>
 
                     <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      {ord.branchName} • Tạo lúc: <strong>{ord.createdAt}</strong> {ord.customerName ? `• Khách: ${ord.customerName}` : ''}
+                      Tạo lúc: <strong>{ord.createdAt}</strong> {ord.customerName ? `• Khách: ${ord.customerName}` : ''}
                     </div>
                   </div>
                 </div>

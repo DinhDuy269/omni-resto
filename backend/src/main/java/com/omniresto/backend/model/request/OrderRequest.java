@@ -12,8 +12,6 @@ import java.util.List;
 @Getter
 @Setter
 public class OrderRequest {
-    private String branchId;
-    private String branchName;
     private OrderType orderType;
     private String tableNo;
     private OrderStatus status;

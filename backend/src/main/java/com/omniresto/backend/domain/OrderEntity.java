@@ -23,8 +23,6 @@ public class OrderEntity extends BaseEntity {
     @Column(name = "order_number", nullable = false, unique = true, length = 30)
     private String orderNumber;
 
-    @Column(name = "branch_id", nullable = false, length = 36)
-    private String branchId;
 
     @Column(name = "table_id", length = 36)
     private String tableId;

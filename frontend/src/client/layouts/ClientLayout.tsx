@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
-import { ShoppingCart, MapPin, UtensilsCrossed, CheckCircle } from 'lucide-react';
+import { ShoppingCart, UtensilsCrossed, CheckCircle } from 'lucide-react';
 import { useClientStore, selectTotalItems, selectTotalAmount } from '../store/clientStore';
 import { CartDrawer } from '../components/CartDrawer';
 import { apiClient } from '../../shared/api/client';
+import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 import './ClientLayout.css';
 
 const NAV_LINKS = [
@@ -78,7 +79,7 @@ const NewsletterMini: React.FC = () => {
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 export const ClientLayout: React.FC = () => {
-  const { selectedBranchName, isCartOpen, openCart, closeCart } = useClientStore();
+  const { isCartOpen, openCart, closeCart } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
 
@@ -112,14 +113,6 @@ export const ClientLayout: React.FC = () => {
             ))}
           </nav>
 
-          {/* Branch context */}
-          {selectedBranchName && (
-            <div className="client-branch-badge" title={selectedBranchName}>
-              <MapPin size={13} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedBranchName}</span>
-            </div>
-          )}
-
           {/* Cart */}
           <button
             id="client-cart-button"
@@ -146,7 +139,9 @@ export const ClientLayout: React.FC = () => {
 
       {/* ── Main Content ── */}
       <main className="client-main">
-        <Outlet />
+        <ErrorBoundary fallbackTitle="Không thể tải nội dung trang">
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       {/* ── Footer ── */}
@@ -165,7 +160,7 @@ export const ClientLayout: React.FC = () => {
                 OmniResto
               </div>
               <p style={{ fontSize: '0.875rem', lineHeight: 1.7, margin: '0 0 16px', color: 'rgba(255,255,255,0.55)' }}>
-                Chuỗi nhà hàng ẩm thực Việt Nam tinh hoa — mang đến trải nghiệm hương vị đích thực tại mọi chi nhánh.
+                Nhà hàng ẩm thực Việt Nam tinh hoa — mang đến trải nghiệm hương vị đích thực và trọn vẹn nhất.
               </p>
               {/* Social links */}
               <div style={{ display: 'flex', gap: 10 }}>

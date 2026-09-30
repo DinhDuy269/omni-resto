@@ -39,9 +39,6 @@ public class EventEntity extends BaseEntity {
     @Column(name = "location", length = 300)
     private String location;
 
-    /** null = all branches, otherwise specific branchId */
-    @Column(name = "branch_id", length = 36)
-    private String branchId;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;

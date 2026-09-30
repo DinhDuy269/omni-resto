@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Check, Flame } from 'lucide-react';
+import { X, Plus, Minus, Check, Flame, Leaf, ShieldAlert, Sparkles } from 'lucide-react';
 import type { MenuItem } from '../../shared/types/menu';
 import { useClientStore } from '../store/clientStore';
 
@@ -168,6 +168,79 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
               {unitPrice.toLocaleString('vi-VN')} đ
             </div>
           </div>
+
+          {/* Ingredients & Allergens info */}
+          {item.ingredients && item.ingredients.trim() && (
+            <div
+              style={{
+                background: 'rgba(232, 93, 38, 0.04)',
+                border: '1px solid rgba(232, 93, 38, 0.15)',
+                borderRadius: '16px',
+                padding: '14px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 800, color: 'var(--c-primary)' }}>
+                  <Leaf size={15} />
+                  <span>Thành phần & Nguyên liệu chính:</span>
+                </div>
+                <span style={{ fontSize: '0.725rem', color: 'var(--c-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldAlert size={12} /> Lưu ý dị ứng
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {item.ingredients.split(',').map((ing, idx) => {
+                  const cleanIng = ing.trim();
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      title={`Bấm để thêm yêu cầu "Không lấy ${cleanIng}" vào ghi chú bếp`}
+                      onClick={() => {
+                        const noteToAdd = `Không lấy ${cleanIng}`;
+                        if (!specialNote.includes(noteToAdd)) {
+                          setSpecialNote((prev) => (prev ? `${prev}, ${noteToAdd}` : noteToAdd));
+                        }
+                      }}
+                      style={{
+                        background: 'var(--c-surface)',
+                        border: '1.5px solid var(--c-border-light)',
+                        color: 'var(--c-text-main)',
+                        fontSize: '0.775rem',
+                        fontWeight: 600,
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--c-primary)';
+                        e.currentTarget.style.background = 'var(--c-primary-light)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--c-border-light)';
+                        e.currentTarget.style.background = 'var(--c-surface)';
+                      }}
+                    >
+                      <Sparkles size={11} color="var(--c-primary)" />
+                      {cleanIng}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: 'var(--c-text-muted)', lineHeight: 1.4 }}>
+                💡 <em>Mẹo: Bạn có thể bấm vào nguyên liệu để nhanh chóng dặn nhà bếp bỏ bớt nguyên liệu không dùng.</em>
+              </div>
+            </div>
+          )}
 
           <hr style={{ border: 'none', borderTop: '1px solid var(--c-border-light)', margin: 0 }} />
 

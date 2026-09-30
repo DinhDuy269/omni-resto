@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Store,
   UtensilsCrossed,
   ShoppingBag,
   Grid2x2,
@@ -25,16 +24,15 @@ export const Sidebar: React.FC = () => {
 
   const navItems = [
     {
-      section: 'VẬN HÀNH CHUỖI',
+      section: 'VẬN HÀNH NHÀ HÀNG',
       items: [
-        { label: 'Tổng Quan Hệ Thống', path: '/admin', icon: LayoutDashboard },
-        { label: 'Quản Lý Chi Nhánh', path: '/admin/branches', icon: Store },
-        { label: 'Master Menu & Món', path: '/admin/menu', icon: UtensilsCrossed },
-        { label: 'Đơn Hàng Chuỗi', path: '/admin/orders', icon: ShoppingBag,
+        { label: 'Tổng Quan Nhà Hàng', path: '/admin', icon: LayoutDashboard },
+        { label: 'Menu & Món Ăn', path: '/admin/menu', icon: UtensilsCrossed },
+        { label: 'Quản Lý Đơn Hàng', path: '/admin/orders', icon: ShoppingBag,
           badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
         },
         { label: 'Màn Hình Bếp (KDS)', path: '/admin/kds', icon: ChefHat },
-        { label: 'Sơ Đồ Bàn & Đặt Bàn', path: '/admin/tables', icon: Grid2x2 },
+        { label: 'Sơ Đồ Bàn', path: '/admin/tables', icon: Grid2x2 },
         { label: 'Quản Lý Đặt Bàn', path: '/admin/reservations', icon: CalendarCheck,
           badge: pendingReservationsCount > 0 ? pendingReservationsCount : undefined,
         },

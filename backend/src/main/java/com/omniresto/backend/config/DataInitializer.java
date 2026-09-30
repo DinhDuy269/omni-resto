@@ -10,13 +10,11 @@ import org.springframework.context.annotation.Configuration;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.UUID;
 
 @Configuration
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    private final BranchRepository branchRepository;
     private final CategoryRepository categoryRepository;
     private final MenuItemRepository menuItemRepository;
     private final TableRepository tableRepository;
@@ -27,37 +25,6 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (branchRepository.count() == 0) {
-            BranchEntity branch1 = BranchEntity.builder()
-                    .code("HN-HK")
-                    .name("OmniResto - Hoàn Kiếm")
-                    .address("42 Tràng Tiền, Q. Hoàn Kiếm, Hà Nội")
-                    .phone("024 3825 9999")
-                    .managerName("Nguyễn Văn Minh")
-                    .status(BranchStatus.active)
-                    .tablesCount(24)
-                    .dailyRevenue(BigDecimal.valueOf(28500000))
-                    .rating(4.9)
-                    .build();
-            branch1.setId("br-01");
-
-            BranchEntity branch2 = BranchEntity.builder()
-                    .code("HCM-Q1")
-                    .name("OmniResto - Quận 1")
-                    .address("88 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM")
-                    .phone("028 3822 8888")
-                    .managerName("Trần Thị Thu Thảo")
-                    .status(BranchStatus.active)
-                    .tablesCount(30)
-                    .dailyRevenue(BigDecimal.valueOf(34200000))
-                    .rating(4.8)
-                    .build();
-            branch2.setId("br-02");
-
-            branchRepository.save(branch1);
-            branchRepository.save(branch2);
-        }
-
         if (categoryRepository.count() == 0) {
             CategoryEntity cat1 = CategoryEntity.builder().name("Phở & Bún").displayOrder(1).build();
             cat1.setId("cat-01");
@@ -77,6 +44,7 @@ public class DataInitializer implements CommandLineRunner {
                         .category(cat1)
                         .basePrice(BigDecimal.valueOf(89000))
                         .description("Nước dùng hầm xương 24h truyền thống, thịt bò Wagyu tái nạm mềm thơm ngậy.")
+                        .ingredients("Bò Wagyu thái mỏng, Nạm bò gừng, Bánh phở tươi Hà Nội, Hành hoa, Ngò gai, Nước hầm xương bò 24h thảo mộc")
                         .status(MenuStatus.available)
                         .isBestSeller(true)
                         .imageUrl("https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=500&auto=format&fit=crop")
@@ -89,6 +57,7 @@ public class DataInitializer implements CommandLineRunner {
                         .category(cat2)
                         .basePrice(BigDecimal.valueOf(85000))
                         .description("Sườn nướng mật ong đậm đà, chả trứng chưng chuẩn vị Sài Gòn.")
+                        .ingredients("Gạo tấm thơm, Sườn nướng mật ong hoa cà phê, Bì heo thính, Chả trứng hấp mộc nhĩ, Trứng ốp la, Mỡ hành tép mỡ")
                         .status(MenuStatus.available)
                         .isBestSeller(true)
                         .imageUrl("https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&auto=format&fit=crop")
@@ -103,7 +72,6 @@ public class DataInitializer implements CommandLineRunner {
         if (tableRepository.count() == 0) {
             for (int i = 1; i <= 10; i++) {
                 TableEntity table = TableEntity.builder()
-                        .branchId("br-01")
                         .tableNo(String.format("Bàn %02d", i))
                         .capacity(i % 2 == 0 ? 4 : 2)
                         .status(i == 2 ? TableStatus.occupied : TableStatus.available)
@@ -121,7 +89,6 @@ public class DataInitializer implements CommandLineRunner {
 
             // Reservation 1 — confirmed, assigned table, today
             ReservationEntity r1 = ReservationEntity.builder()
-                    .branchId("br-01")
                     .customerName("Nguyễn Thị Lan")
                     .customerPhone("0901234567")
                     .customerEmail("lan.nguyen@gmail.com")
@@ -136,7 +103,6 @@ public class DataInitializer implements CommandLineRunner {
 
             // Reservation 2 — pending, today
             ReservationEntity r2 = ReservationEntity.builder()
-                    .branchId("br-01")
                     .customerName("Trần Văn Hùng")
                     .customerPhone("0912888999")
                     .partySize(2)
@@ -146,9 +112,8 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             r2.setId("rsv-002");
 
-            // Reservation 3 — confirmed, today, br-02
+            // Reservation 3 — confirmed, today
             ReservationEntity r3 = ReservationEntity.builder()
-                    .branchId("br-02")
                     .customerName("Lê Thị Phương")
                     .customerPhone("0988555444")
                     .customerEmail("phuong.le@yahoo.com")
@@ -162,7 +127,6 @@ public class DataInitializer implements CommandLineRunner {
 
             // Reservation 4 — pending, tomorrow
             ReservationEntity r4 = ReservationEntity.builder()
-                    .branchId("br-01")
                     .customerName("Phạm Minh Đức")
                     .customerPhone("0933111222")
                     .partySize(3)
@@ -174,7 +138,6 @@ public class DataInitializer implements CommandLineRunner {
 
             // Reservation 5 — seated, today
             ReservationEntity r5 = ReservationEntity.builder()
-                    .branchId("br-01")
                     .customerName("Hoàng Anh Tú")
                     .customerPhone("0977333666")
                     .partySize(8)
@@ -187,7 +150,6 @@ public class DataInitializer implements CommandLineRunner {
 
             // Reservation 6 — pending, next week
             ReservationEntity r6 = ReservationEntity.builder()
-                    .branchId("br-02")
                     .customerName("Nguyễn Anh Khữu")
                     .customerPhone("0911222333")
                     .customerEmail("khuu@gmail.com")
@@ -218,8 +180,7 @@ public class DataInitializer implements CommandLineRunner {
                     .eventDate(today.plusDays(5))
                     .startTime(LocalTime.of(18, 30))
                     .endTime(LocalTime.of(21, 30))
-                    .location("OmniResto - Hoàn Kiếm, 42 Tràng Tiền")
-                    .branchId("br-01")
+                    .location("OmniResto, 42 Tràng Tiền, Hà Nội")
                     .imageUrl("https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&auto=format&fit=crop")
                     .price(BigDecimal.valueOf(450000))
                     .maxCapacity(60)
@@ -237,8 +198,7 @@ public class DataInitializer implements CommandLineRunner {
                     .eventDate(today.plusDays(12))
                     .startTime(LocalTime.of(19, 0))
                     .endTime(LocalTime.of(22, 30))
-                    .location("OmniResto - Quận 1, 88 Nguyễn Huệ")
-                    .branchId("br-02")
+                    .location("OmniResto Lounge, 88 Nguyễn Huệ, TP.HCM")
                     .imageUrl("https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&auto=format&fit=crop")
                     .price(BigDecimal.valueOf(850000))
                     .maxCapacity(40)
@@ -256,8 +216,7 @@ public class DataInitializer implements CommandLineRunner {
                     .eventDate(today.plusDays(18))
                     .startTime(LocalTime.of(9, 0))
                     .endTime(LocalTime.of(12, 0))
-                    .location("OmniResto - Hoàn Kiếm — Bếp trình diễn tầng 2")
-                    .branchId("br-01")
+                    .location("OmniResto — Bếp trình diễn tầng 2")
                     .imageUrl("https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=800&auto=format&fit=crop")
                     .price(BigDecimal.valueOf(350000))
                     .maxCapacity(20)
@@ -271,13 +230,13 @@ public class DataInitializer implements CommandLineRunner {
             EventEntity ev4 = EventEntity.builder()
                     .title("Khuyến Mãi Sinh Nhật — Tháng " + today.getMonthValue())
                     .shortDescription("Sinh nhật trong tháng được tặng miễn phí 1 món tráng miệng đặc biệt và bánh sinh nhật mini.")
-                    .description("Áp dụng toàn chuỗi OmniResto trong suốt tháng " + today.getMonthValue() + ". Khách hàng có sinh nhật trong tháng chỉ cần xuất trình CCCD hoặc giấy tờ chứng minh để nhận ưu đãi đặc biệt từ nhà hàng.")
+                    .description("Áp dụng tại OmniResto trong suốt tháng " + today.getMonthValue() + ". Khách hàng có sinh nhật trong tháng chỉ cần xuất trình CCCD hoặc giấy tờ chứng minh để nhận ưu đãi đặc biệt từ nhà hàng.")
                     .eventDate(today.withDayOfMonth(1))
-                    .location("Tất cả chi nhánh OmniResto")
+                    .location("Nhà hàng OmniResto")
                     .imageUrl("https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&auto=format&fit=crop")
                     .price(BigDecimal.ZERO)
                     .isFeatured(false)
-                    .tags("khuyến mãi,sinh nhật,toàn chuỗi")
+                    .tags("khuyến mãi,sinh nhật")
                     .status(EventStatus.ongoing)
                     .build();
             ev4.setId("evt-004");
@@ -289,4 +248,3 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 }
-

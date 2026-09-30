@@ -19,5 +19,4 @@ public interface EventRepository extends JpaRepository<EventEntity, String> {
 
     List<EventEntity> findByIsFeaturedTrueOrderByEventDateAsc();
 
-    List<EventEntity> findByBranchIdOrBranchIdIsNullOrderByEventDateAsc(String branchId);
 }

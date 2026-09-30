@@ -11,7 +11,5 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<OrderEntity, String> {
     Optional<OrderEntity> findByOrderNumber(String orderNumber);
-    List<OrderEntity> findByBranchId(String branchId);
-    List<OrderEntity> findByBranchIdAndStatus(String branchId, OrderStatus status);
     List<OrderEntity> findByStatus(OrderStatus status);
 }

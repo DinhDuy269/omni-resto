@@ -11,8 +11,6 @@ const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
 const MOCK_RESERVATIONS: Reservation[] = [
   {
     id: 'rsv-001',
-    branchId: 'br-01',
-    branchName: 'OmniResto - Hoàn Kiếm',
     customerName: 'Nguyễn Thị Lan',
     customerPhone: '0901234567',
     customerEmail: 'lan.nguyen@gmail.com',
@@ -26,8 +24,6 @@ const MOCK_RESERVATIONS: Reservation[] = [
   },
   {
     id: 'rsv-002',
-    branchId: 'br-01',
-    branchName: 'OmniResto - Hoàn Kiếm',
     customerName: 'Trần Văn Hùng',
     customerPhone: '0912888999',
     partySize: 2,
@@ -38,8 +34,6 @@ const MOCK_RESERVATIONS: Reservation[] = [
   },
   {
     id: 'rsv-003',
-    branchId: 'br-02',
-    branchName: 'OmniResto - Quận 1',
     customerName: 'Lê Thị Phương',
     customerPhone: '0988555444',
     customerEmail: 'phuong.le@yahoo.com',
@@ -52,8 +46,6 @@ const MOCK_RESERVATIONS: Reservation[] = [
   },
   {
     id: 'rsv-004',
-    branchId: 'br-01',
-    branchName: 'OmniResto - Hoàn Kiếm',
     customerName: 'Phạm Minh Đức',
     customerPhone: '0933111222',
     partySize: 3,
@@ -64,8 +56,6 @@ const MOCK_RESERVATIONS: Reservation[] = [
   },
   {
     id: 'rsv-005',
-    branchId: 'br-01',
-    branchName: 'OmniResto - Hoàn Kiếm',
     customerName: 'Hoàng Anh Tú',
     customerPhone: '0977333666',
     partySize: 8,
@@ -77,8 +67,6 @@ const MOCK_RESERVATIONS: Reservation[] = [
   },
   {
     id: 'rsv-006',
-    branchId: 'br-02',
-    branchName: 'OmniResto - Quận 1',
     customerName: 'Nguyễn Anh Khữu',
     customerPhone: '0911222333',
     customerEmail: 'khuu@gmail.com',
@@ -142,7 +130,6 @@ export const useReservationStore = create<ReservationState>((set, get) => ({
     if (isApiMode) {
       try {
         const created = await reservationApi.create({
-          branchId: data.branchId,
           customerName: data.customerName,
           customerPhone: data.customerPhone,
           customerEmail: data.customerEmail,

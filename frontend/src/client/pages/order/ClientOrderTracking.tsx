@@ -147,7 +147,7 @@ const ClientOrderTracking: React.FC = () => {
           }}>
             {[
               { label: 'Hình thức', value: `${modeInfo.emoji} ${modeInfo.label}` },
-              { label: 'Chi nhánh', value: `📍 ${placedOrder.branchName}` },
+              { label: 'Địa điểm', value: '📍 Nhà hàng OmniResto' },
               placedOrder.tableNo   ? { label: 'Bàn',          value: `🪑 ${placedOrder.tableNo}` } : null,
               placedOrder.customerName ? { label: 'Khách hàng', value: `👤 ${placedOrder.customerName}` } : null,
               { label: 'Thanh toán', value: PAY_LABELS[placedOrder.paymentMethod] },

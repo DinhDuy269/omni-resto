@@ -7,8 +7,6 @@ export interface StaffUser {
   email: string;
   phone: string;
   role: RoleType;
-  branchId: string;
-  branchName: string;
   status: UserStatus;
   avatar: string;
   createdAt: string;
@@ -19,7 +17,6 @@ export interface UserRequest {
   email: string;
   phone: string;
   role: RoleType;
-  branchId: string;
 }
 
 export interface UserResponse {

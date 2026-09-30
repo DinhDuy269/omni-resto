@@ -20,7 +20,7 @@ interface CartDrawerProps {
  */
 export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const navigate    = useNavigate();
-  const { cart, updateQuantity, removeFromCart, selectedBranchName } = useClientStore();
+  const { cart, updateQuantity, removeFromCart } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
 
@@ -125,16 +125,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Branch context */}
-        {selectedBranchName && (
-          <div style={{
-            padding: '10px 20px', background: 'var(--c-surface-warm)',
-            borderBottom: '1px solid var(--c-border-light)',
-            fontSize: '0.8125rem', color: 'var(--c-text-muted)',
-          }}>
-            📍 Chi nhánh: <strong style={{ color: 'var(--c-text-body)' }}>{selectedBranchName}</strong>
-          </div>
-        )}
 
         {/* ── Items List ── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0' }}>
