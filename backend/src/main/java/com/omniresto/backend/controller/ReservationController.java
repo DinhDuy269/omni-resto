@@ -17,19 +17,18 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/reservations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ReservationController {
 
     private final ReservationService reservationService;
 
-    /** GET /api/reservations?branchId=br-01&date=2025-12-31&status=pending */
+    /** GET /api/reservations?date=2026-12-31&status=pending */
     @GetMapping
     public ResponseEntity<List<ReservationResponse>> getAllReservations(
-            @RequestParam(required = false) String branchId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) ReservationStatus status
+            @RequestParam(required = false) ReservationStatus status,
+            @RequestParam(required = false) String branchId
     ) {
-        return ResponseEntity.ok(reservationService.getAllReservations(branchId, date, status));
+        return ResponseEntity.ok(reservationService.getAllReservations(date, status));
     }
 
     /** GET /api/reservations/{id} */

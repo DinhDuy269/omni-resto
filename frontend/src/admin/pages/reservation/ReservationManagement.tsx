@@ -4,7 +4,7 @@ import {
   RefreshCw, Wifi, WifiOff, Mail,
 } from 'lucide-react';
 import { useReservationStore } from '../../store/reservationStore';
-import type { Reservation, ReservationStatus } from '../../../shared/types/reservation';
+import type { ReservationStatus } from '../../../shared/types/reservation';
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<ReservationStatus, { label: string; color: string; bg: string }> = {

@@ -31,6 +31,11 @@ public class MenuItemController {
         return ResponseEntity.ok(menuItemService.getAllMenuItems(period));
     }
 
+    @GetMapping("/current-period")
+    public ResponseEntity<com.omniresto.backend.model.menu.response.MealPeriodInfoResponse> getCurrentMealPeriod() {
+        return ResponseEntity.ok(menuItemService.getCurrentMealPeriodInfo());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<MenuItemResponse> getMenuItemById(@PathVariable String id) {
         return ResponseEntity.ok(menuItemService.getMenuItemById(id));

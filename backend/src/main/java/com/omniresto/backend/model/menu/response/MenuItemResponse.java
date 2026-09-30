@@ -24,6 +24,8 @@ public class MenuItemResponse {
     private MenuStatus status;
     private Boolean isBestSeller;
     private String mealPeriods;
+    private Boolean isAvailableNow;
+    private String mealPeriodNote;
     private String image;
     private String imageUrl;
     private LocalDateTime createdAt;

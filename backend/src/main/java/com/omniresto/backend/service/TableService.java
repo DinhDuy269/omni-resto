@@ -2,10 +2,12 @@ package com.omniresto.backend.service;
 
 import com.omniresto.backend.domain.TableEntity;
 import com.omniresto.backend.domain.enums.TableStatus;
+import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.model.table.response.TableResponse;
 import com.omniresto.backend.repository.TableRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -13,6 +15,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TableService {
 
     private final TableRepository tableRepository;
@@ -28,9 +31,16 @@ public class TableService {
         return getAllTables(status);
     }
 
+    public TableResponse getTableById(String id) {
+        TableEntity entity = tableRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bàn với ID: " + id));
+        return mapToResponse(entity);
+    }
+
+    @Transactional
     public TableResponse updateTableStatus(String id, TableStatus status) {
         TableEntity entity = tableRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Table not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bàn với ID: " + id));
         entity.setStatus(status);
         TableEntity updated = tableRepository.save(entity);
         return mapToResponse(updated);

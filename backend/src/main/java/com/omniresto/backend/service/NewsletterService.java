@@ -11,6 +11,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class NewsletterService {
 
     private final NewsletterSubscriberRepository subscriberRepository;

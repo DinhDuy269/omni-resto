@@ -67,6 +67,7 @@ public class PaymentService {
                 .build();
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public OrderResponse handlePaymentWebhook(String orderId, String transactionId, Double amountPaid) {
         System.out.printf("💰 Payment Webhook Received: Order %s, Txn %s, Amount %f%n", orderId, transactionId, amountPaid);
         // Automatically mark order status as COMPLETED / PAID

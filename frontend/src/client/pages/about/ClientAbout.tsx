@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Award, ChefHat, MapPin, Heart, Star, Users, Clock, Flame, ChevronRight } from 'lucide-react';
+import { Award, MapPin, Star, Users, Clock, Flame, ChevronRight } from 'lucide-react';
 
 const STATS = [
   { icon: <MapPin size={22} />, value: '100+', label: 'Món đặc sắc', color: '#e8533d' },

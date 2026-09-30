@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, Utensils, CalendarCheck, Clock, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { ArrowRight, Sparkles, Utensils, CalendarCheck, Clock, ShieldCheck } from 'lucide-react';
 import { useAdminStore } from '../../../admin/store/adminStore';
 
 /**

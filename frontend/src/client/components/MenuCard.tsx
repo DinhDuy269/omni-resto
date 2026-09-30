@@ -28,7 +28,9 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
 
   const cartItem = cart.find((c) => c.menuItemId === item.id);
   const qty = cartItem?.quantity ?? 0;
-  const isAvailable = item.status === 'AVAILABLE' || item.status === 'available';
+  const isStatusAvailable = item.status === 'AVAILABLE' || item.status === 'available';
+  const isTimeAvailable = item.isAvailableNow !== false;
+  const isAvailable = isStatusAvailable && isTimeAvailable;
 
   const openModal = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -40,7 +42,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
     <>
       <article
         className="menu-card"
-        style={{ animationDelay: `${animationDelay}ms` }}
+        style={{ animationDelay: `${animationDelay}ms`, opacity: isAvailable ? 1 : 0.8 }}
         aria-label={item.name}
         onClick={openModal}
         role="button"
@@ -60,10 +62,14 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
             }}
           />
 
-          {/* Out-of-stock overlay — Figure-Ground principle */}
+          {/* Out-of-stock or Out-of-time overlay */}
           {!isAvailable && (
-            <div className="menu-card__oos-overlay">
-              <span>Tạm hết</span>
+            <div className="menu-card__oos-overlay" style={{ background: !isTimeAvailable && isStatusAvailable ? 'rgba(30, 20, 10, 0.72)' : undefined }}>
+              <span style={{ fontSize: '0.75rem', padding: '4px 10px', textAlign: 'center' }}>
+                {!isTimeAvailable && isStatusAvailable
+                  ? (item.mealPeriodNote ? `Chỉ bán ${item.mealPeriodNote}` : 'Hết giờ phục vụ')
+                  : 'Tạm hết món'}
+              </span>
             </div>
           )}
 
@@ -114,7 +120,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
                 aria-label={`Xem tuỳ chọn và thêm ${item.name} vào giỏ hàng`}
               >
                 <Plus size={18} strokeWidth={2.5} />
-                {isAvailable ? 'Thêm' : 'Hết'}
+                {isAvailable ? 'Thêm' : (!isTimeAvailable && isStatusAvailable ? 'Hết giờ' : 'Hết')}
               </button>
             ) : (
               /* Quantity stepper — shown after first add, click stops propagation */

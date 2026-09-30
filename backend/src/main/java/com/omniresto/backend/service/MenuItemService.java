@@ -150,6 +150,30 @@ public class MenuItemService {
         menuItemRepository.delete(entity);
     }
 
+    public com.omniresto.backend.model.menu.response.MealPeriodInfoResponse getCurrentMealPeriodInfo() {
+        java.time.LocalTime now = java.time.LocalTime.now();
+        com.omniresto.backend.domain.enums.MealPeriod current = com.omniresto.backend.domain.enums.MealPeriod.getCurrentPeriod(now);
+        boolean isOrdering = (current == com.omniresto.backend.domain.enums.MealPeriod.MORNING
+                || current == com.omniresto.backend.domain.enums.MealPeriod.NOON
+                || current == com.omniresto.backend.domain.enums.MealPeriod.EVENING);
+        String message;
+        switch (current) {
+            case MORNING -> message = "Đang trong khung giờ phục vụ Thực đơn Sáng (06:00 - 10:30)";
+            case NOON -> message = "Đang trong khung giờ phục vụ Thực đơn Trưa (10:30 - 14:30)";
+            case BREAK -> message = "Giờ nghỉ bếp dọn dẹp (14:30 - 16:30). Ca Tối mở phục vụ lúc 16:30";
+            case EVENING -> message = "Đang trong khung giờ phục vụ Thực đơn Tối & Lẩu (16:30 - 22:00)";
+            default -> message = "Nhà hàng hiện đang đóng cửa (22:00 - 06:00)";
+        }
+        return com.omniresto.backend.model.menu.response.MealPeriodInfoResponse.builder()
+                .currentPeriod(current.name())
+                .periodName(current.getDisplayName())
+                .timeRange(current.getTimeRange())
+                .currentTime(now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")))
+                .isOrderingAvailable(isOrdering)
+                .message(message)
+                .build();
+    }
+
     private MenuItemResponse mapToResponse(MenuItemEntity entity) {
         MenuItemResponse res = new MenuItemResponse();
         res.setId(entity.getId());
@@ -166,6 +190,12 @@ public class MenuItemService {
         res.setDescription(entity.getDescription());
         res.setIngredients(entity.getIngredients());
         res.setMealPeriods(entity.getMealPeriods());
+
+        java.time.LocalTime now = java.time.LocalTime.now();
+        boolean availableNow = com.omniresto.backend.domain.enums.MealPeriod.isAvailableNow(entity.getMealPeriods(), now);
+        res.setIsAvailableNow(availableNow);
+        res.setMealPeriodNote(com.omniresto.backend.domain.enums.MealPeriod.getPeriodDescription(entity.getMealPeriods()));
+
         res.setStatus(entity.getStatus());
         res.setIsBestSeller(Boolean.TRUE.equals(entity.getIsBestSeller()));
         res.setImage(entity.getImageUrl());

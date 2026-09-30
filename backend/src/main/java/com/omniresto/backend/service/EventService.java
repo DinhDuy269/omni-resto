@@ -2,6 +2,7 @@ package com.omniresto.backend.service;
 
 import com.omniresto.backend.domain.EventEntity;
 import com.omniresto.backend.domain.enums.EventStatus;
+import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.model.event.request.EventRequest;
 import com.omniresto.backend.model.event.response.EventResponse;
 import com.omniresto.backend.repository.EventRepository;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EventService {
 
     private final EventRepository eventRepository;
@@ -49,7 +51,7 @@ public class EventService {
     /** Get single event by id */
     public EventResponse getEventById(String id) {
         EventEntity entity = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện với ID: " + id));
         return mapToResponse(entity);
     }
 
@@ -78,7 +80,7 @@ public class EventService {
     @Transactional
     public EventResponse updateEvent(String id, EventRequest request) {
         EventEntity entity = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện với ID: " + id));
         if (request.getTitle() != null)         entity.setTitle(request.getTitle().trim());
         if (request.getDescription() != null)   entity.setDescription(request.getDescription());
         if (request.getShortDescription() != null) entity.setShortDescription(request.getShortDescription());
@@ -98,7 +100,7 @@ public class EventService {
     @Transactional
     public EventResponse updateEventStatus(String id, EventStatus status) {
         EventEntity entity = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện với ID: " + id));
         entity.setStatus(status);
         return mapToResponse(eventRepository.save(entity));
     }
@@ -106,10 +108,9 @@ public class EventService {
     /** Delete event */
     @Transactional
     public void deleteEvent(String id) {
-        if (!eventRepository.existsById(id)) {
-            throw new RuntimeException("Event not found: " + id);
-        }
-        eventRepository.deleteById(id);
+        EventEntity entity = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện với ID: " + id));
+        eventRepository.delete(entity);
     }
 
     // ─── Mapper ─────────────────────────────────────────────────────────────

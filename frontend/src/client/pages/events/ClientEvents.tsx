@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Users, Tag, Flame, ArrowRight, ChevronRight } from 'lucide-react';
-import { apiClient, toQueryString } from '../../../shared/api/client';
+import { apiClient } from '../../../shared/api/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Event {
