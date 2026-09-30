@@ -89,15 +89,19 @@ const ClientHome: React.FC = () => {
               </span>
             </div>
 
-            {/* Main heading — largest element, draws eye first */}
+            {/* Main heading — Cormorant Garamond display font, sang trọng */}
             <h1 style={{
-              fontSize: 'clamp(2rem, 5vw, 3.25rem)',
-              fontWeight: 900, color: '#fff',
-              lineHeight: 1.15, margin: '0 0 16px',
-              letterSpacing: '-0.02em',
+              fontFamily: 'var(--c-font-display)',
+              fontSize: 'clamp(2.4rem, 5.5vw, 3.75rem)',
+              fontWeight: 600,
+              fontStyle: 'italic',
+              color: '#fff',
+              lineHeight: 1.1,
+              margin: '0 0 16px',
+              letterSpacing: '-0.01em',
             }}>
               Hương Vị Đích Thực<br />
-              <span style={{ color: 'var(--c-accent)' }}>Việt Nam</span>
+              <span style={{ color: 'var(--c-accent)', fontStyle: 'normal', fontWeight: 700 }}>Việt Nam</span>
             </h1>
 
             {/* Sub-heading */}
@@ -120,10 +124,22 @@ const ClientHome: React.FC = () => {
                 <ArrowRight size={18} strokeWidth={2.2} />
               </button>
               <button
+                id="hero-reservation-btn"
                 className="c-btn c-btn-lg"
                 style={{
                   background: 'rgba(255,255,255,0.12)', color: '#fff',
                   border: '1.5px solid rgba(255,255,255,0.3)',
+                  backdropFilter: 'blur(8px)',
+                }}
+                onClick={() => navigate('/client/reservation')}
+              >
+                📅 Đặt bàn
+              </button>
+              <button
+                className="c-btn c-btn-lg"
+                style={{
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)',
+                  border: '1.5px solid rgba(255,255,255,0.2)',
                   backdropFilter: 'blur(8px)',
                 }}
                 onClick={() => {

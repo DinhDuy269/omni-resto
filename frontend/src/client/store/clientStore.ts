@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { CartItem, OrderMode, ClientOrderDraft, PlacedOrder } from '../../shared/types/client';
+import { useAdminStore } from '../../admin/store/adminStore';
 
 // ─── State Interface ──────────────────────────────────────────────────────────
 
@@ -103,11 +104,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
   placeOrder: (draft) => {
     orderCounter += 1;
     const state = get();
-    const branchCode = draft.branchId.split('-').slice(1).join('').toUpperCase() || 'XX';
+    const branchCode = draft.branchId ? draft.branchId.split('-').slice(1).join('').toUpperCase() : 'HK';
     const order: PlacedOrder = {
       id: `client-${Date.now()}`,
       orderNumber: `ORD-${branchCode}-${orderCounter}`,
-      branchName: draft.branchName,
+      branchName: draft.branchName || 'OmniResto - Hoàn Kiếm',
       orderMode: draft.orderMode,
       tableNo: draft.tableNo,
       customerName: draft.customerName,
@@ -118,6 +119,29 @@ export const useClientStore = create<ClientState>((set, get) => ({
       estimatedMinutes: draft.orderMode === 'DELIVERY' ? 35 : draft.orderMode === 'TAKEAWAY' ? 20 : 15,
       paymentMethod: draft.paymentMethod,
     };
+
+    // Synchronize to Admin Store and update Table state automatically
+    useAdminStore.getState().addOrderFromClient({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      branchId: draft.branchId || 'br-01',
+      branchName: order.branchName,
+      orderType: order.orderMode,
+      tableNo: order.tableNo,
+      status: 'PENDING',
+      items: order.items.map((it, i) => ({
+        id: String(i + 1),
+        name: it.name,
+        quantity: it.quantity,
+        price: it.price,
+        notes: it.notes,
+      })),
+      totalAmount: order.totalAmount,
+      createdAt: 'Vừa xong',
+      customerName: order.customerName,
+      paymentMethod: order.paymentMethod as any,
+    });
+
     set({ placedOrder: order, cart: [], orderDraft: {} });
     return order;
   },

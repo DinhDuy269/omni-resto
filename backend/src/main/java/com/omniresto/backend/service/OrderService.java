@@ -18,12 +18,16 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.omniresto.backend.model.order.response.OrderEventMessage;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public List<OrderResponse> getAllOrders(String branchId, OrderStatus status) {
         List<OrderEntity> orders;
@@ -42,6 +46,12 @@ public class OrderService {
         return orders.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    public OrderResponse getOrderById(String id) {
+        OrderEntity entity = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + id));
+        return mapToResponse(entity);
     }
 
     @Transactional
@@ -79,7 +89,12 @@ public class OrderService {
             });
         }
 
-        return mapToResponseWithItems(saved, itemEntities);
+        OrderResponse response = mapToResponseWithItems(saved, itemEntities);
+
+        // Notify WebSockets
+        sendWebSocketEvent("ORDER_CREATED", response);
+
+        return response;
     }
 
     public OrderResponse updateOrderStatus(String id, OrderStatus status) {
@@ -87,11 +102,32 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found: " + id));
         entity.setStatus(status);
         OrderEntity updated = orderRepository.save(entity);
-        return mapToResponse(updated);
+        OrderResponse response = mapToResponse(updated);
+
+        // Notify WebSockets
+        sendWebSocketEvent("ORDER_STATUS_CHANGED", response);
+
+        return response;
+    }
+
+    private void sendWebSocketEvent(String eventType, OrderResponse orderResponse) {
+        try {
+            OrderEventMessage message = OrderEventMessage.builder()
+                    .eventType(eventType)
+                    .order(orderResponse)
+                    .build();
+            messagingTemplate.convertAndSend("/topic/orders", message);
+            if (orderResponse.getBranchId() != null) {
+                messagingTemplate.convertAndSend("/topic/orders/" + orderResponse.getBranchId(), message);
+            }
+        } catch (Exception e) {
+            // Log error silently without failing business transaction
+            System.err.println("Failed to broadcast WebSocket event: " + e.getMessage());
+        }
     }
 
     private OrderResponse mapToResponse(OrderEntity entity) {
-        List<OrderItemEntity> items = orderItemRepository.findByOrderId(entity.getId());
+        List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
         return mapToResponseWithItems(entity, items);
     }
 

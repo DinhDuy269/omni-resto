@@ -10,13 +10,18 @@ import {
   BarChart3,
   Settings,
   Flame,
+  ChefHat,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
+import { useReservationStore } from '../store/reservationStore';
 import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
   const { orders } = useAdminStore();
+  const { reservations } = useReservationStore();
   const pendingOrdersCount = orders.filter((o) => o.status === 'pending').length;
+  const pendingReservationsCount = reservations.filter((r) => r.status === 'pending').length;
 
   const navItems = [
     {
@@ -25,13 +30,14 @@ export const Sidebar: React.FC = () => {
         { label: 'Tổng Quan Hệ Thống', path: '/admin', icon: LayoutDashboard },
         { label: 'Quản Lý Chi Nhánh', path: '/admin/branches', icon: Store },
         { label: 'Master Menu & Món', path: '/admin/menu', icon: UtensilsCrossed },
-        {
-          label: 'Đơn Hàng Chuỗi',
-          path: '/admin/orders',
-          icon: ShoppingBag,
+        { label: 'Đơn Hàng Chuỗi', path: '/admin/orders', icon: ShoppingBag,
           badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
         },
+        { label: 'Màn Hình Bếp (KDS)', path: '/admin/kds', icon: ChefHat },
         { label: 'Sơ Đồ Bàn & Đặt Bàn', path: '/admin/tables', icon: Grid2x2 },
+        { label: 'Quản Lý Đặt Bàn', path: '/admin/reservations', icon: CalendarCheck,
+          badge: pendingReservationsCount > 0 ? pendingReservationsCount : undefined,
+        },
       ],
     },
     {

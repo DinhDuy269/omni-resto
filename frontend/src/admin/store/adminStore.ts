@@ -30,6 +30,8 @@ interface AdminState {
 
   // Actions - Orders
   updateOrderStatus: (id: string, status: Order['status']) => void;
+  addOrderFromClient: (order: Order) => void;
+  handleWebSocketOrderEvent: (event: { eventType: string; order: Order }) => void;
 
   // Actions - Staff
   addStaff: (staff: Omit<StaffUser, 'id' | 'createdAt'>) => void;
@@ -357,9 +359,57 @@ export const useAdminStore = create<AdminState>((set) => ({
     })),
 
   updateOrderStatus: (id, status) =>
-    set((state) => ({
-      orders: state.orders.map((o) => (o.id === id ? { ...o, status } : o)),
-    })),
+    set((state) => {
+      const targetOrder = state.orders.find((o) => o.id === id);
+      const updatedOrders = state.orders.map((o) => (o.id === id ? { ...o, status } : o));
+
+      let updatedTables = state.tables;
+      if (targetOrder && targetOrder.tableNo) {
+        if (status === 'COMPLETED') {
+          updatedTables = state.tables.map((t) =>
+            t.tableNo.toLowerCase() === targetOrder.tableNo?.toLowerCase()
+              ? { ...t, status: 'CLEANING', currentOrderAmount: undefined, occupiedSince: undefined }
+              : t
+          );
+        } else if (status === 'PREPARING' || status === 'READY') {
+          updatedTables = state.tables.map((t) =>
+            t.tableNo.toLowerCase() === targetOrder.tableNo?.toLowerCase()
+              ? { ...t, status: 'OCCUPIED' }
+              : t
+          );
+        }
+      }
+
+      return { orders: updatedOrders, tables: updatedTables };
+    }),
+
+  addOrderFromClient: (newOrder) =>
+    set((state) => {
+      let updatedTables = state.tables;
+      if (newOrder.orderType === 'DINE_IN' && newOrder.tableNo) {
+        updatedTables = state.tables.map((t) =>
+          t.tableNo.toLowerCase() === newOrder.tableNo?.toLowerCase()
+            ? { ...t, status: 'OCCUPIED', currentOrderAmount: newOrder.totalAmount, occupiedSince: 'Vừa gọi đơn' }
+            : t
+        );
+      }
+      return {
+        orders: [newOrder, ...state.orders.filter(o => o.id !== newOrder.id)],
+        tables: updatedTables,
+      };
+    }),
+
+  handleWebSocketOrderEvent: ({ eventType, order }) =>
+    set((state) => {
+      const exists = state.orders.some((o) => o.id === order.id);
+      let newOrders = state.orders;
+      if (eventType === 'ORDER_CREATED' || !exists) {
+        newOrders = [order, ...state.orders.filter((o) => o.id !== order.id)];
+      } else {
+        newOrders = state.orders.map((o) => (o.id === order.id ? { ...o, ...order } : o));
+      }
+      return { orders: newOrders };
+    }),
 
   addStaff: (newStaffData) =>
     set((state) => ({

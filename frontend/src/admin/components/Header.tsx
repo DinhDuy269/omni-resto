@@ -48,6 +48,24 @@ export const Header: React.FC<HeaderProps> = () => {
             </select>
             <ChevronDown size={14} color="var(--primary)" />
           </div>
+
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-full)',
+              backgroundColor: 'var(--success-bg)',
+              border: '1px solid var(--success-border)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: 'var(--success)',
+            }}
+          >
+            <span className="pulse-dot" style={{ backgroundColor: 'var(--success)' }} />
+            Realtime Sync
+          </div>
         </div>
 
         {/* Right: Date, Notifications & User Profile Dropdown */}

@@ -9,6 +9,8 @@ import { MasterMenuManagement } from '../admin/pages/menu/MasterMenuManagement';
 import { ChainOrdersManagement } from '../admin/pages/order/ChainOrdersManagement';
 import { StaffManagement } from '../admin/pages/auth/StaffManagement';
 import { TableManagement } from '../admin/pages/table/TableManagement';
+import { KitchenDisplaySystem } from '../admin/pages/kds/KitchenDisplaySystem';
+import { ReservationManagement } from '../admin/pages/reservation/ReservationManagement';
 
 // ── Client imports ────────────────────────────────────────────────────────────
 import { ClientLayout } from '../client/layouts/ClientLayout';
@@ -16,6 +18,9 @@ import ClientHome from '../client/pages/home/ClientHome';
 import ClientMenu from '../client/pages/menu/ClientMenu';
 import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
+import ClientReservation from '../client/pages/reservation/ClientReservation';
+import ClientEvents from '../client/pages/events/ClientEvents';
+import ClientAbout from '../client/pages/about/ClientAbout';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -34,6 +39,8 @@ export const AppRouter: React.FC = () => {
           <Route path="orders" element={<ChainOrdersManagement />} />
           <Route path="staff" element={<StaffManagement />} />
           <Route path="tables" element={<TableManagement />} />
+          <Route path="kds" element={<KitchenDisplaySystem />} />
+          <Route path="reservations" element={<ReservationManagement />} />
           <Route
             path="reports"
             element={
@@ -66,6 +73,9 @@ export const AppRouter: React.FC = () => {
           <Route path="menu" element={<ClientMenu />} />
           <Route path="cart" element={<ClientCart />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
+          <Route path="reservation" element={<ClientReservation />} />
+          <Route path="events" element={<ClientEvents />} />
+          <Route path="about" element={<ClientAbout />} />
           <Route path="*" element={<Navigate to="/client" replace />} />
         </Route>
 
@@ -75,4 +85,3 @@ export const AppRouter: React.FC = () => {
     </BrowserRouter>
   );
 };
-

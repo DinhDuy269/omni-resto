@@ -203,6 +203,38 @@ const ClientOrderTracking: React.FC = () => {
           </div>
         </div>
 
+        {/* Dynamic VietQR Payment Card */}
+        {placedOrder.paymentMethod === 'QR_CODE' && !isCompleted && (
+          <div
+            style={{
+              background: 'var(--c-surface)',
+              border: '2px solid var(--c-primary)',
+              borderRadius: 'var(--c-r-lg)',
+              padding: '20px',
+              textAlign: 'center',
+              marginBottom: 20,
+              boxShadow: '0 4px 20px rgba(249, 115, 22, 0.15)',
+            }}
+          >
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--c-text-main)', margin: '0 0 6px' }}>
+              📲 Thanh Toán Nhanh Qua Mã VietQR
+            </h3>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--c-text-muted)', margin: '0 0 16px' }}>
+              Mở ứng dụng Ngân hàng / Momo để quét mã tự động điền số tiền & nội dung
+            </p>
+            <div style={{ display: 'inline-block', background: '#ffffff', padding: '12px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              <img
+                src={`https://img.vietqr.io/image/MB-03456789999-compact2.png?amount=${placedOrder.totalAmount}&addInfo=${placedOrder.orderNumber}&accountName=OMNIRESTO%20CHAIN`}
+                alt="VietQR Payment"
+                style={{ width: 220, height: 220, borderRadius: '8px', display: 'block' }}
+              />
+            </div>
+            <div style={{ marginTop: '14px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--c-primary)' }}>
+              Số tiền: {placedOrder.totalAmount.toLocaleString('vi-VN')}đ • Nội dung: {placedOrder.orderNumber}
+            </div>
+          </div>
+        )}
+
         {/* CTA buttons */}
         <div style={{ display: 'flex', gap: 12 }}>
           <button

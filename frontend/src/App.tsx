@@ -1,11 +1,11 @@
 import { AppRouter } from './router';
-import { BackendConnectionGate } from './shared/components/BackendConnectionGate';
+// import { BackendConnectionGate } from './shared/components/BackendConnectionGate';
 
 function App() {
   return (
-    <BackendConnectionGate>
-      <AppRouter />
-    </BackendConnectionGate>
+    // <BackendConnectionGate>
+    <AppRouter />
+    // </BackendConnectionGate>
   );
 }
 
