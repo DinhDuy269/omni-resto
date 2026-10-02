@@ -5,6 +5,7 @@ import {
   Store,
   UtensilsCrossed,
   ShoppingBag,
+  CalendarCheck,
   Grid2x2,
   Users,
   BarChart3,
@@ -31,7 +32,10 @@ export const Sidebar: React.FC = () => {
           icon: ShoppingBag,
           badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
         },
-        { label: 'Sơ Đồ Bàn & Đặt Bàn', path: '/admin/tables', icon: Grid2x2 },
+        // ── Mục Đặt Bàn mới thêm nằm dưới Đơn Hàng Chuỗi ──
+        { label: 'Quản Lý Đặt Bàn', path: '/admin/reservations', icon: CalendarCheck },
+        // ── Đã đổi tên chỉ còn là Sơ Đồ Bàn ──
+        { label: 'Sơ Đồ Bàn', path: '/admin/tables', icon: Grid2x2 },
       ],
     },
     {

@@ -28,7 +28,7 @@ export const AdminLayout: React.FC = () => {
         onClose={() => setIsQuickActionModalOpen(false)}
         title="Thao Tác Nhanh Hệ Thống HQ"
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
           <button
             className="card"
             style={{
@@ -69,7 +69,30 @@ export const AdminLayout: React.FC = () => {
               🏢 Mở Chi Nhánh Mới
             </strong>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-              Thêm địa điểm điểm bán mới
+              Thêm địa điểm bán mới
+            </span>
+          </button>
+
+          {/* ── Nút Thao Tác Nhanh: Quản Lý Đặt Bàn ── */}
+          <button
+            className="card"
+            style={{
+              padding: '20px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              borderColor: '#059669',
+              backgroundColor: '#ecfdf5',
+            }}
+            onClick={() => {
+              setIsQuickActionModalOpen(false);
+              navigate('/admin/reservations');
+            }}
+          >
+            <strong style={{ fontSize: '1rem', color: '#059669', display: 'block', marginBottom: '4px' }}>
+              📅 Quản Lý Đặt Bàn
+            </strong>
+            <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              Sơ đồ bàn & tiếp nhận đơn
             </span>
           </button>
         </div>

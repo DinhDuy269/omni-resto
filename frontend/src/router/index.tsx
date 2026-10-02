@@ -10,12 +10,18 @@ import { ChainOrdersManagement } from '../admin/pages/order/ChainOrdersManagemen
 import { StaffManagement } from '../admin/pages/auth/StaffManagement';
 import { TableManagement } from '../admin/pages/table/TableManagement';
 
+// @ts-expect-error JSX component file without TypeScript declaration
+import ReservationManagement from '../pages/admin/ReservationManagement';
+
 // ── Client imports ────────────────────────────────────────────────────────────
 import { ClientLayout } from '../client/layouts/ClientLayout';
 import ClientHome from '../client/pages/home/ClientHome';
 import ClientMenu from '../client/pages/menu/ClientMenu';
 import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
+
+// @ts-expect-error JSX component file without TypeScript declaration
+import ReservationPage from '../pages/customer/ReservationPage';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -34,6 +40,10 @@ export const AppRouter: React.FC = () => {
           <Route path="orders" element={<ChainOrdersManagement />} />
           <Route path="staff" element={<StaffManagement />} />
           <Route path="tables" element={<TableManagement />} />
+
+          {/* Route Quản lý đặt bàn cho nhân viên/thu ngân */}
+          <Route path="reservations" element={<ReservationManagement />} />
+
           <Route
             path="reports"
             element={
@@ -66,6 +76,11 @@ export const AppRouter: React.FC = () => {
           <Route path="menu" element={<ClientMenu />} />
           <Route path="cart" element={<ClientCart />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
+
+          {/* Route Khách hàng đặt bàn trực tuyến */}
+          <Route path="reservation" element={<ReservationPage />} />
+          <Route path="dat-ban" element={<ReservationPage />} />
+
           <Route path="*" element={<Navigate to="/client" replace />} />
         </Route>
 
@@ -75,4 +90,3 @@ export const AppRouter: React.FC = () => {
     </BrowserRouter>
   );
 };
-

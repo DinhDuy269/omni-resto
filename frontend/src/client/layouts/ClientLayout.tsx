@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { ShoppingCart, MapPin, UtensilsCrossed } from 'lucide-react';
+import { ShoppingCart, MapPin, UtensilsCrossed, CalendarDays } from 'lucide-react';
 import { useClientStore, selectTotalItems, selectTotalAmount } from '../store/clientStore';
 import { CartDrawer } from '../components/CartDrawer';
 import './ClientLayout.css';
@@ -29,27 +29,54 @@ export const ClientLayout: React.FC = () => {
             </div>
           )}
 
-          {/* Cart — Fitts's Law: large, right-aligned CTA */}
-          <button
-            id="client-cart-button"
-            className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}
-            onClick={openCart}
-            aria-label={`Xem giỏ hàng (${totalItems} món)`}
-          >
-            <ShoppingCart size={19} strokeWidth={2.2} />
-            {totalItems > 0 ? (
-              <>
-                <span className="client-cart-amount">
-                  {totalAmount.toLocaleString('vi-VN')}đ
-                </span>
-                <span className="client-cart-badge" aria-label={`${totalItems} món`}>
-                  {totalItems}
-                </span>
-              </>
-            ) : (
-              <span style={{ fontSize: '0.875rem' }}>Giỏ hàng</span>
-            )}
-          </button>
+          {/* ── Header Actions: Nút Đặt Bàn & Giỏ Hàng ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Nút Đặt Bàn Demo trực tiếp trên Client */}
+            <Link
+              to="/client/reservation"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                backgroundColor: '#10b981',
+                color: '#ffffff',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                textDecoration: 'none',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+            >
+              <CalendarDays size={18} />
+              <span>Đặt Bàn</span>
+            </Link>
+
+            {/* Cart — Fitts's Law: large, right-aligned CTA */}
+            <button
+              id="client-cart-button"
+              className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}
+              onClick={openCart}
+              aria-label={`Xem giỏ hàng (${totalItems} món)`}
+            >
+              <ShoppingCart size={19} strokeWidth={2.2} />
+              {totalItems > 0 ? (
+                <>
+                  <span className="client-cart-amount">
+                    {totalAmount.toLocaleString('vi-VN')}đ
+                  </span>
+                  <span className="client-cart-badge" aria-label={`${totalItems} món`}>
+                    {totalItems}
+                  </span>
+                </>
+              ) : (
+                <span style={{ fontSize: '0.875rem' }}>Giỏ hàng</span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
