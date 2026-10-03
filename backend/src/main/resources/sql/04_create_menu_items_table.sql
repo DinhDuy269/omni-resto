@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS menu_items (
     is_best_seller BOOLEAN DEFAULT FALSE,
     meal_periods VARCHAR(100) DEFAULT 'MORNING,NOON,EVENING',  -- Lọc theo buổi: MORNING, NOON, EVENING
     image_url VARCHAR(500),
+    is_vegetarian BOOLEAN DEFAULT FALSE,
+    spicy_level TINYINT DEFAULT 0,
+    allergens VARCHAR(255),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_menu_category (category_id),

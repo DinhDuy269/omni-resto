@@ -36,4 +36,9 @@ public class TableController {
     ) {
         return ResponseEntity.ok(tableService.updateTableStatus(id, status));
     }
+
+    @PostMapping("/{id}/regenerate-qr")
+    public ResponseEntity<TableResponse> regenerateQrToken(@PathVariable String id) {
+        return ResponseEntity.ok(tableService.regenerateQrSecretToken(id));
+    }
 }

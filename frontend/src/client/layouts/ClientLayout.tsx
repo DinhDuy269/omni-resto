@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
 import { ShoppingCart, UtensilsCrossed, CheckCircle } from 'lucide-react';
-import { useClientStore, selectTotalItems, selectTotalAmount } from '../store/clientStore';
+import { useClientStore, selectTotalItems, selectTotalAmount, selectHasActiveOrders } from '../store/clientStore';
 import { CartDrawer } from '../components/CartDrawer';
+import { ClientActiveOrderBar } from '../components/ClientActiveOrderBar';
+import { ClientAiChatWidget } from '../components/chat/ClientAiChatWidget';
 import { apiClient } from '../../shared/api/client';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 import './ClientLayout.css';
 
 const NAV_LINKS = [
   { to: '/client/menu',        label: 'Thực đơn' },
+  { to: '/client/orders',      label: 'Đơn hàng' },
   { to: '/client/reservation', label: 'Đặt bàn'  },
   { to: '/client/events',      label: 'Sự kiện'  },
   { to: '/client/about',       label: 'Giới thiệu' },
@@ -82,6 +85,7 @@ export const ClientLayout: React.FC = () => {
   const { isCartOpen, openCart, closeCart } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
+  const hasActiveOrder = useClientStore(selectHasActiveOrders);
 
   return (
     <div className="client-layout client-scope">
@@ -96,21 +100,41 @@ export const ClientLayout: React.FC = () => {
 
           {/* Nav links */}
           <nav style={{ display: 'flex', gap: 4, flex: 1, justifyContent: 'center' }}>
-            {NAV_LINKS.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                style={({ isActive }) => ({
-                  padding: '7px 14px', borderRadius: 'var(--c-r-full)',
-                  fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none',
-                  transition: 'all 0.15s',
-                  background: isActive ? 'rgba(232,83,38,0.1)' : 'transparent',
-                  color: isActive ? 'var(--c-primary)' : 'var(--c-text-muted)',
-                })}
-              >
-                {link.label}
-              </NavLink>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const isOrderLink = link.to === '/client/orders';
+              const showDot = isOrderLink && hasActiveOrder;
+              return (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  style={({ isActive }) => ({
+                    padding: '7px 14px', borderRadius: 'var(--c-r-full)',
+                    fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none',
+                    transition: 'all 0.15s',
+                    background: isActive ? 'rgba(232,83,38,0.1)' : 'transparent',
+                    color: isActive ? 'var(--c-primary)' : 'var(--c-text-muted)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  })}
+                >
+                  <span>{link.label}</span>
+                  {showDot && (
+                    <span
+                      style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ea580c',
+                        boxShadow: '0 0 0 2px #ffffff, 0 0 6px #ea580c',
+                        display: 'inline-block',
+                      }}
+                      title="Có đơn hàng đang chuẩn bị"
+                    />
+                  )}
+                </NavLink>
+              );
+            })}
           </nav>
 
           {/* Cart */}
@@ -236,6 +260,12 @@ export const ClientLayout: React.FC = () => {
 
       {/* ── Cart Drawer ── */}
       <CartDrawer isOpen={isCartOpen} onClose={closeCart} />
+
+      {/* ── Floating Live-Tracker Pill ── */}
+      <ClientActiveOrderBar />
+
+      {/* ── OmniBot AI Culinary Assistant Widget ── */}
+      <ClientAiChatWidget />
     </div>
   );
 };

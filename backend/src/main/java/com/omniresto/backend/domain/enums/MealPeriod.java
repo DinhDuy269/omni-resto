@@ -59,6 +59,11 @@ public enum MealPeriod {
      * có được phép đặt tại thời điểm time hay không.
      */
     public static boolean isAvailableNow(String mealPeriods, LocalTime time) {
+        MealPeriod current = getCurrentPeriod(time);
+        if (current == CLOSED) {
+            return false;
+        }
+
         if (mealPeriods == null || mealPeriods.isBlank()) {
             return true;
         }
@@ -67,8 +72,7 @@ public enum MealPeriod {
             return true;
         }
 
-        MealPeriod current = getCurrentPeriod(time);
-        if (current == CLOSED || current == BREAK) {
+        if (current == BREAK) {
             return false;
         }
 

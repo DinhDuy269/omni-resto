@@ -29,4 +29,7 @@ public class TableEntity extends BaseEntity {
 
     @Column(name = "current_order_id", length = 36)
     private String currentOrderId;
+
+    @Column(name = "qr_secret_token", unique = true, length = 64)
+    private String qrSecretToken;
 }

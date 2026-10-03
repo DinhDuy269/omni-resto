@@ -11,10 +11,10 @@ export const KitchenDisplaySystem: React.FC = () => {
   // Real-time WebSocket connection hook
   const { isConnected } = useWebSocket(handleWebSocketOrderEvent);
 
-  // Filter orders relevant for Kitchen (PENDING, PREPARING, READY)
+  // Filter orders relevant for Kitchen (PENDING, CONFIRMED, PREPARING, READY)
   const kitchenOrders = orders.filter((order) => {
     if (filterStatus === 'KITCHEN_ACTIVE') {
-      return order.status === 'PENDING' || order.status === 'PREPARING' || order.status === 'READY';
+      return order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PREPARING' || order.status === 'READY';
     }
     return order.status === filterStatus;
   });
@@ -22,7 +22,9 @@ export const KitchenDisplaySystem: React.FC = () => {
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case 'PENDING':
-        return { label: 'Đơn Mới', bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', icon: AlertCircle };
+        return { label: 'Đơn Chờ Xác Nhận', bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', icon: AlertCircle };
+      case 'CONFIRMED':
+        return { label: 'Hàng Đợi Nấu', bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', icon: Clock };
       case 'PREPARING':
         return { label: 'Đang Nấu', bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', icon: Utensils };
       case 'READY':
@@ -95,7 +97,7 @@ export const KitchenDisplaySystem: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
             { id: 'KITCHEN_ACTIVE', label: 'Tất cả đơn bếp' },
-            { id: 'PENDING', label: '🔴 Đơn chờ nhận' },
+            { id: 'CONFIRMED', label: '🔵 Chờ nấu' },
             { id: 'PREPARING', label: '🟡 Đang chế biến' },
             { id: 'READY', label: '🟢 Đã xong' },
           ].map((tab) => (
@@ -162,8 +164,8 @@ export const KitchenDisplaySystem: React.FC = () => {
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   borderRadius: '16px',
-                  border: order.status === 'PENDING' ? '2px solid #ef4444' : '1px solid var(--border-color)',
-                  boxShadow: order.status === 'PENDING' ? '0 0 20px rgba(239, 68, 68, 0.2)' : 'none',
+                  border: order.status === 'PENDING' ? '2px solid #ef4444' : order.status === 'CONFIRMED' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
+                  boxShadow: order.status === 'PENDING' ? '0 0 20px rgba(239, 68, 68, 0.2)' : order.status === 'CONFIRMED' ? '0 0 16px rgba(59, 130, 246, 0.2)' : 'none',
                   padding: '20px',
                   gap: '16px',
                   background: 'var(--bg-surface)',
@@ -256,14 +258,14 @@ export const KitchenDisplaySystem: React.FC = () => {
 
                 {/* Footer Action Buttons */}
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  {order.status === 'PENDING' && (
+                  {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
                     <button
                       onClick={() => updateOrderStatus(order.id, 'PREPARING')}
                       style={{
                         flex: 1,
                         padding: '10px',
                         borderRadius: '10px',
-                        background: '#f59e0b',
+                        background: order.status === 'CONFIRMED' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#f59e0b',
                         color: '#ffffff',
                         fontWeight: 700,
                         border: 'none',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ShieldCheck, Copy, RefreshCw } from 'lucide-react';
+import { PAYMENT_CONFIG, generateVietQRUrl } from '../../shared/config/paymentConfig';
 
 interface VietQRPaymentModalProps {
   orderId: string;
@@ -19,15 +20,11 @@ export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  const bankName = 'MBBank (Ngân Hàng Quân Đội)';
-  const accountNumber = '09888888888';
-  const accountHolder = 'NHAN HANG OMNIRESTO';
+  const { bankName, accountNumber, accountName: accountHolder } = PAYMENT_CONFIG;
   const transferContent = `OMNIRESTO ${orderNumber}`;
 
   // VietQR Dynamic Image URL
-  const qrImageUrl = `https://img.vietqr.io/image/MB-${accountNumber}-compact2.png?amount=${totalAmount}&addInfo=${encodeURIComponent(
-    transferContent
-  )}&accountName=${encodeURIComponent(accountHolder)}`;
+  const qrImageUrl = generateVietQRUrl(totalAmount, transferContent);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transferContent);

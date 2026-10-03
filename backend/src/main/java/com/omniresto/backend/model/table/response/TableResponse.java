@@ -17,4 +17,5 @@ public class TableResponse {
     private TableStatus status;
     private BigDecimal currentOrderAmount;
     private String occupiedSince;
+    private String qrSecretToken;
 }

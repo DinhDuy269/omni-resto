@@ -3,6 +3,7 @@ package com.omniresto.backend.controller;
 import com.omniresto.backend.domain.enums.MenuStatus;
 import com.omniresto.backend.model.menu.request.MenuItemCreateRequest;
 import com.omniresto.backend.model.menu.request.MenuItemUpdateRequest;
+import com.omniresto.backend.model.menu.response.MealPeriodInfoResponse;
 import com.omniresto.backend.model.menu.response.MenuItemResponse;
 import com.omniresto.backend.service.MenuItemService;
 import jakarta.validation.Valid;
@@ -32,7 +33,7 @@ public class MenuItemController {
     }
 
     @GetMapping("/current-period")
-    public ResponseEntity<com.omniresto.backend.model.menu.response.MealPeriodInfoResponse> getCurrentMealPeriod() {
+    public ResponseEntity<MealPeriodInfoResponse> getCurrentMealPeriod() {
         return ResponseEntity.ok(menuItemService.getCurrentMealPeriodInfo());
     }
 

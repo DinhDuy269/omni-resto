@@ -9,8 +9,9 @@
   margin-left: var(--sidebar-width);
   margin-top: var(--header-height);
   flex: 1;
-  padding: 24px 28px 48px 28px;
+  padding: 30px 36px 64px 36px;
   width: calc(100% - var(--sidebar-width));
   box-sizing: border-box;
   transition: margin-left var(--transition-normal);
+  max-width: 1600px;
 }

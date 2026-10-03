@@ -198,18 +198,19 @@ export const ClientMenu: React.FC = () => {
       <div style={{
         background: 'var(--c-surface)',
         borderBottom: '1px solid var(--c-border-light)',
-        padding: '16px 24px',
       }}>
         <div style={{
           maxWidth: 'var(--c-max-w)', margin: '0 auto',
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+          padding: '16px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 16, flexWrap: 'wrap',
         }}>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--c-text-main)', margin: 0 }}>
-              Thực Đơn Cơm Văn Phòng & Lẩu
+            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--c-text-main)', margin: 0 }}>
+              Thực Đơn Đặc Sắc OmniResto
             </h1>
-            <span style={{ fontSize: '0.8125rem', color: 'var(--c-text-muted)' }}>
-              Phân chia thực đơn theo khung giờ Sáng · Trưa · Tối
+            <span style={{ fontSize: '0.85rem', color: 'var(--c-text-muted)' }}>
+              Tinh hoa ẩm thực ba miền: Phở bò, Cơm tấm, Bánh mì chảo, Lẩu riêu cua & Thức uống thanh nhiệt
             </span>
           </div>
 
@@ -252,10 +253,10 @@ export const ClientMenu: React.FC = () => {
       <div style={{
         background: banner.bg,
         borderBottom: '1px solid rgba(0,0,0,0.06)',
-        padding: '12px 24px',
       }}>
         <div style={{
           maxWidth: 'var(--c-max-w)', margin: '0 auto',
+          padding: '12px 24px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 16, flexWrap: 'wrap',
         }}>
@@ -287,16 +288,18 @@ export const ClientMenu: React.FC = () => {
       <div style={{
         background: 'var(--c-surface)',
         borderBottom: '1px solid var(--c-border-light)',
-        padding: '12px 24px',
       }}>
         <div style={{
           maxWidth: 'var(--c-max-w)', margin: '0 auto',
+          padding: '12px 24px',
           display: 'flex', gap: 10, alignItems: 'center', overflowX: 'auto',
           scrollbarWidth: 'none',
         }}>
           {MEAL_PERIOD_TABS.map((tab) => {
             const isSelected = activePeriod === tab.id;
-            const isLive = currentPeriod === tab.id;
+            const isLive = tab.id === 'ALL_DAY'
+              ? currentPeriod !== 'CLOSED' && currentPeriod !== 'BREAK'
+              : currentPeriod === tab.id;
             return (
               <button
                 key={tab.id}
@@ -337,33 +340,49 @@ export const ClientMenu: React.FC = () => {
         position: 'sticky', top: 'var(--c-header-h)', zIndex: 90,
         background: 'rgba(255,252,249,0.96)', backdropFilter: 'blur(10px)',
         borderBottom: '1px solid var(--c-border-light)',
-        overflowX: 'auto', scrollbarWidth: 'none',
       }}>
         <div style={{
           maxWidth: 'var(--c-max-w)', margin: '0 auto',
-          padding: '10px 24px', display: 'flex', gap: 8, alignItems: 'center',
-          width: 'max-content', minWidth: '100%',
+          padding: '10px 24px',
+          display: 'flex', gap: 8, alignItems: 'center',
+          overflowX: 'auto', scrollbarWidth: 'none',
         }}>
           {categories.map((cat) => {
             const isActive = cat === activeCategory;
+            const count = cat === ALL_CATEGORY ? menuItems.length : menuItems.filter((m) => m.category === cat).length;
             return (
               <button
                 key={cat}
                 id={`category-filter-${cat}`}
                 className="c-btn"
                 style={{
-                  minHeight: 34, padding: '4px 14px', borderRadius: 'var(--c-r-full)',
-                  fontSize: '0.8125rem', fontWeight: isActive ? 700 : 500,
-                  whiteSpace: 'nowrap', flexShrink: 0,
-                  background: isActive ? 'var(--c-text-main)' : 'var(--c-surface)',
-                  color: isActive ? '#fff' : 'var(--c-text-muted)',
-                  border: `1px solid ${isActive ? 'var(--c-text-main)' : 'var(--c-border)'}`,
+                  minHeight: 36,
+                  padding: '6px 16px',
+                  borderRadius: 'var(--c-r-full)',
+                  fontSize: '0.85rem',
+                  fontWeight: isActive ? 700 : 500,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  background: isActive ? 'var(--c-primary)' : 'var(--c-surface)',
+                  color: isActive ? '#fff' : 'var(--c-text-body)',
+                  border: `1.5px solid ${isActive ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                  boxShadow: isActive ? 'var(--c-shadow-orange)' : 'none',
                   transition: 'all var(--c-t-fast)',
                 }}
                 onClick={() => setActiveCategory(cat)}
                 aria-pressed={isActive}
               >
-                {cat}
+                <span>{cat}</span>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    opacity: isActive ? 0.9 : 0.6,
+                    marginLeft: 6,
+                    fontWeight: 700,
+                  }}
+                >
+                  ({count})
+                </span>
               </button>
             );
           })}

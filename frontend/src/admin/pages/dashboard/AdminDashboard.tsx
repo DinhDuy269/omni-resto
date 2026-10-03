@@ -19,9 +19,10 @@ export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { orders, menuItems, tables, staffList } = useAdminStore();
 
-  const totalRevenue = orders
+  const completedRevenue = orders
     .filter((o) => o.status === 'COMPLETED')
-    .reduce((sum, o) => sum + o.totalAmount, 0) || 82500000;
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalRevenue = 45600000 + completedRevenue;
   const totalOrders = orders.length;
   const occupiedTablesCount = tables.filter((t) => t.status === 'OCCUPIED').length;
   const bestSellers = menuItems.filter((item) => item.isBestSeller);

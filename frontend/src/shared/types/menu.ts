@@ -11,6 +11,16 @@ export interface MealPeriodInfo {
   message: string;
 }
 
+export interface CategoryOption {
+  id: string;
+  categoryId: string;
+  name: string;
+  optionType: 'SIZE' | 'TOPPING';
+  price: number;
+  status: string;
+  displayOrder?: number;
+}
+
 export interface MenuItem {
   id: string;
   code: string;
@@ -28,6 +38,10 @@ export interface MenuItem {
   mealPeriodNote?: string;
   image: string;
   imageUrl?: string;
+  options?: CategoryOption[];
+  isVegetarian?: boolean;
+  spicyLevel?: number;
+  allergens?: string[];
 }
 
 export interface MenuItemRequest {

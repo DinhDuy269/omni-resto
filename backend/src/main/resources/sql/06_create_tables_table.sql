@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS tables (
     capacity INT NOT NULL DEFAULT 4,
     status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE', -- AVAILABLE, OCCUPIED, RESERVED, CLEANING
     current_order_id VARCHAR(36),
+    qr_secret_token VARCHAR(64) UNIQUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_tables_status (status)
+    INDEX idx_tables_status (status),
+    INDEX idx_tables_qr_token (qr_secret_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

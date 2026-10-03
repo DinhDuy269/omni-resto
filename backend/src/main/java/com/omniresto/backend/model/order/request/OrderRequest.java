@@ -18,5 +18,6 @@ public class OrderRequest {
     private BigDecimal totalAmount;
     private String customerName;
     private PaymentMethod paymentMethod;
+    private String sessionToken;
     private List<OrderItemRequest> items;
 }

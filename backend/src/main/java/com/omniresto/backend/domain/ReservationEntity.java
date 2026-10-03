@@ -46,4 +46,15 @@ public class ReservationEntity extends BaseEntity {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private ReservationStatus status = ReservationStatus.pending;
+
+    @Column(name = "reservation_code", length = 50)
+    @Builder.Default
+    private String reservationCode = "RSV-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+    @PrePersist
+    public void prePersistReservationCode() {
+        if (this.reservationCode == null || this.reservationCode.trim().isEmpty()) {
+            this.reservationCode = "RSV-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        }
+    }
 }

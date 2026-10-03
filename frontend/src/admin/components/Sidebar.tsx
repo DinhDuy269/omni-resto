@@ -19,8 +19,12 @@ import './Sidebar.css';
 export const Sidebar: React.FC = () => {
   const { orders } = useAdminStore();
   const { reservations } = useReservationStore();
-  const pendingOrdersCount = orders.filter((o) => o.status === 'pending').length;
-  const pendingReservationsCount = reservations.filter((r) => r.status === 'pending').length;
+  const pendingOrdersCount = orders.filter(
+    (o) => o.status?.toUpperCase() === 'PENDING'
+  ).length;
+  const pendingReservationsCount = reservations.filter(
+    (r) => r.status?.toUpperCase() === 'PENDING'
+  ).length;
 
   const navItems = [
     {
@@ -96,6 +100,19 @@ export const Sidebar: React.FC = () => {
           </div>
         ))}
       </nav>
+
+      {/* Branch & System Footer */}
+      <div className="sidebar-footer">
+        <div className="sidebar-footer-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className="pulse-dot" style={{ backgroundColor: '#10b981' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8' }}>Hệ Thống Trực Tuyến</span>
+          </div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', marginTop: '3px' }}>
+            Chi Nhánh Hoàn Kiếm • HN
+          </div>
+        </div>
+      </div>
     </aside>
   );
 };

@@ -57,6 +57,7 @@ export const ChainOrdersManagement: React.FC = () => {
             { id: 'PREPARING', label: 'Đang Nấu Bếp' },
             { id: 'READY', label: 'Sẵn Sàng Giao' },
             { id: 'COMPLETED', label: 'Hoàn Tất' },
+            { id: 'CANCELLED', label: 'Đã Hủy' },
           ].map((tab) => {
             const count = getStatusCount(tab.id);
             return (
@@ -94,7 +95,9 @@ export const ChainOrdersManagement: React.FC = () => {
                     ? 'var(--warning)'
                     : ord.status === 'READY'
                     ? 'var(--purple)'
-                    : 'var(--success)'
+                    : ord.status === 'COMPLETED'
+                    ? 'var(--success)'
+                    : 'var(--danger)'
                 }`,
               }}
             >

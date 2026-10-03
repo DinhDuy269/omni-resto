@@ -7,6 +7,12 @@ export interface TableInfo {
   status: TableStatus;
   currentOrderAmount?: number;
   occupiedSince?: string;
+  qrSecretToken?: string;
+  isVerified?: boolean;
+  paymentRequested?: boolean;
+  isPaid?: boolean;
+  activeOrderNumber?: string;
+  activeSessionToken?: string;
 }
 
 export interface TableRequest {

@@ -33,9 +33,12 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderRequest request) {
+    public ResponseEntity<OrderResponse> createOrder(
+            @Valid @RequestBody OrderRequest request,
+            @RequestHeader(value = "X-Table-Session", required = false) String sessionToken
+    ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orderService.createOrder(request));
+                .body(orderService.createOrder(request, sessionToken));
     }
 
     @PatchMapping("/{id}/status")
@@ -44,5 +47,24 @@ public class OrderController {
             @RequestParam OrderStatus status
     ) {
         return ResponseEntity.ok(orderService.updateOrderStatus(id, status));
+    }
+
+    @PatchMapping("/{orderId}/items/{itemId}/status")
+    public ResponseEntity<OrderResponse> updateOrderItemStatus(
+            @PathVariable String orderId,
+            @PathVariable String itemId,
+            @RequestParam com.omniresto.backend.domain.enums.OrderItemStatus status
+    ) {
+        return ResponseEntity.ok(orderService.updateOrderItemStatus(itemId, status));
+    }
+
+    @PostMapping("/{orderId}/items/{itemId}/cancel")
+    public ResponseEntity<OrderResponse> cancelOrderItem(
+            @PathVariable String orderId,
+            @PathVariable String itemId,
+            @RequestParam(required = false, defaultValue = "Khách yêu cầu hủy món") String reason,
+            @RequestHeader(value = "X-Staff-Id", required = false) String staffId
+    ) {
+        return ResponseEntity.ok(orderService.cancelOrderItem(orderId, itemId, reason, staffId));
     }
 }

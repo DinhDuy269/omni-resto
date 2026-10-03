@@ -59,14 +59,15 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
 
   /* Radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   /* Dimensions */
-  --header-height: 56px;
-  --sidebar-width: 240px;
+  --header-height: 60px;
+  --sidebar-width: 248px;
 
   /* ─── Typography System ─────────────────────────────────────────────────────
      Vai trò font:
@@ -178,10 +179,14 @@ body {
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 16px 20px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
   transition: all var(--transition-fast);
+}
+
+.card:hover {
+  border-color: #cbd5e1;
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -423,9 +428,26 @@ body {
   outline: none;
 }
 
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.2px;
+}
+
+.form-input,
+.form-select,
+.form-textarea,
 .form-control {
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   font-family: var(--font-family);
@@ -436,9 +458,17 @@ body {
   transition: all var(--transition-fast);
 }
 
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
 .form-control:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--primary-glow);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
 /* Simple Fade In */
@@ -449,7 +479,7 @@ body {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 

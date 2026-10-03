@@ -10,12 +10,14 @@ import org.springframework.context.annotation.Configuration;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;
+    private final CategoryOptionRepository categoryOptionRepository;
     private final MenuItemRepository menuItemRepository;
     private final TableRepository tableRepository;
     private final UserRepository userRepository;
@@ -26,27 +28,41 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (categoryRepository.count() == 0) {
-            CategoryEntity cat1 = CategoryEntity.builder().name("Điểm Tâm Sáng").code("BREAKFAST").displayOrder(1).build();
-            cat1.setId("cat-01");
-            CategoryEntity cat2 = CategoryEntity.builder().name("Cơm Văn Phòng & Bún Trưa").code("LUNCH").displayOrder(2).build();
-            cat2.setId("cat-02");
-            CategoryEntity cat3 = CategoryEntity.builder().name("Lẩu & Món Nhắm Ca Tối").code("DINNER").displayOrder(3).build();
-            cat3.setId("cat-03");
-            CategoryEntity cat4 = CategoryEntity.builder().name("Đồ Uống Cả Ngày").code("DRINK").displayOrder(4).build();
-            cat4.setId("cat-04");
+        CategoryEntity catPho = categoryRepository.findById("cat-pho").orElseGet(() -> {
+            CategoryEntity c = CategoryEntity.builder().name("Phở & Bún Nước").code("PHO_BUN").description("Các món phở bò truyền thống, bún bò huế, bún chả que tre").displayOrder(1).build();
+            c.setId("cat-pho");
+            return categoryRepository.save(c);
+        });
+        CategoryEntity catCom = categoryRepository.findById("cat-com").orElseGet(() -> {
+            CategoryEntity c = CategoryEntity.builder().name("Cơm Tấm & Món Mặn").code("COM_MAN").description("Cơm tấm sườn bì chả, cơm gà xối mỡ, cơm cá kho tộ").displayOrder(2).build();
+            c.setId("cat-com");
+            return categoryRepository.save(c);
+        });
+        CategoryEntity catBanhMi = categoryRepository.findById("cat-banhmi").orElseGet(() -> {
+            CategoryEntity c = CategoryEntity.builder().name("Bánh Mì & Điểm Tâm").code("DIEM_TAM").description("Bánh mì chảo pate trứng, xôi xéo mỡ gà, bánh cuốn nóng").displayOrder(3).build();
+            c.setId("cat-banhmi");
+            return categoryRepository.save(c);
+        });
+        CategoryEntity catLau = categoryRepository.findById("cat-lau").orElseGet(() -> {
+            CategoryEntity c = CategoryEntity.builder().name("Lẩu & Món Nhắm").code("LAU_NHUNG").description("Set lẩu riêu cua bắp bò, lẩu Thái tomyum, dĩa nhúng lẩu & món nhắm").displayOrder(4).build();
+            c.setId("cat-lau");
+            return categoryRepository.save(c);
+        });
+        CategoryEntity catDrink = categoryRepository.findById("cat-drink").orElseGet(() -> {
+            CategoryEntity c = CategoryEntity.builder().name("Đồ Uống & Tráng Miệng").code("DO_UONG").description("Trà sen vàng, cà phê phin sữa đá, nước ép nguyên chất, chè sen").displayOrder(5).build();
+            c.setId("cat-drink");
+            return categoryRepository.save(c);
+        });
 
-            categoryRepository.save(cat1);
-            categoryRepository.save(cat2);
-            categoryRepository.save(cat3);
-            categoryRepository.save(cat4);
+        seedCategoryOptions(catPho, catCom, catBanhMi, catLau, catDrink);
+        migrateExistingMenuItems(catPho, catCom, catBanhMi, catLau, catDrink);
 
             if (menuItemRepository.count() == 0) {
                 // ── SÁNG (06:00 - 10:30) ──
                 MenuItemEntity item1 = MenuItemEntity.builder()
                         .code("XOI-01")
                         .name("Xôi Xéo Gà Xé Nấm Hương")
-                        .category(cat1)
+                        .category(catBanhMi)
                         .basePrice(BigDecimal.valueOf(45000))
                         .description("Xôi xéo dẻo thơm hạt nếp cái hoa vàng, gà xé đậm đà, hành phi giòn tan và rưới mỡ gà béo ngậy.")
                         .ingredients("Gạo nếp cái hoa vàng, Đậu xanh đồ mịn, Thịt đùi gà xé sợi, Nấm hương Sa Pa, Hành khô phi giòn, Mỡ gà ta")
@@ -60,7 +76,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item2 = MenuItemEntity.builder()
                         .code("BM-01")
                         .name("Bánh Mì Chảo Đặc Biệt Pate Trứng")
-                        .category(cat1)
+                        .category(catBanhMi)
                         .basePrice(BigDecimal.valueOf(55000))
                         .description("Chảo gang nóng hổi gồm trứng ốp la lòng đào, pate Cột Đèn béo ngậy, xúc xích tiêu đen và sốt cà chua bí truyền.")
                         .ingredients("Bánh mì giòn vỏ, Pate gan heo Cột Đèn, 2 trứng gà ta ốp la, Xúc xích tiêu, Xíu mại thịt băm, Sốt vang cà chua")
@@ -74,7 +90,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item3 = MenuItemEntity.builder()
                         .code("BM-02")
                         .name("Bánh Mì Heo Quay Giòn Bì Dưa Chua")
-                        .category(cat1)
+                        .category(catBanhMi)
                         .basePrice(BigDecimal.valueOf(38000))
                         .description("Bánh mì nướng giòn rụm kẹp thịt ba chỉ heo quay nổ cốm giòn tan, dưa leo và sốt ớt cay ngọt.")
                         .ingredients("Bánh mì nóng giòn, Heo quay nổ cốm da giòn, Dưa leo, Ngò rí, Đồ chua, Nước sốt heo quay thảo quả")
@@ -88,7 +104,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item4 = MenuItemEntity.builder()
                         .code("XOI-02")
                         .name("Xôi Khúc Hoàng Mai Chả Lụa Nóng")
-                        .category(cat1)
+                        .category(catBanhMi)
                         .basePrice(BigDecimal.valueOf(35000))
                         .description("Hạt xôi mềm dẻo bọc nhân rau khúc tươi thơm nức, đậu xanh tiêu sọ, thịt ba chỉ và kèm 2 lát chả lụa.")
                         .ingredients("Nếp nương dẻo, Lá khúc tươi, Đậu xanh đồ nhuyễn, Thịt ba chỉ rim tiêu sọ, Chả lụa Ước Lễ")
@@ -102,7 +118,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item5 = MenuItemEntity.builder()
                         .code("BC-01")
                         .name("Bánh Cuốn Nóng Thanh Trì Chả Quế")
-                        .category(cat1)
+                        .category(catBanhMi)
                         .basePrice(BigDecimal.valueOf(40000))
                         .description("Bánh tráng tay mỏng mướt trắng ngần rắc mộc nhĩ thịt băm, chấm nước mắm ấm nóng và chả quế giòn sần sật.")
                         .ingredients("Bột gạo tẻ tráng mỏng, Mộc nhĩ thịt nạc vai băm, Hành phi thơm lừng, Chả quế nướng vàng, Nước mắm chua ngọt")
@@ -116,7 +132,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item6 = MenuItemEntity.builder()
                         .code("CHE-01")
                         .name("Chè Hạt Sen Bọc Nhãn Lồng Bột Sắn")
-                        .category(cat1)
+                        .category(catDrink)
                         .basePrice(BigDecimal.valueOf(35000))
                         .description("Món tráng miệng thanh tao giải nhiệt, hạt sen bùi ngậy lồng trong cùi nhãn ngọt giòn, nước đường phèn hoa bưởi.")
                         .ingredients("Hạt sen Huế tươi ninh mềm, Cùi nhãn lồng Hưng Yên, Bột sắn dây hoa bưởi, Đường phèn Quảng Ngãi")
@@ -131,7 +147,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item7 = MenuItemEntity.builder()
                         .code("COM-01")
                         .name("Cơm Tấm Sườn Bì Chả Trứng Sài Gòn")
-                        .category(cat2)
+                        .category(catCom)
                         .basePrice(BigDecimal.valueOf(79000))
                         .description("Sườn cốt lết ướp mật ong nướng than hoa thơm lừng, chả trứng chưng chuẩn vị Sài Gòn, bì giòn và mỡ hành tép mỡ.")
                         .ingredients("Gạo tấm thơm dẻo, Sườn cốt lết nướng than, Bì heo thính gạo rang, Chả trứng mộc nhĩ, Trứng ốp la, Mỡ hành tép mỡ")
@@ -145,7 +161,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item8 = MenuItemEntity.builder()
                         .code("COM-02")
                         .name("Cơm Gà Xối Mỡ Dưa Chua Sốt Cay")
-                        .category(cat2)
+                        .category(catCom)
                         .basePrice(BigDecimal.valueOf(75000))
                         .description("Góc phần tư đùi gà xối mỡ vàng ươm da giòn rụm, cơm rang hạt ngọc thơm phức, ăn kèm dưa muối giòn chua giải ngấy.")
                         .ingredients("Đùi gà xối mỡ giòn da, Cơm chiên tỏi nghệ, Dưa cải chua xào tóp mỡ, Dưa leo, Cà chua, Nước tương tỏi ớt gừng")
@@ -159,7 +175,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item9 = MenuItemEntity.builder()
                         .code("COM-03")
                         .name("Cơm Cá Basa Kho Tộ Canh Chua Bông Điên Điển")
-                        .category(cat2)
+                        .category(catCom)
                         .basePrice(BigDecimal.valueOf(72000))
                         .description("Khúc cá basa kho tiêu tộ đất sánh đặc đậm đà keo vị, ăn kèm niêu canh chua cá bông điên điển thanh mát.")
                         .ingredients("Cá basa tươi cắt khúc, Nước hàng dừa Bến Tre, Tiêu đen Phú Quốc, Nước cốt me, Bông điên điển, Bạc hà")
@@ -173,7 +189,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item10 = MenuItemEntity.builder()
                         .code("COM-04")
                         .name("Cơm Bò Lúc Lắc Khoai Tây Chiên Bơ Tỏi")
-                        .category(cat2)
+                        .category(catCom)
                         .basePrice(BigDecimal.valueOf(85000))
                         .description("Thịt thăn bò Úc thái quân cờ xào lửa lớn sốt tiêu đen bóng mượt, dùng kèm khoai tây chiên bơ vàng ươm.")
                         .ingredients("Thăn bò Úc mềm ngọt, Ớt chuông Đà Lạt, Hành tây xào tiêu đen bơ tỏi, Khoai tây chiên giòn, Cơm thơm lài")
@@ -187,7 +203,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item11 = MenuItemEntity.builder()
                         .code("COM-05")
                         .name("Cơm Sườn Non Rim Mặn Ngọt Mỡ Hành")
-                        .category(cat2)
+                        .category(catCom)
                         .basePrice(BigDecimal.valueOf(75000))
                         .description("Sườn non heo rim nước mắm tỏi ớt keo lại mặn ngọt đưa cơm, chan mỡ hành thơm phức.")
                         .ingredients("Sườn non heo chọn lọc, Nước mắm cá cơm truyền thống, Tỏi ớt băm nhuyễn, Mỡ hành lá tép mỡ")
@@ -201,7 +217,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item12 = MenuItemEntity.builder()
                         .code("BUN-01")
                         .name("Bún Chả Hà Nội Que Tre Than Hồng")
-                        .category(cat2)
+                        .category(catPho)
                         .basePrice(BigDecimal.valueOf(75000))
                         .description("Thịt ba chỉ thái mỏng và chả băm kẹp que tre nướng than hoa thơm nức mũi, nước chấm đu đủ ấm nóng kèm bún tươi.")
                         .ingredients("Thịt ba chỉ nướng than, Chả viên hành sả nướng que tre, Bún tươi Phú Đô, Đu đủ cà rốt muối chua, Rau sống kinh giới")
@@ -215,7 +231,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item13 = MenuItemEntity.builder()
                         .code("PHO-01")
                         .name("Phở Bò Tái Nạm Gầu Giòn Wagyu")
-                        .category(cat2)
+                        .category(catPho)
                         .basePrice(BigDecimal.valueOf(89000))
                         .description("Nước dùng phở bò truyền thống hầm xương tủy 24h thơm mùi quế hồi thảo quả, thịt bò Wagyu tái mềm ngọt.")
                         .ingredients("Bò Wagyu thái mỏng, Nạm gầu giòn, Bánh phở tươi Hà Nội, Nước hầm xương bò thảo mộc 24h, Hành hoa, Ngò gai")
@@ -229,7 +245,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item14 = MenuItemEntity.builder()
                         .code("BBH-01")
                         .name("Bún Bò Huế Chả Cua Giò Heo Cay Nồng")
-                        .category(cat2)
+                        .category(catPho)
                         .basePrice(BigDecimal.valueOf(79000))
                         .description("Nước dùng bún bò hầm xương ống dậy mùi mắm ruốc sả ớt, khoanh giò heo mềm ngậy, chả cua bể và tiết luộc.")
                         .ingredients("Sợi bún to Huế, Bắp bò hoa, Giò heo hầm mềm, Chả cua bể tươi, Nước dùng sả ớt mắm ruốc Bà Duệ")
@@ -243,7 +259,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item15 = MenuItemEntity.builder()
                         .code("BD-01")
                         .name("Bún Đậu Mắm Tôm Thập Cẩm Chả Cốm")
-                        .category(cat2)
+                        .category(catPho)
                         .basePrice(BigDecimal.valueOf(75000))
                         .description("Mẹt bún lá cắt miếng, đậu hũ Mơ rán phồng giòn rụm chấm mắm tôm Thanh Hóa đánh sủi bọt với quất và ớt tươi.")
                         .ingredients("Bún lá tươi cắt con cờ, Đậu hũ Mơ chiên phồng, Chả cốm làng Vòng, Nem rán giòn, Thịt chân giò luộc, Mắm tôm Thanh Hóa")
@@ -258,7 +274,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item16 = MenuItemEntity.builder()
                         .code("LAU-01")
                         .name("Set Lẩu Riêu Cua Bắp Bò Sườn Sụn")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(389000))
                         .description("Set lẩu riêu cua đồng xịn giã tay dậy mùi giấm bỗng nếp, thịt bắp bò hoa giòn ngọt và sườn sụn non chặt nhỏ.")
                         .ingredients("Cua đồng tươi giã tay gạch béo ngậy, Bắp bò hoa thái mỏng, Sườn sụn non chặt con chì, Giấm bỗng nếp làng Vân, Hoa chuối, Bún tươi")
@@ -272,7 +288,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item17 = MenuItemEntity.builder()
                         .code("LAU-02")
                         .name("Set Lẩu Thái Hải Sản Tomyum Chua Cay")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(429000))
                         .description("Nước lẩu Tomyum đậm đà chuẩn vị Thái với cốt dừa thơm béo, lá chanh kaffir, tôm sú tươi nhảy tanh tách, mực ống và nghêu.")
                         .ingredients("Tôm sú tươi sống, Mực ống câu Cô Tô, Nghêu biển trắng, Nước cốt lẩu Tomyum lá chanh sả ớt cốt dừa, Nấm kim châm, Mì tôm")
@@ -286,7 +302,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item18 = MenuItemEntity.builder()
                         .code("LAU-03")
                         .name("Set Lẩu Gà Lá É Phú Yên Nấm Tuyết")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(369000))
                         .description("Lẩu gà đồi thả vườn thịt săn chắc, nước lẩu ngọt thanh từ xương gà và tiêu xanh cay nồng, nhúng lá é tươi thơm mát.")
                         .ingredients("Gà ta thả đồi 1.4kg, Lá é trắng tươi Phú Yên, Măng củ giòn ngọt, Tiêu xanh cay nồng, Nấm tuyết trắng, Bún tươi")
@@ -300,7 +316,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item19 = MenuItemEntity.builder()
                         .code("NHU-01")
                         .name("Dĩa Ba Chỉ Bò Mỹ & Nấm Tươi Nhúng Lẩu")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(120000))
                         .description("Đĩa thịt ba chỉ bò Black Angus Mỹ thái lát mỏng cuộn tròn vân mỡ hoa đẹp mắt kèm đĩa nấm tươi tổng hợp nhúng lẩu.")
                         .ingredients("Ba chỉ bò Black Angus Mỹ thái lát mỏng, Nấm kim châm, Nấm đùi gà baby, Nấm bào ngư")
@@ -314,7 +330,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item20 = MenuItemEntity.builder()
                         .code("NHU-02")
                         .name("Dĩa Tôm Sú Biển & Mực Trứng Nhúng Lẩu")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(145000))
                         .description("Đĩa hải sản tươi sống gồm 6 con tôm sú biển tươi giòn và mực trứng Phú Quốc béo ngậy.")
                         .ingredients("Tôm sú biển còn bơi, Mực trứng hấp sơ đá lạnh, Nước sốt tiêu chanh ớt xanh")
@@ -328,7 +344,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item21 = MenuItemEntity.builder()
                         .code("NHA-01")
                         .name("Gà Ta Ủ Muối Hoa Tiêu Nửa Con")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(160000))
                         .description("Gà đồi ủ muối hoa tiêu da vàng giòn sần sật, thịt ngọt thơm mùi lá chanh, chấm muối ớt chanh chuẩn vị nhắm bia.")
                         .ingredients("Nửa con gà ta ủ muối, Muối hạt rang thơm, Tiêu sọ Phú Quốc, Lá chanh thái chỉ, Nước chấm sữa ớt đỏ")
@@ -342,7 +358,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item22 = MenuItemEntity.builder()
                         .code("NHA-02")
                         .name("Nộm Tai Heo Bóp Thấu Ngó Sen Giòn Cay")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(85000))
                         .description("Món khai vị nhắm lai rai giòn sần sật, ngó sen ngâm chua ngọt trộn tai heo giòn và lạc rang giã dập.")
                         .ingredients("Tai heo luộc giòn thái chỉ, Ngó sen tươi muối chua ngọt, Rau răm, Húng lủi, Lạc rang giã thô, Nước mắm chua cay")
@@ -356,7 +372,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item23 = MenuItemEntity.builder()
                         .code("NHA-03")
                         .name("Đậu Hũ Lướt Ván Giòn Rụm Chấm Mắm Tôm")
-                        .category(cat3)
+                        .category(catLau)
                         .basePrice(BigDecimal.valueOf(45000))
                         .description("Đậu hũ non lướt chảo dầu sôi da giòn rụm bên trong mềm mịn tan trong miệng.")
                         .ingredients("Đậu hũ non làng Mơ, Hành hoa phi mỡ, Mắm tôm Thanh Hóa đánh sủi bọt quất ớt tươi")
@@ -371,7 +387,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item24 = MenuItemEntity.builder()
                         .code("DRK-01")
                         .name("Trà Sen Vàng Hạt Hạt Cung Đình")
-                        .category(cat4)
+                        .category(catDrink)
                         .basePrice(BigDecimal.valueOf(39000))
                         .description("Trà oolong ướp sen Huế tự nhiên kết hợp củ năng giòn rụm ngọt thanh và hạt sen tươi ninh mềm.")
                         .ingredients("Trà oolong sen Huế, Hạt sen tươi ninh mềm, Củ năng giòn ngọt ngào, Kem macchiato béo nhẹ, Đường phèn thanh")
@@ -385,7 +401,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item25 = MenuItemEntity.builder()
                         .code("DRK-02")
                         .name("Cà Phê Sữa Đá Phin Đậm Đà Buôn Ma Thuột")
-                        .category(cat4)
+                        .category(catDrink)
                         .basePrice(BigDecimal.valueOf(29000))
                         .description("Cà phê Robusta Đắk Lắk nguyên chất pha phin nhôm truyền thống, hòa quyện sữa đặc thơm béo và đá viên mát lạnh.")
                         .ingredients("Hạt Robusta mộc Buôn Ma Thuột, Sữa đặc có đường Ông Thọ, Đá viên sạch tinh khiết")
@@ -399,7 +415,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item26 = MenuItemEntity.builder()
                         .code("DRK-03")
                         .name("Cà Phê Muối Kem Béo Xứ Huế")
-                        .category(cat4)
+                        .category(catDrink)
                         .basePrice(BigDecimal.valueOf(35000))
                         .description("Cà phê phin đậm vị kết hợp lớp kem sữa mặn béo ngậy chuẩn phong vị Cố Đô.")
                         .ingredients("Cà phê phin Robusta Arabica phối trộn, Lớp kem muối béo mặn nhẹ, Sữa đặc nguyên chất")
@@ -413,7 +429,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item27 = MenuItemEntity.builder()
                         .code("DRK-04")
                         .name("Trà Đào Cam Sả Tươi Mát Thanh Nhiệt")
-                        .category(cat4)
+                        .category(catDrink)
                         .basePrice(BigDecimal.valueOf(42000))
                         .description("Hương vị trà đào ngọt ngào kết hợp cam tươi vắt mọng nước và sả đập dập thơm lừng giải nhiệt.")
                         .ingredients("Trà đen Ceylon hảo hạng, Đào miếng giòn ngọt ngào, Nước cam tươi vắt, Sả cây đập dập, Bạc hà")
@@ -427,7 +443,7 @@ public class DataInitializer implements CommandLineRunner {
                 MenuItemEntity item28 = MenuItemEntity.builder()
                         .code("DRK-05")
                         .name("Nước Ép Dưa Hấu Bạc Hà Tươi Nguyên Chất")
-                        .category(cat4)
+                        .category(catDrink)
                         .basePrice(BigDecimal.valueOf(38000))
                         .description("Nước ép dưa hấu đỏ ngọt lịm ép chậm 100% không thêm đường kết hợp lá bạc hà mát lạnh.")
                         .ingredients("Dưa hấu Long An ngọt mọng nước ép chậm, Lá bạc hà vườn, Đá hoa tuyết")
@@ -467,7 +483,6 @@ public class DataInitializer implements CommandLineRunner {
                 menuItemRepository.save(item27);
                 menuItemRepository.save(item28);
             }
-        }
 
         // ─ Seed Users / Staff ────────────────────────────────────────────────────────
         if (userRepository.count() == 0) {
@@ -544,10 +559,18 @@ public class DataInitializer implements CommandLineRunner {
                         .tableNo(String.format("Bàn %02d", i))
                         .capacity(i % 3 == 0 ? 6 : (i % 2 == 0 ? 4 : 2))
                         .status(status)
+                        .qrSecretToken(String.format("qr-token-tbl-%02d-sec%d", i, i * 7391))
                         .build();
                 table.setId("tbl-" + i);
                 tableRepository.save(table);
             }
+        } else {
+            tableRepository.findAll().forEach(t -> {
+                if (t.getQrSecretToken() == null || t.getQrSecretToken().isBlank()) {
+                    t.setQrSecretToken("qr-token-" + t.getId() + "-sec" + Math.abs(t.getId().hashCode()));
+                    tableRepository.save(t);
+                }
+            });
         }
 
         // ─ Seed Orders ──────────────────────────────────────────────────────────────
@@ -791,6 +814,76 @@ public class DataInitializer implements CommandLineRunner {
             eventRepository.save(ev2);
             eventRepository.save(ev3);
             eventRepository.save(ev4);
+        }
+    }
+
+    private void seedCategoryOptions(CategoryEntity catPho, CategoryEntity catCom, CategoryEntity catBanhMi, CategoryEntity catLau, CategoryEntity catDrink) {
+        if (categoryOptionRepository.count() > 0) return;
+
+        List<CategoryOptionEntity> options = List.of(
+            // 1. Phở & Bún
+            CategoryOptionEntity.builder().category(catPho).name("Tô Chuẩn (Vừa Vặn)").optionType(OptionType.SIZE).price(BigDecimal.ZERO).status("AVAILABLE").displayOrder(1).build(),
+            CategoryOptionEntity.builder().category(catPho).name("Tô Lớn (Nhiều Thịt & Bánh)").optionType(OptionType.SIZE).price(BigDecimal.valueOf(15000)).status("AVAILABLE").displayOrder(2).build(),
+            CategoryOptionEntity.builder().category(catPho).name("Tô Đặc Biệt (Full Topping)").optionType(OptionType.SIZE).price(BigDecimal.valueOf(25000)).status("AVAILABLE").displayOrder(3).build(),
+            CategoryOptionEntity.builder().category(catPho).name("Quẩy Giòn Rụm (Đĩa 3 cái)").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(8000)).status("AVAILABLE").displayOrder(4).build(),
+            CategoryOptionEntity.builder().category(catPho).name("Trứng Chần Lòng Đào").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(6000)).status("AVAILABLE").displayOrder(5).build(),
+            CategoryOptionEntity.builder().category(catPho).name("Thịt Bò Tái Thêm").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(20000)).status("AVAILABLE").displayOrder(6).build(),
+            CategoryOptionEntity.builder().category(catPho).name("Tiết Luộc / Nước Béo Hành Trần").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(5000)).status("AVAILABLE").displayOrder(7).build(),
+
+            // 2. Cơm Tấm & Món Mặn
+            CategoryOptionEntity.builder().category(catCom).name("Dĩa Chuẩn (Vừa Vặn)").optionType(OptionType.SIZE).price(BigDecimal.ZERO).status("AVAILABLE").displayOrder(1).build(),
+            CategoryOptionEntity.builder().category(catCom).name("Dĩa Đầy Đặn (Thêm Cơm)").optionType(OptionType.SIZE).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(2).build(),
+            CategoryOptionEntity.builder().category(catCom).name("Trứng Ốp La Lòng Đào").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(7000)).status("AVAILABLE").displayOrder(3).build(),
+            CategoryOptionEntity.builder().category(catCom).name("Chả Trứng Hấp Sài Gòn").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(12000)).status("AVAILABLE").displayOrder(4).build(),
+            CategoryOptionEntity.builder().category(catCom).name("Thêm Sườn Cốt Lết Nướng").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(30000)).status("AVAILABLE").displayOrder(5).build(),
+            CategoryOptionEntity.builder().category(catCom).name("Chén Canh Chua Thêm").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(6).build(),
+
+            // 3. Bánh Mì & Điểm Tâm
+            CategoryOptionEntity.builder().category(catBanhMi).name("Khẩu Phần Chuẩn").optionType(OptionType.SIZE).price(BigDecimal.ZERO).status("AVAILABLE").displayOrder(1).build(),
+            CategoryOptionEntity.builder().category(catBanhMi).name("Khẩu Phần Đầy Đặn").optionType(OptionType.SIZE).price(BigDecimal.valueOf(12000)).status("AVAILABLE").displayOrder(2).build(),
+            CategoryOptionEntity.builder().category(catBanhMi).name("Pate Cột Đèn Thêm").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(3).build(),
+            CategoryOptionEntity.builder().category(catBanhMi).name("Xúc Xích Tiêu Đen Chiên").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(4).build(),
+            CategoryOptionEntity.builder().category(catBanhMi).name("Chả Lụa Ước Lễ Thêm").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(5).build(),
+            CategoryOptionEntity.builder().category(catBanhMi).name("Trứng Ốp La Thêm").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(7000)).status("AVAILABLE").displayOrder(6).build(),
+
+            // 4. Lẩu & Món Nhắm
+            CategoryOptionEntity.builder().category(catLau).name("Set Tiêu Chuẩn (2-3 Người)").optionType(OptionType.SIZE).price(BigDecimal.ZERO).status("AVAILABLE").displayOrder(1).build(),
+            CategoryOptionEntity.builder().category(catLau).name("Set Đầy Đặn (4-5 Người)").optionType(OptionType.SIZE).price(BigDecimal.valueOf(90000)).status("AVAILABLE").displayOrder(2).build(),
+            CategoryOptionEntity.builder().category(catLau).name("Dĩa Bắp Bò Nhúng Thêm").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(65000)).status("AVAILABLE").displayOrder(3).build(),
+            CategoryOptionEntity.builder().category(catLau).name("Dĩa Nấm Tươi Tổng Hợp").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(35000)).status("AVAILABLE").displayOrder(4).build(),
+            CategoryOptionEntity.builder().category(catLau).name("Đĩa Đậu Phụ & Váng Đậu").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(25000)).status("AVAILABLE").displayOrder(5).build(),
+            CategoryOptionEntity.builder().category(catLau).name("Mì Tôm / Bún Tươi Ăn Lẩu").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(15000)).status("AVAILABLE").displayOrder(6).build(),
+
+            // 5. Đồ Uống & Tráng Miệng
+            CategoryOptionEntity.builder().category(catDrink).name("Size Tiêu Chuẩn (Size M)").optionType(OptionType.SIZE).price(BigDecimal.ZERO).status("AVAILABLE").displayOrder(1).build(),
+            CategoryOptionEntity.builder().category(catDrink).name("Size Lớn Cỡ Bự (Size L)").optionType(OptionType.SIZE).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(2).build(),
+            CategoryOptionEntity.builder().category(catDrink).name("Trân Châu Hoàng Kim").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(8000)).status("AVAILABLE").displayOrder(3).build(),
+            CategoryOptionEntity.builder().category(catDrink).name("Hạt Sen Huế Ninh Mềm").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(4).build(),
+            CategoryOptionEntity.builder().category(catDrink).name("Thạch Củ Năng Giòn").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(8000)).status("AVAILABLE").displayOrder(5).build(),
+            CategoryOptionEntity.builder().category(catDrink).name("Kem Sữa Macchiato Béo Ngậy").optionType(OptionType.TOPPING).price(BigDecimal.valueOf(10000)).status("AVAILABLE").displayOrder(6).build()
+        );
+        categoryOptionRepository.saveAll(options);
+    }
+
+    private void migrateExistingMenuItems(CategoryEntity catPho, CategoryEntity catCom, CategoryEntity catBanhMi, CategoryEntity catLau, CategoryEntity catDrink) {
+        if (menuItemRepository.count() > 0) {
+            menuItemRepository.findAll().forEach(item -> {
+                if (item.getCategory() == null || item.getCategory().getId().startsWith("cat-0")) {
+                    String code = item.getCode() != null ? item.getCode() : "";
+                    if (code.startsWith("XOI") || code.startsWith("BM") || code.startsWith("BC")) {
+                        item.setCategory(catBanhMi);
+                    } else if (code.startsWith("COM")) {
+                        item.setCategory(catCom);
+                    } else if (code.startsWith("PHO") || code.startsWith("BUN") || code.startsWith("BBH") || code.startsWith("BD")) {
+                        item.setCategory(catPho);
+                    } else if (code.startsWith("LAU") || code.startsWith("NHU") || code.startsWith("NHA")) {
+                        item.setCategory(catLau);
+                    } else if (code.startsWith("DRK") || code.startsWith("CHE")) {
+                        item.setCategory(catDrink);
+                    }
+                    menuItemRepository.save(item);
+                }
+            });
         }
     }
 }

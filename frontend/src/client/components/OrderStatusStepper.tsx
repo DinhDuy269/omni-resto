@@ -10,10 +10,11 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  { key: 'PENDING',    label: 'Đã nhận đơn', subLabel: 'Bếp đã xác nhận', Icon: Clock },
-  { key: 'PREPARING',  label: 'Đang nấu',     subLabel: 'Đang chế biến',   Icon: ChefHat },
-  { key: 'READY',      label: 'Sẵn sàng',     subLabel: 'Món đã sẵn sàng', Icon: Bell },
-  { key: 'COMPLETED',  label: 'Hoàn tất',     subLabel: 'Chúc ngon miệng!',Icon: Check },
+  { key: 'PENDING',    label: 'Tiếp nhận', subLabel: 'Chờ duyệt bàn',        Icon: Clock },
+  { key: 'CONFIRMED',  label: 'Đã duyệt',  subLabel: 'Hàng đợi bếp (Chờ nấu)', Icon: Clock },
+  { key: 'PREPARING',  label: 'Bếp nấu',    subLabel: 'Đầu bếp đang nấu',    Icon: ChefHat },
+  { key: 'READY',      label: 'Sẵn sàng',   subLabel: 'Đang bưng ra bàn',    Icon: Bell },
+  { key: 'COMPLETED',  label: 'Hoàn tất',   subLabel: 'Đã lên bàn xong',     Icon: Check },
 ];
 
 interface Props {

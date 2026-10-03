@@ -80,6 +80,8 @@ public class SecurityConfig {
             .requestMatchers(new AntPathRequestMatcher("/ws/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/ws-raw/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/api/payments/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/api/ai/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/error")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/v3/api-docs/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/swagger-ui/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/swagger-ui.html")).permitAll()

@@ -51,6 +51,31 @@ public class MenuItemEntity extends BaseEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Column(name = "is_vegetarian")
+    @Builder.Default
+    private Boolean isVegetarian = false;
+
+    @Column(name = "spicy_level")
+    @Builder.Default
+    private Integer spicyLevel = 0;
+
+    @Column(name = "allergens", length = 255)
+    private String allergens;
+
+    @Column(name = "allergen_verified")
+    @Builder.Default
+    private Boolean allergenVerified = false;
+
+    @Column(name = "spicy_verified")
+    @Builder.Default
+    private Boolean spicyVerified = false;
+
+    @Column(name = "verified_by", length = 100)
+    private String verifiedBy;
+
+    @Column(name = "verified_at")
+    private java.time.LocalDateTime verifiedAt;
+
     public BigDecimal getPrice() {
         return basePrice;
     }

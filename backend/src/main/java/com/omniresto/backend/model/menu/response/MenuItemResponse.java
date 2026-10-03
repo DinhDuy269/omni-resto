@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -28,6 +29,7 @@ public class MenuItemResponse {
     private String mealPeriodNote;
     private String image;
     private String imageUrl;
+    private List<CategoryOptionResponse> options;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

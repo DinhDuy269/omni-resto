@@ -17,9 +17,11 @@ import ClientHome from '../client/pages/home/ClientHome';
 import ClientMenu from '../client/pages/menu/ClientMenu';
 import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
+import ClientOrdersPage from '../client/pages/order/ClientOrdersPage';
 import ClientReservation from '../client/pages/reservation/ClientReservation';
 import ClientEvents from '../client/pages/events/ClientEvents';
 import ClientAbout from '../client/pages/about/ClientAbout';
+import ClientCheckIn from '../client/pages/scan/ClientCheckIn';
 
 /** Normalizes uppercase or mixed-case paths (e.g. /Client -> /client) seamlessly */
 const PathCaseNormalizer: React.FC = () => {
@@ -81,10 +83,13 @@ export const AppRouter: React.FC = () => {
           <Route index element={<ClientHome />} />
           <Route path="menu" element={<ClientMenu />} />
           <Route path="cart" element={<ClientCart />} />
+          <Route path="orders" element={<ClientOrdersPage />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
           <Route path="reservation" element={<ClientReservation />} />
           <Route path="events" element={<ClientEvents />} />
           <Route path="about" element={<ClientAbout />} />
+          <Route path="scan" element={<ClientCheckIn />} />
+          <Route path="table/:token" element={<ClientCheckIn />} />
           <Route path="*" element={<Navigate to="/client" replace />} />
         </Route>
 

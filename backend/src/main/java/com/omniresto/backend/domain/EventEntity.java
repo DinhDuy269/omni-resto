@@ -30,6 +30,22 @@ public class EventEntity extends BaseEntity {
     @Column(name = "event_date", nullable = false)
     private LocalDate eventDate;
 
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @PrePersist
+    public void prePersistEventDates() {
+        if (this.startDate == null) {
+            this.startDate = this.eventDate != null ? this.eventDate : LocalDate.now();
+        }
+        if (this.endDate == null) {
+            this.endDate = this.startDate;
+        }
+    }
+
     @Column(name = "start_time")
     private LocalTime startTime;
 

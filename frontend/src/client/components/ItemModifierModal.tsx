@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Plus, Minus, Check, Flame, Leaf, ShieldAlert, Sparkles } from 'lucide-react';
 import type { MenuItem } from '../../shared/types/menu';
 import { useClientStore } from '../store/clientStore';
@@ -8,40 +9,120 @@ interface ItemModifierModalProps {
   onClose: () => void;
 }
 
+const DEFAULT_CATEGORY_OPTIONS: Record<string, { sizes: Array<{ name: string; extraPrice: number }>; toppings: Array<{ name: string; price: number }> }> = {
+  'Phở & Bún Nước': {
+    sizes: [
+      { name: 'Tô Chuẩn (Vừa Vặn)', extraPrice: 0 },
+      { name: 'Tô Lớn (Nhiều Thịt & Bánh)', extraPrice: 15000 },
+      { name: 'Tô Đặc Biệt (Full Topping)', extraPrice: 25000 },
+    ],
+    toppings: [
+      { name: 'Quẩy Giòn Rụm (Đĩa 3 cái)', price: 8000 },
+      { name: 'Trứng Chần Lòng Đào', price: 6000 },
+      { name: 'Thịt Bò Tái Thêm', price: 20000 },
+      { name: 'Tiết Luộc / Nước Béo Hành Trần', price: 5000 },
+    ],
+  },
+  'Cơm Tấm & Món Mặn': {
+    sizes: [
+      { name: 'Dĩa Chuẩn (Vừa Vặn)', extraPrice: 0 },
+      { name: 'Dĩa Đầy Đặn (Thêm Cơm)', extraPrice: 10000 },
+    ],
+    toppings: [
+      { name: 'Trứng Ốp La Lòng Đào', price: 7000 },
+      { name: 'Chả Trứng Hấp Sài Gòn', price: 12000 },
+      { name: 'Thêm Sườn Cốt Lết Nướng', price: 30000 },
+      { name: 'Chén Canh Chua Thêm', price: 10000 },
+    ],
+  },
+  'Bánh Mì & Điểm Tâm': {
+    sizes: [
+      { name: 'Khẩu Phần Chuẩn', extraPrice: 0 },
+      { name: 'Khẩu Phần Đầy Đặn', extraPrice: 12000 },
+    ],
+    toppings: [
+      { name: 'Pate Cột Đèn Thêm', price: 10000 },
+      { name: 'Xúc Xích Tiêu Đen Chiên', price: 10000 },
+      { name: 'Chả Lụa Ước Lễ Thêm', price: 10000 },
+      { name: 'Trứng Ốp La Thêm', price: 7000 },
+    ],
+  },
+  'Lẩu & Món Nhắm': {
+    sizes: [
+      { name: 'Set Tiêu Chuẩn (2-3 Người)', extraPrice: 0 },
+      { name: 'Set Đầy Đặn (4-5 Người)', extraPrice: 90000 },
+    ],
+    toppings: [
+      { name: 'Dĩa Bắp Bò Nhúng Thêm', price: 65000 },
+      { name: 'Dĩa Nấm Tươi Tổng Hợp', price: 35000 },
+      { name: 'Đĩa Đậu Phụ & Váng Đậu', price: 25000 },
+      { name: 'Mì Tôm / Bún Tươi Ăn Lẩu', price: 15000 },
+    ],
+  },
+  'Đồ Uống & Tráng Miệng': {
+    sizes: [
+      { name: 'Size Tiêu Chuẩn (Size M)', extraPrice: 0 },
+      { name: 'Size Lớn Cỡ Bự (Size L)', extraPrice: 10000 },
+    ],
+    toppings: [
+      { name: 'Trân Châu Hoàng Kim', price: 8000 },
+      { name: 'Hạt Sen Huế Ninh Mềm', price: 10000 },
+      { name: 'Thạch Củ Năng Giòn', price: 8000 },
+      { name: 'Kem Sữa Macchiato Béo Ngậy', price: 10000 },
+    ],
+  },
+};
+
 export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onClose }) => {
   const { addToCart } = useClientStore();
 
+  // Tính toán sizes & toppings động dựa trên item.options hoặc danh mục kiểu món
+  const categoryConfig = item ? DEFAULT_CATEGORY_OPTIONS[item.category] || Object.values(DEFAULT_CATEGORY_OPTIONS)[0] : null;
+
+  const sizes = React.useMemo(() => {
+    if (!item) return [];
+    if (item.options && item.options.length > 0) {
+      const sizeOpts = item.options.filter((o) => o.optionType === 'SIZE');
+      if (sizeOpts.length > 0) {
+        return sizeOpts.map((o) => ({ name: o.name, extraPrice: Number(o.price) || 0 }));
+      }
+    }
+    return categoryConfig?.sizes || [{ name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 }];
+  }, [item?.id, item?.options, item?.category]);
+
+  const availableToppings = React.useMemo(() => {
+    if (!item) return [];
+    if (item.options && item.options.length > 0) {
+      const topOpts = item.options.filter((o) => o.optionType === 'TOPPING');
+      if (topOpts.length > 0) {
+        return topOpts.map((o) => ({ name: o.name, price: Number(o.price) || 0 }));
+      }
+    }
+    return categoryConfig?.toppings || [];
+  }, [item?.id, item?.options, item?.category]);
+
   const [selectedSize, setSelectedSize] = useState<{ name: string; extraPrice: number }>({
-    name: 'Khẩu phần Chuẩn (Vừa)',
-    extraPrice: 0,
+    name: sizes[0]?.name || 'Khẩu phần Chuẩn',
+    extraPrice: sizes[0]?.extraPrice || 0,
   });
 
   const [selectedToppings, setSelectedToppings] = useState<Array<{ name: string; price: number }>>([]);
   const [specialNote, setSpecialNote] = useState('');
   const [quantity, setQuantity] = useState(1);
 
-  // Reset selections each time a new item is opened (must be before early return)
+  // Reset selections each time a new item is opened
   useEffect(() => {
-    setSelectedSize({ name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 });
+    if (sizes.length > 0) {
+      setSelectedSize(sizes[0]);
+    } else {
+      setSelectedSize({ name: 'Khẩu phần Chuẩn', extraPrice: 0 });
+    }
     setSelectedToppings([]);
     setSpecialNote('');
     setQuantity(1);
-  }, [item?.id]);
+  }, [item?.id, sizes]);
 
   if (!item) return null;
-
-  const sizes = [
-    { name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 },
-    { name: 'Khẩu phần Đầy Đặn (Lớn)', extraPrice: 15000 },
-    { name: 'Khẩu phần Đặc Biệt (Full Op)', extraPrice: 25000 },
-  ];
-
-  const availableToppings = [
-    { name: 'Trứng Chần Lòng Đào', price: 6000 },
-    { name: 'Phô Mai Viên Tan Chảy', price: 12000 },
-    { name: 'Quẩy Giòn Rụm (Đĩa 3 cái)', price: 8000 },
-    { name: 'Thêm Sốt Đặc Biệt OmniResto', price: 10000 },
-  ];
 
   const toggleTopping = (topping: { name: string; price: number }) => {
     if (selectedToppings.some((t) => t.name === topping.name)) {
@@ -74,7 +155,7 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -458,6 +539,7 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -19,11 +19,17 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.generateVietQR(orderId));
     }
 
+    @GetMapping("/status/{orderId}")
+    public ResponseEntity<PaymentService.PaymentStatusResponse> getPaymentStatus(@PathVariable String orderId) {
+        return ResponseEntity.ok(paymentService.getPaymentStatus(orderId));
+    }
+
     @Data
     public static class WebhookRequest {
         private String orderId;
         private String transactionId;
         private Double amount;
+        private String rawPayload;
     }
 
     @PostMapping("/webhook")
@@ -31,7 +37,8 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.handlePaymentWebhook(
                 request.getOrderId(),
                 request.getTransactionId() != null ? request.getTransactionId() : "TXN-" + System.currentTimeMillis(),
-                request.getAmount()
+                request.getAmount(),
+                request.getRawPayload()
         ));
     }
 }
