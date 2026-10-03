@@ -10,6 +10,7 @@ import {
   BarChart3,
   Settings,
   Flame,
+  Ticket, // <-- Đã thêm icon Ticket
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
 import './Sidebar.css';
@@ -32,6 +33,7 @@ export const Sidebar: React.FC = () => {
           badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
         },
         { label: 'Sơ Đồ Bàn & Đặt Bàn', path: '/admin/tables', icon: Grid2x2 },
+        { label: 'Voucher', path: '/admin/vouchers', icon: Ticket }, // <-- Đã thêm menu Voucher
       ],
     },
     {

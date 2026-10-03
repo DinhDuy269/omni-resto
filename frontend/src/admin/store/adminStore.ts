@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Branch, MenuItem, Order, StaffUser, TableInfo } from '../../shared/types/admin';
+import type { Branch, MenuItem, Order, StaffUser, TableInfo, VoucherInfo } from '../../shared/types/admin';
 
 interface AdminState {
   // Global Filters
@@ -12,6 +12,7 @@ interface AdminState {
   orders: Order[];
   staffList: StaffUser[];
   tables: TableInfo[];
+  vouchers: VoucherInfo[]; // <-- Thêm Vouchers
 
   // Bulk Setters
   setBranches: (branches: Branch[]) => void;
@@ -19,6 +20,7 @@ interface AdminState {
   setOrders: (orders: Order[]) => void;
   setStaffList: (staff: StaffUser[]) => void;
   setTables: (tables: TableInfo[]) => void;
+  setVouchers: (vouchers: VoucherInfo[]) => void; // <-- Thêm Setter cho Vouchers
 
   // Actions - Branch
   addBranch: (branch: Omit<Branch, 'id' | 'dailyRevenue' | 'activeOrdersCount'>) => void;
@@ -34,6 +36,9 @@ interface AdminState {
   // Actions - Staff
   addStaff: (staff: Omit<StaffUser, 'id' | 'createdAt'>) => void;
   toggleStaffStatus: (id: string, status: StaffUser['status']) => void;
+
+  // Actions - Vouchers
+  toggleVoucherStatus: (id: string, status: VoucherInfo['status']) => void; // <-- Thêm Action cho Vouchers
 }
 
 const INITIAL_BRANCHES: Branch[] = [
@@ -305,6 +310,61 @@ const INITIAL_TABLES: TableInfo[] = Array.from({ length: 12 }).map((_, i) => ({
   occupiedSince: (i === 1 || i === 4 || i === 7) ? `${15 + i * 5} phút trước` : undefined,
 }));
 
+const INITIAL_VOUCHERS: VoucherInfo[] = [
+  {
+    id: 'vch-01',
+    code: 'WELCOME100',
+    name: 'Quà Tặng Thành Viên Mới',
+    description: 'Giảm ngay 100.000đ cho đơn hàng đầu tiên. Tự động tặng khi khách hàng mới đăng ký tài khoản thành công.',
+    discountType: 'FIXED_AMOUNT',
+    discountValue: 100000,
+    minOrderAmount: 0, // Đơn tối thiểu 200k mới được áp dụng
+    totalQuantity: 99999, // Gần như không giới hạn
+    usedQuantity: 1250,
+    usageLimitPerUser: 1, // Mỗi người chỉ dùng 1 lần
+    startDate: '2026-01-01T00:00:00',
+    endDate: '2027-12-31T23:59:59',
+    status: 'ACTIVE',
+    isWelcomeVoucher: true, // <-- Cờ đánh dấu đây là mã cho New Member
+    createdAt: '2026-01-01T00:00:00',
+  },
+  {
+    id: 'vch-02',
+    code: 'FREELUNCH20',
+    name: 'Trưa Vui Vẻ Giảm 20%',
+    description: 'Giảm 20% tổng hóa đơn, tối đa 50.000đ. Áp dụng cho các bữa trưa tại nhà hàng.',
+    discountType: 'PERCENTAGE',
+    discountValue: 20,
+    maxDiscountAmount: 50000,
+    minOrderAmount: 150000,
+    totalQuantity: 500,
+    usedQuantity: 498, // Sắp hết lượt
+    usageLimitPerUser: 2, // Cho phép dùng 2 lần
+    startDate: '2026-09-01T00:00:00',
+    endDate: '2026-11-30T23:59:59',
+    status: 'ACTIVE',
+    isWelcomeVoucher: false,
+    createdAt: '2026-08-25T00:00:00',
+  },
+  {
+    id: 'vch-03',
+    code: 'SUMMER2026',
+    name: 'Chào Hè Rực Rỡ',
+    description: 'Giảm 50.000đ phí giao hàng cho các đơn Takeaway / Delivery.',
+    discountType: 'FIXED_AMOUNT',
+    discountValue: 50000,
+    minOrderAmount: 200000,
+    totalQuantity: 1000,
+    usedQuantity: 1000, // Đã dùng hết
+    usageLimitPerUser: 1,
+    startDate: '2026-05-01T00:00:00',
+    endDate: '2026-08-31T23:59:59',
+    status: 'EXPIRED', // Đã hết hạn hoặc hết lượt
+    isWelcomeVoucher: false,
+    createdAt: '2026-04-15T00:00:00',
+  }
+];
+
 export const useAdminStore = create<AdminState>((set) => ({
   selectedBranchId: 'ALL',
   setSelectedBranchId: (id) => set({ selectedBranchId: id }),
@@ -314,12 +374,14 @@ export const useAdminStore = create<AdminState>((set) => ({
   orders: INITIAL_ORDERS,
   staffList: INITIAL_STAFF,
   tables: INITIAL_TABLES,
+  vouchers: INITIAL_VOUCHERS, // <-- Khởi tạo Vouchers
 
   setBranches: (branches) => set({ branches }),
   setMenuItems: (menuItems) => set({ menuItems }),
   setOrders: (orders) => set({ orders }),
   setStaffList: (staffList) => set({ staffList }),
   setTables: (tables) => set({ tables }),
+  setVouchers: (vouchers) => set({ vouchers }), // <-- Thêm Setter cho Vouchers
 
   addBranch: (newBranchData) =>
     set((state) => ({
@@ -376,5 +438,11 @@ export const useAdminStore = create<AdminState>((set) => ({
   toggleStaffStatus: (id, status) =>
     set((state) => ({
       staffList: state.staffList.map((usr) => (usr.id === id ? { ...usr, status } : usr)),
+    })),
+
+  // <-- Action Bật/Tắt trạng thái Voucher
+  toggleVoucherStatus: (id, status) =>
+    set((state) => ({
+      vouchers: state.vouchers.map((v) => (v.id === id ? { ...v, status } : v)),
     })),
 }));

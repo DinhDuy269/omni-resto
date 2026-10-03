@@ -16,6 +16,7 @@ import ClientHome from '../client/pages/home/ClientHome';
 import ClientMenu from '../client/pages/menu/ClientMenu';
 import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
+import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -34,6 +35,7 @@ export const AppRouter: React.FC = () => {
           <Route path="orders" element={<ChainOrdersManagement />} />
           <Route path="staff" element={<StaffManagement />} />
           <Route path="tables" element={<TableManagement />} />
+          <Route path="vouchers" element={<VoucherManagement />} />
           <Route
             path="reports"
             element={

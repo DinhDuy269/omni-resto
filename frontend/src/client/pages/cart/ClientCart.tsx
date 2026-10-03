@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Utensils, ShoppingBag, Bike, QrCode, Banknote, CreditCard } from 'lucide-react';
+import { ArrowLeft, Check, Utensils, ShoppingBag, Bike, QrCode, Banknote, CreditCard, Ticket } from 'lucide-react';
 import { useClientStore, selectTotalAmount } from '../../store/clientStore';
+import { useAdminStore } from '../../../admin/store/adminStore';
 import type { OrderMode, ClientPaymentMethod } from '../../../shared/types/client';
 
 /**
@@ -24,41 +25,94 @@ const ClientCart: React.FC = () => {
     placeOrder,
   } = useClientStore();
   const totalAmount = useClientStore(selectTotalAmount);
+  const { vouchers } = useAdminStore();
 
-  const [step, setStep]                   = useState<1 | 2 | 3>(1);
-  const [customerName, setCustomerName]   = useState('');
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [tableNo, setTableNo]             = useState('');
-  const [deliveryAddr, setDeliveryAddr]   = useState('');
-  const [notes, setNotes]                 = useState('');
-  const [payMethod, setPayMethod]         = useState<ClientPaymentMethod>('QR_CODE');
+  const [tableNo, setTableNo] = useState('');
+  const [deliveryAddr, setDeliveryAddr] = useState('');
+  const [notes, setNotes] = useState('');
+  const [payMethod, setPayMethod] = useState<ClientPaymentMethod>('QR_CODE');
+  const [voucherCode, setVoucherCode] = useState('');
+  // 1. Thêm state lưu giữ voucher đã áp dụng thành công
+  const [appliedVoucher, setAppliedVoucher] = useState<typeof vouchers[0] | null>(null);
+  const [voucherMsg, setVoucherMsg] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
+  // 2. Tự động tính toán số tiền được giảm mỗi khi giỏ hàng hoặc voucher thay đổi
+  const discountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    let discount = 0;
+
+    // Nếu là giảm theo phần trăm
+    if (appliedVoucher.discountType === 'PERCENTAGE' || appliedVoucher.discountType === 'percentage') {
+      discount = totalAmount * (appliedVoucher.discountValue / 100);
+      // Kiểm tra giới hạn giảm tối đa (nếu có)
+      if (appliedVoucher.maxDiscountAmount) {
+        discount = Math.min(discount, appliedVoucher.maxDiscountAmount);
+      }
+    } else {
+      // Nếu là giảm tiền mặt
+      discount = appliedVoucher.discountValue;
+    }
+
+    // Đảm bảo không giảm âm tiền của đơn hàng
+    return Math.min(discount, totalAmount);
+  }, [appliedVoucher, totalAmount]);
+
+  // Tổng tiền thanh toán cuối cùng
+  const finalAmount = totalAmount - discountAmount;
+
+  // 3. Hàm xử lý khi bấm nút "Áp dụng"
+  const handleApplyVoucher = () => {
+    const selected = activeVouchers.find(v => v.code === voucherCode);
+    if (!selected) return;
+
+    // Kiểm tra điều kiện đơn hàng tối thiểu
+    if (totalAmount < selected.minOrderAmount) {
+      setAppliedVoucher(null); // Gỡ bỏ voucher cũ nếu có
+      setVoucherMsg({
+        text: `Đơn hàng chưa đạt mức tối thiểu ${selected.minOrderAmount.toLocaleString('vi-VN')}đ để áp dụng mã này.`,
+        type: 'error'
+      });
+      return;
+    }
+
+    setAppliedVoucher(selected);
+    setVoucherMsg({
+      text: `Áp dụng mã ${selected.code} thành công!`,
+      type: 'success'
+    });
+  };
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
-  const isEmpty    = cart.length === 0;
+  const isEmpty = cart.length === 0;
+  const activeVouchers = useMemo(() => {
+    return vouchers.filter(v => v.status === 'ACTIVE' || v.status === 'active');
+  }, [vouchers]);
 
   const ORDER_MODES: Array<{ mode: OrderMode; icon: typeof Utensils; label: string; desc: string; emoji: string }> = [
-    { mode: 'DINE_IN',  icon: Utensils,  label: 'Tại bàn',  desc: 'Dùng bữa ngay tại nhà hàng', emoji: '🍽️' },
+    { mode: 'DINE_IN', icon: Utensils, label: 'Tại bàn', desc: 'Dùng bữa ngay tại nhà hàng', emoji: '🍽️' },
     { mode: 'TAKEAWAY', icon: ShoppingBag, label: 'Mang về', desc: 'Đóng gói mang đi, nhận tại quầy', emoji: '📦' },
-    { mode: 'DELIVERY', icon: Bike,      label: 'Giao hàng', desc: 'Giao đến tận địa chỉ của bạn', emoji: '🚴' },
+    { mode: 'DELIVERY', icon: Bike, label: 'Giao hàng', desc: 'Giao đến tận địa chỉ của bạn', emoji: '🚴' },
   ];
 
   const PAY_METHODS: Array<{ key: ClientPaymentMethod; label: string; icon: typeof QrCode }> = [
     { key: 'QR_CODE', label: 'Quét QR', icon: QrCode },
-    { key: 'CASH',    label: 'Tiền mặt', icon: Banknote },
-    { key: 'CARD',    label: 'Thẻ ngân hàng', icon: CreditCard },
+    { key: 'CASH', label: 'Tiền mặt', icon: Banknote },
+    { key: 'CARD', label: 'Thẻ ngân hàng', icon: CreditCard },
   ];
 
   const handlePlaceOrder = () => {
     const placed = placeOrder({
-      branchId:        selectedBranchId || 'br-01',
-      branchName:      selectedBranchName || 'OmniResto',
+      branchId: selectedBranchId || 'br-01',
+      branchName: selectedBranchName || 'OmniResto',
       orderMode,
-      tableNo:         orderMode === 'DINE_IN' ? tableNo : undefined,
-      customerName:    customerName || undefined,
-      customerPhone:   customerPhone || undefined,
+      tableNo: orderMode === 'DINE_IN' ? tableNo : undefined,
+      customerName: customerName || undefined,
+      customerPhone: customerPhone || undefined,
       deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddr : undefined,
-      notes:           notes || undefined,
-      paymentMethod:   payMethod,
+      notes: notes || undefined,
+      paymentMethod: payMethod,
     });
     navigate(`/client/order/${placed.id}`);
   };
@@ -72,8 +126,8 @@ const ClientCart: React.FC = () => {
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 32 }}>
       {(['Giỏ hàng', 'Hình thức', 'Thông tin'] as const).map((label, i) => {
         const stepNum = (i + 1) as 1 | 2 | 3;
-        const done    = step > stepNum;
-        const active  = step === stepNum;
+        const done = step > stepNum;
+        const active = step === stepNum;
         return (
           <React.Fragment key={label}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -124,6 +178,8 @@ const ClientCart: React.FC = () => {
       <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--c-text-main)', margin: '0 0 16px' }}>
         Tóm tắt đơn hàng
       </h3>
+
+      {/* 1. Danh sách món ăn */}
       {cart.map((item) => (
         <div key={item.menuItemId} style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
@@ -137,15 +193,41 @@ const ClientCart: React.FC = () => {
           </span>
         </div>
       ))}
+
       <div style={{ height: 1, background: 'var(--c-border-light)', margin: '12px 0' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+      {/* 2. Tạm tính (Subtotal) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: '0.875rem', color: 'var(--c-text-body)' }}>
+          Tạm tính
+        </span>
+        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--c-text-main)' }}>
+          {totalAmount.toLocaleString('vi-VN')}đ
+        </span>
+      </div>
+
+      {/* 3. Khuyến mãi (Chỉ hiển thị khi đã áp dụng thành công) */}
+      {appliedVoucher && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: '0.875rem', color: 'var(--c-text-body)' }}>
+            Khuyến mãi ({appliedVoucher.code})
+          </span>
+          <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--c-success)' }}>
+            -{discountAmount.toLocaleString('vi-VN')}đ
+          </span>
+        </div>
+      )}
+
+      {/* 4. Tổng cộng thanh toán */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
         <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--c-text-body)' }}>
           Tổng cộng
         </span>
         <span style={{ fontSize: '1.125rem', fontWeight: 900, color: 'var(--c-primary)' }}>
-          {totalAmount.toLocaleString('vi-VN')}đ
+          {finalAmount.toLocaleString('vi-VN')}đ
         </span>
       </div>
+
       <p style={{ fontSize: '0.75rem', color: 'var(--c-text-muted)', margin: '8px 0 0', textAlign: 'center' }}>
         * Chưa bao gồm phí dịch vụ và phí giao hàng
       </p>
@@ -342,6 +424,73 @@ const ClientCart: React.FC = () => {
                   </div>
                 </div>
 
+                {/* ── KHỐI VOUCHER MỚI THÊM ── */}
+                <div style={{
+                  background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+                  borderRadius: 'var(--c-r-lg)', padding: 24, boxShadow: 'var(--c-shadow-sm)', marginBottom: 20,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <Ticket size={20} color="var(--c-primary)" />
+                    <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--c-text-main)' }}>
+                      Mã ưu đãi / Khuyến mãi
+                    </h2>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <select
+                        className="form-control"
+                        value={voucherCode}
+                        onChange={(e) => {
+                          setVoucherCode(e.target.value);
+                          setVoucherMsg(null); // Ẩn thông báo khi khách hàng đổi mã khác
+                        }}
+                        style={{
+                          width: '100%', fontFamily: 'var(--c-font)', borderRadius: 'var(--c-r-md)',
+                          borderColor: 'var(--c-border)', padding: '12px 16px', appearance: 'none',
+                          background: 'var(--c-surface-warm)', cursor: 'pointer', outline: 'none',
+                          fontSize: '0.875rem', color: voucherCode ? 'var(--c-text-main)' : 'var(--c-text-muted)'
+                        }}
+                      >
+                        <option value="">Chọn Voucher</option>
+                        {activeVouchers.map(v => (
+                          <option key={v.id} value={v.code}>
+                            🎁 {v.code} - {v.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      className="c-btn c-btn-primary"
+                      style={{ padding: '0 24px', borderRadius: 'var(--c-r-md)', fontWeight: 700 }}
+                      disabled={!voucherCode}
+                      onClick={handleApplyVoucher}
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+
+                  {/* Hiển thị thông báo (Inline Message) thay cho alert() */}
+                  {voucherMsg && (
+                    <div className="c-animate-fade-up" style={{
+                      marginTop: 12,
+                      padding: '10px 14px',
+                      borderRadius: 'var(--c-r-md)',
+                      background: voucherMsg.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      color: voucherMsg.type === 'success' ? 'var(--c-success, #22c55e)' : 'var(--c-error, #ef4444)',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8
+                    }}>
+                      {voucherMsg.type === 'success' ? '✅' : '❌'} {voucherMsg.text}
+                    </div>
+                  )}
+                </div>
+                {/* ── KẾT THÚC KHỐI VOUCHER ── */}
+
                 <button
                   id="cart-step3-btn"
                   className="c-btn c-btn-primary c-btn-lg c-btn-block"
@@ -442,7 +591,7 @@ const ClientCart: React.FC = () => {
                     onClick={handlePlaceOrder}
                     disabled={!canConfirm}
                   >
-                    ✅ Xác nhận đặt hàng · {totalAmount.toLocaleString('vi-VN')}đ
+                    ✅ Xác nhận đặt hàng · {finalAmount.toLocaleString('vi-VN')}đ
                   </button>
                   <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--c-text-muted)', margin: 0 }}>
                     Bằng cách đặt hàng, bạn đồng ý với điều khoản dịch vụ của OmniResto

@@ -3,9 +3,9 @@ import { BackendConnectionGate } from './shared/components/BackendConnectionGate
 
 function App() {
   return (
-    <BackendConnectionGate>
+    // <BackendConnectionGate>
       <AppRouter />
-    </BackendConnectionGate>
+    // </BackendConnectionGate>
   );
 }
 
