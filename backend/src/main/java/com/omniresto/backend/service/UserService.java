@@ -9,14 +9,15 @@ import com.omniresto.backend.model.user.request.UserRequest;
 import com.omniresto.backend.model.user.response.UserResponse;
 import com.omniresto.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,13 +29,11 @@ public class UserService {
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public UserResponse getUserById(String id) {
-        UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
-        return mapToResponse(entity);
+        return mapToResponse(findUserById(id));
     }
 
     @Transactional
@@ -60,8 +59,7 @@ public class UserService {
 
     @Transactional
     public UserResponse updateUserStatus(String id, UserStatus status) {
-        UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+        UserEntity entity = findUserById(id);
         entity.setStatus(status);
         UserEntity updated = userRepository.save(entity);
         return mapToResponse(updated);
@@ -69,9 +67,13 @@ public class UserService {
 
     @Transactional
     public void deleteUser(String id) {
-        UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+        UserEntity entity = findUserById(id);
         userRepository.delete(entity);
+    }
+
+    private UserEntity findUserById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
     }
 
     private UserResponse mapToResponse(UserEntity entity) {

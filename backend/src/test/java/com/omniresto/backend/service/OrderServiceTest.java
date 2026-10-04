@@ -47,9 +47,6 @@ class OrderServiceTest {
     private MenuItemRepository menuItemRepository;
 
     @Mock
-    private SimpMessagingTemplate messagingTemplate;
-
-    @Mock
     private TableSessionService tableSessionService;
 
     @InjectMocks
@@ -89,7 +86,7 @@ class OrderServiceTest {
                 .tableId("tbl-01")
                 .tableNo("Bàn 01")
                 .sessionToken("tok-test-123")
-                .status(TableSessionStatus.ACTIVE)
+                .status(TableSessionStatus.active)
                 .build();
         mockSession.setId("sess-test-01");
         when(tableSessionService.validateAndTouchSessionWithLock("tok-test-123")).thenReturn(mockSession);
@@ -119,9 +116,6 @@ class OrderServiceTest {
         assertNotNull(response);
         assertNotNull(response.getOrderNumber());
         assertEquals("Bàn 01", response.getTableNo());
-
-        // Verify WebSocket message conversion & sending
-        verify(messagingTemplate, times(1)).convertAndSend(eq("/topic/orders"), any(Object.class));
     }
 
     @Test
@@ -149,7 +143,6 @@ class OrderServiceTest {
         assertNotNull(updated);
         assertEquals(OrderStatus.preparing, updated.getStatus());
         verify(orderRepository, times(1)).save(mockOrderEntity);
-        verify(messagingTemplate, times(1)).convertAndSend(eq("/topic/orders"), any(Object.class));
     }
 
     @Test

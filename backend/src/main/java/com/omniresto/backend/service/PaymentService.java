@@ -11,7 +11,6 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,11 +25,11 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PaymentService {
 
     private final OrderService orderService;
     private final PaymentTransactionRepository paymentTransactionRepository;
-    private final SimpMessagingTemplate messagingTemplate;
 
     // Configurable VietQR merchant credentials
     @Value("${vietqr.bank-id:MB}")
@@ -128,13 +127,13 @@ public class PaymentService {
 
         PaymentTransactionStatus txStatus;
         if (actualAmount.compareTo(expectedAmount) < 0) {
-            txStatus = PaymentTransactionStatus.UNDERPAID;
+            txStatus = PaymentTransactionStatus.underpaid;
             log.warn("⚠️ Thanh toán thiếu tiền: Cần {}đ, nhận {}đ cho đơn {}", expectedAmount, actualAmount, orderId);
         } else if (actualAmount.compareTo(expectedAmount) > 0) {
-            txStatus = PaymentTransactionStatus.OVERPAID;
+            txStatus = PaymentTransactionStatus.overpaid;
             log.info("ℹ️ Khách thanh toán dư tiền cho đơn {}", orderId);
         } else {
-            txStatus = PaymentTransactionStatus.SUCCESS;
+            txStatus = PaymentTransactionStatus.success;
         }
 
         // Lưu bản ghi giao dịch bảo mật
@@ -151,7 +150,7 @@ public class PaymentService {
         paymentTransactionRepository.save(tx);
 
         OrderResponse updatedOrder;
-        if (txStatus == PaymentTransactionStatus.UNDERPAID) {
+        if (txStatus == PaymentTransactionStatus.underpaid) {
             // Không chuyển đơn sang bếp, gửi cảnh báo POS
             notifyPaymentEvent(orderId, "PAYMENT_UNDERPAID", Map.of(
                     "orderId", orderId,
@@ -184,7 +183,7 @@ public class PaymentService {
                 || order.getStatus() == OrderStatus.completed;
 
         BigDecimal totalPaid = txList.stream()
-                .filter(t -> t.getStatus() == PaymentTransactionStatus.SUCCESS || t.getStatus() == PaymentTransactionStatus.OVERPAID)
+                .filter(t -> t.getStatus() == PaymentTransactionStatus.success || t.getStatus() == PaymentTransactionStatus.overpaid)
                 .map(PaymentTransactionEntity::getAmountReceived)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -203,13 +202,6 @@ public class PaymentService {
     }
 
     private void notifyPaymentEvent(String orderId, String eventType, Object payload) {
-        try {
-            messagingTemplate.convertAndSend("/topic/payments/" + orderId, Map.of(
-                    "eventType", eventType,
-                    "data", payload
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast payment WebSocket event: {}", e.getMessage());
-        }
+        log.debug("Payment event: {} for order: {}", eventType, orderId);
     }
 }

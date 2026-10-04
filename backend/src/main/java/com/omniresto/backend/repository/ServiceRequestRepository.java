@@ -13,7 +13,7 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequestEn
 
     List<ServiceRequestEntity> findByStatusOrderByCreatedAtDesc(ServiceRequestStatus status);
 
-    List<ServiceRequestEntity> findByTableIdAndStatusOrderByCreatedAtDesc(String tableId, ServiceRequestStatus status);
+    List<ServiceRequestEntity> findByTableNoIgnoreCaseAndStatus(String tableNo, ServiceRequestStatus status);
 
     int countByTableSessionIdAndCreatedAtAfter(String tableSessionId, LocalDateTime since);
 }

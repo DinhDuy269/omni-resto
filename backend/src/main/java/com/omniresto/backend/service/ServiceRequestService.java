@@ -10,24 +10,21 @@ import com.omniresto.backend.model.servicerequest.ServiceRequestResponse;
 import com.omniresto.backend.repository.ServiceRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ServiceRequestService {
 
     private final ServiceRequestRepository serviceRequestRepository;
     private final TableSessionService tableSessionService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     // Giới hạn tần suất gọi phục vụ: Tối thiểu cách nhau 15 giây để chống spam
     public static final int RATE_LIMIT_SECONDS = 15;
@@ -45,84 +42,55 @@ public class ServiceRequestService {
 
         ServiceRequestEntity entity = ServiceRequestEntity.builder()
                 .tableSessionId(session.getId())
-                .tableId(session.getTableId())
                 .tableNo(session.getTableNo())
                 .requestType(request.getRequestType())
-                .note(request.getNote() != null ? request.getNote().trim() : null)
-                .status(ServiceRequestStatus.PENDING)
+                .note(request.getNote())
+                .status(ServiceRequestStatus.pending)
                 .build();
-        entity.setId("sr-" + UUID.randomUUID().toString().substring(0, 8));
+        entity.setId("req-" + UUID.randomUUID().toString().substring(0, 8));
 
         ServiceRequestEntity saved = serviceRequestRepository.save(entity);
         log.info("🔔 Service request {} created for {}: {}", saved.getId(), saved.getTableNo(), saved.getRequestType());
 
-        ServiceRequestResponse response = mapToResponse(saved);
-
-        // Broadcast qua WebSocket tới màn hình thu ngân và POS
-        try {
-            messagingTemplate.convertAndSend("/topic/service-requests", Map.of(
-                    "eventType", "SERVICE_REQUEST_CREATED",
-                    "request", response
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast service request: {}", e.getMessage());
-        }
-
-        return response;
+        return mapToResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> getActiveRequests() {
-        return serviceRequestRepository.findByStatusOrderByCreatedAtDesc(ServiceRequestStatus.PENDING)
+        return serviceRequestRepository.findByStatusOrderByCreatedAtDesc(ServiceRequestStatus.pending)
                 .stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional
-    public ServiceRequestResponse resolveRequest(String id, String staffId) {
-        ServiceRequestEntity entity = serviceRequestRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Yêu cầu phục vụ không tồn tại: " + id));
+    public ServiceRequestResponse resolveRequest(String requestId, String staffId) {
+        ServiceRequestEntity entity = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu hỗ trợ: " + requestId));
 
-        entity.setStatus(ServiceRequestStatus.RESOLVED);
+        entity.setStatus(ServiceRequestStatus.resolved);
         entity.setResolvedAt(LocalDateTime.now());
         entity.setResolvedByStaffId(staffId != null ? staffId : "STAFF-POS");
 
         ServiceRequestEntity saved = serviceRequestRepository.save(entity);
         log.info("✅ Service request {} resolved by {}", saved.getId(), entity.getResolvedByStaffId());
 
-        ServiceRequestResponse response = mapToResponse(saved);
-
-        try {
-            messagingTemplate.convertAndSend("/topic/service-requests", Map.of(
-                    "eventType", "SERVICE_REQUEST_RESOLVED",
-                    "request", response
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast service request resolution: {}", e.getMessage());
-        }
-
-        return response;
+        return mapToResponse(saved);
     }
 
     @Transactional
     public void resolveAllForTable(String tableNo, String staffId) {
-        List<ServiceRequestEntity> activeList = serviceRequestRepository.findByStatusOrderByCreatedAtDesc(ServiceRequestStatus.PENDING);
-        for (ServiceRequestEntity req : activeList) {
-            if (req.getTableNo().equalsIgnoreCase(tableNo)) {
-                req.setStatus(ServiceRequestStatus.RESOLVED);
-                req.setResolvedAt(LocalDateTime.now());
-                req.setResolvedByStaffId(staffId != null ? staffId : "STAFF-POS");
-                serviceRequestRepository.save(req);
-            }
-        }
-        try {
-            messagingTemplate.convertAndSend("/topic/service-requests", Map.of(
-                    "eventType", "SERVICE_REQUEST_TABLE_RESOLVED",
-                    "tableNo", tableNo
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast table resolution: {}", e.getMessage());
+        List<ServiceRequestEntity> activeList = serviceRequestRepository.findByTableNoIgnoreCaseAndStatus(tableNo, ServiceRequestStatus.pending);
+        if (!activeList.isEmpty()) {
+            LocalDateTime now = LocalDateTime.now();
+            String resolvedBy = staffId != null ? staffId : "STAFF-POS";
+            activeList.forEach(req -> {
+                req.setStatus(ServiceRequestStatus.resolved);
+                req.setResolvedAt(now);
+                req.setResolvedByStaffId(resolvedBy);
+            });
+            serviceRequestRepository.saveAll(activeList);
+            log.info("✅ Resolved {} service requests for table {} by {}", activeList.size(), tableNo, resolvedBy);
         }
     }
 
@@ -130,14 +98,13 @@ public class ServiceRequestService {
         return ServiceRequestResponse.builder()
                 .id(entity.getId())
                 .tableSessionId(entity.getTableSessionId())
-                .tableId(entity.getTableId())
                 .tableNo(entity.getTableNo())
                 .requestType(entity.getRequestType())
                 .note(entity.getNote())
                 .status(entity.getStatus())
-                .createdAt(entity.getCreatedAt())
                 .resolvedAt(entity.getResolvedAt())
                 .resolvedByStaffId(entity.getResolvedByStaffId())
+                .createdAt(entity.getCreatedAt())
                 .build();
     }
 }

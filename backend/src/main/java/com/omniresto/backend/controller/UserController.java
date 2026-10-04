@@ -7,7 +7,6 @@ import com.omniresto.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,32 +19,32 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+    public List<UserResponse> getAllUsers() {
+        return userService.getAllUsers();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable String id) {
-        return ResponseEntity.ok(userService.getUserById(id));
+    public UserResponse getUserById(@PathVariable String id) {
+        return userService.getUserById(id);
     }
 
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(userService.createUser(request));
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponse createUser(@Valid @RequestBody UserRequest request) {
+        return userService.createUser(request);
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<UserResponse> updateUserStatus(
+    public UserResponse updateUserStatus(
             @PathVariable String id,
             @RequestParam UserStatus status
     ) {
-        return ResponseEntity.ok(userService.updateUserStatus(id, status));
+        return userService.updateUserStatus(id, status);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
     }
 }

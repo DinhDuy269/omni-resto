@@ -32,8 +32,9 @@ export interface TableSession {
   tableId: string;
   tableNo: string;
   sessionToken: string;
-  status: 'ACTIVE' | 'PAYMENT_REQUESTED' | 'PAYMENT_PENDING' | 'PAID' | 'CLOSED' | 'EXPIRED';
-  mode: 'PAY_AFTER' | 'PAY_FIRST';
+  status: 'ACTIVE' | 'PAYMENT_REQUESTED' | 'PAYMENT_PENDING' | 'PAID' | 'CLOSED' | 'EXPIRED'
+    | 'active' | 'payment_requested' | 'payment_pending' | 'paid' | 'closed' | 'expired';
+  mode: 'PAY_AFTER' | 'PAY_FIRST' | 'pay_after' | 'pay_first';
   expiresAt: string;
   isVerified?: boolean;
   verifiedAt?: string;

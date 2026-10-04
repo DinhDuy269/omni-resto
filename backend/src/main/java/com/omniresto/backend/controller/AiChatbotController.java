@@ -19,7 +19,6 @@ import java.util.Map;
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class AiChatbotController {
 
     private final AiChatbotService aiChatbotService;
@@ -73,11 +72,11 @@ public class AiChatbotController {
     }
 
     @GetMapping("/status")
-    public ResponseEntity<Map<String, Object>> getStatus() {
-        return ResponseEntity.ok(Map.of(
+    public Map<String, Object> getStatus() {
+        return Map.of(
                 "status", "ONLINE",
                 "service", "OmniResto AI Culinary Assistant",
                 "version", "1.0.0"
-        ));
+        );
     }
 }

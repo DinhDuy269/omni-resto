@@ -29,12 +29,12 @@ public class TableSessionEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private TableSessionStatus status = TableSessionStatus.ACTIVE;
+    private TableSessionStatus status = TableSessionStatus.active;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private TableSessionMode mode = TableSessionMode.PAY_AFTER;
+    private TableSessionMode mode = TableSessionMode.pay_after;
 
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;

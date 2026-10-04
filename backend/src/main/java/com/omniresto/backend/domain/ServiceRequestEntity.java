@@ -36,7 +36,7 @@ public class ServiceRequestEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private ServiceRequestStatus status = ServiceRequestStatus.PENDING;
+    private ServiceRequestStatus status = ServiceRequestStatus.pending;
 
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;

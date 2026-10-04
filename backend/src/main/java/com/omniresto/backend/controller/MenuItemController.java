@@ -9,8 +9,6 @@ import com.omniresto.backend.service.MenuItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,60 +24,53 @@ public class MenuItemController {
      * Lấy danh sách món ăn, hỗ trợ lọc theo buổi: MORNING | NOON | EVENING
      */
     @GetMapping
-    public ResponseEntity<List<MenuItemResponse>> getAllMenuItems(
-            @RequestParam(required = false) String period
-    ) {
-        return ResponseEntity.ok(menuItemService.getAllMenuItems(period));
+    public List<MenuItemResponse> getAllMenuItems(@RequestParam(required = false) String period) {
+        return menuItemService.getAllMenuItems(period);
     }
 
     @GetMapping("/current-period")
-    public ResponseEntity<MealPeriodInfoResponse> getCurrentMealPeriod() {
-        return ResponseEntity.ok(menuItemService.getCurrentMealPeriodInfo());
+    public MealPeriodInfoResponse getCurrentMealPeriod() {
+        return menuItemService.getCurrentMealPeriodInfo();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MenuItemResponse> getMenuItemById(@PathVariable String id) {
-        return ResponseEntity.ok(menuItemService.getMenuItemById(id));
+    public MenuItemResponse getMenuItemById(@PathVariable String id) {
+        return menuItemService.getMenuItemById(id);
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('admin', 'store_manager') or permitAll()")
-    public ResponseEntity<MenuItemResponse> createMenuItem(@Valid @RequestBody MenuItemCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(menuItemService.createMenuItem(request));
+    @ResponseStatus(HttpStatus.CREATED)
+    public MenuItemResponse createMenuItem(@Valid @RequestBody MenuItemCreateRequest request) {
+        return menuItemService.createMenuItem(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('admin', 'store_manager') or permitAll()")
-    public ResponseEntity<MenuItemResponse> updateMenuItem(
+    public MenuItemResponse updateMenuItem(
             @PathVariable String id,
             @Valid @RequestBody MenuItemUpdateRequest request
     ) {
-        return ResponseEntity.ok(menuItemService.updateMenuItem(id, request));
+        return menuItemService.updateMenuItem(id, request);
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('admin', 'store_manager') or permitAll()")
-    public ResponseEntity<MenuItemResponse> partialUpdateMenuItem(
+    public MenuItemResponse partialUpdateMenuItem(
             @PathVariable String id,
             @Valid @RequestBody MenuItemUpdateRequest request
     ) {
-        return ResponseEntity.ok(menuItemService.updateMenuItem(id, request));
+        return menuItemService.updateMenuItem(id, request);
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('admin', 'store_manager') or permitAll()")
-    public ResponseEntity<MenuItemResponse> updateMenuItemStatus(
+    public MenuItemResponse updateMenuItemStatus(
             @PathVariable String id,
             @RequestParam MenuStatus status
     ) {
-        return ResponseEntity.ok(menuItemService.updateMenuItemStatus(id, status));
+        return menuItemService.updateMenuItemStatus(id, status);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('admin', 'store_manager') or permitAll()")
-    public ResponseEntity<Void> deleteMenuItem(@PathVariable String id) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMenuItem(@PathVariable String id) {
         menuItemService.deleteMenuItem(id);
-        return ResponseEntity.noContent().build();
     }
 }

@@ -7,7 +7,6 @@ import com.omniresto.backend.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,56 +20,57 @@ public class EventController {
 
     /** GET /api/events — active events for client (upcoming + ongoing) */
     @GetMapping
-    public ResponseEntity<List<EventResponse>> getEvents(
+    public List<EventResponse> getEvents(
             @RequestParam(required = false) EventStatus status,
             @RequestParam(required = false, defaultValue = "false") boolean all
     ) {
         if (all) {
-            return ResponseEntity.ok(eventService.getAllEvents(status));
+            return eventService.getAllEvents(status);
         }
-        return ResponseEntity.ok(eventService.getActiveEvents());
+        return eventService.getActiveEvents();
     }
 
     /** GET /api/events/featured */
     @GetMapping("/featured")
-    public ResponseEntity<List<EventResponse>> getFeatured() {
-        return ResponseEntity.ok(eventService.getFeaturedEvents());
+    public List<EventResponse> getFeatured() {
+        return eventService.getFeaturedEvents();
     }
 
     /** GET /api/events/:id */
     @GetMapping("/{id}")
-    public ResponseEntity<EventResponse> getById(@PathVariable String id) {
-        return ResponseEntity.ok(eventService.getEventById(id));
+    public EventResponse getById(@PathVariable String id) {
+        return eventService.getEventById(id);
     }
 
     /** POST /api/events */
     @PostMapping
-    public ResponseEntity<EventResponse> createEvent(@Valid @RequestBody EventRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventService.createEvent(request));
+    @ResponseStatus(HttpStatus.CREATED)
+    public EventResponse createEvent(@Valid @RequestBody EventRequest request) {
+        return eventService.createEvent(request);
     }
 
     /** PUT /api/events/:id */
     @PutMapping("/{id}")
-    public ResponseEntity<EventResponse> updateEvent(
+    public EventResponse updateEvent(
             @PathVariable String id,
             @Valid @RequestBody EventRequest request
     ) {
-        return ResponseEntity.ok(eventService.updateEvent(id, request));
+        return eventService.updateEvent(id, request);
     }
 
     /** PATCH /api/events/:id/status?status=completed */
     @PatchMapping("/{id}/status")
-    public ResponseEntity<EventResponse> updateStatus(
+    public EventResponse updateStatus(
             @PathVariable String id,
             @RequestParam EventStatus status
     ) {
-        return ResponseEntity.ok(eventService.updateEventStatus(id, status));
+        return eventService.updateEventStatus(id, status);
     }
 
     /** DELETE /api/events/:id */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEvent(@PathVariable String id) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteEvent(@PathVariable String id) {
         eventService.deleteEvent(id);
-        return ResponseEntity.noContent().build();
     }
 }
