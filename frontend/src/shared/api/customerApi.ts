@@ -1,17 +1,42 @@
-import type { CustomerResponse } from "../types/customer";
+import type { MenuItem, OrderRequest } from '../types/customer';
 
-const API_URL: string = import.meta.env?.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL = 'http://localhost:8080/api/v1'; // Điều chỉnh port/URL backend nếu cần
 
-export type CustomerStatus = "active" | "inactive";
+export const customerApi = {
+  // Gửi OTP
+  sendOtp: async (phone: string): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/customer/auth/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    return res.json();
+  },
 
-export async function fetchCustomers(): Promise<CustomerResponse[]> {
-  const res = await fetch(`${API_URL}/api/customers`);
-  if (!res.ok) throw new Error("Không tải được danh sách khách hàng");
-  return res.json();
-}
+  // Xác thực OTP
+  verifyOtp: async (phone: string, otp: string): Promise<{ success: boolean; token?: string; message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/customer/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp }),
+    });
+    return res.json();
+  },
 
-export async function updateCustomerStatus(id: string, status: CustomerStatus): Promise<CustomerResponse> {
-  const res = await fetch(`${API_URL}/api/customers/${id}/status?status=${status}`, { method: "PATCH" });
-  if (!res.ok) throw new Error("Không cập nhật được trạng thái");
-  return res.json();
-}
+  // Lấy danh sách thực đơn
+  getMenu: async (): Promise<MenuItem[]> => {
+    const res = await fetch(`${API_BASE_URL}/customer/menu`);
+    if (!res.ok) throw new Error('Không thể tải thực đơn');
+    return res.json();
+  },
+
+  // Gửi đơn đặt món
+  createOrder: async (order: OrderRequest): Promise<{ success: boolean; orderId: string }> => {
+    const res = await fetch(`${API_BASE_URL}/customer/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order),
+    });
+    return res.json();
+  },
+};

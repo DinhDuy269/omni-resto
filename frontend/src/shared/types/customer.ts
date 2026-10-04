@@ -1,20 +1,27 @@
-export interface CustomerRegisterPayload {
-  fullName: string;
-  email: string;
-  phone: string;
-  dateOfBirth: string | null;
-  password: string;
-  confirmPassword: string;
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+  isAvailable: boolean;
 }
 
-export interface CustomerResponse {
-  id: string;
-  fullName: string;
-  email: string;
+export interface CartItem {
+  menuItem: MenuItem;
+  quantity: number;
+  note?: string;
+}
+
+export interface OrderRequest {
+  customerName: string;
   phone: string;
-  dateOfBirth: string | null;
-  membershipTier: string;
-  loyaltyPoints: number;
-  status: string;
-  createdAt: string;
+  tableNumber?: string;
+  items: {
+    menuItemId: string;
+    quantity: number;
+    note?: string;
+  }[];
+  totalAmount: number;
 }
