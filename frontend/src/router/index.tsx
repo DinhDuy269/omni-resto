@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from '../client/pages/login';  // [THÊM] cạnh import RegisterPage
+
 
 // ── Admin imports ─────────────────────────────────────────────────────────────
 import { AdminLayout } from '../admin/layouts/AdminLayout';
@@ -8,6 +10,8 @@ import { BranchManagement } from '../admin/pages/branch/BranchManagement';
 import { MasterMenuManagement } from '../admin/pages/menu/MasterMenuManagement';
 import { ChainOrdersManagement } from '../admin/pages/order/ChainOrdersManagement';
 import { StaffManagement } from '../admin/pages/auth/StaffManagement';
+import  CustomersPage  from "../admin/pages/customers";
+
 import { TableManagement } from '../admin/pages/table/TableManagement';
 
 // ── Client imports ────────────────────────────────────────────────────────────
@@ -16,6 +20,8 @@ import ClientHome from '../client/pages/home/ClientHome';
 import ClientMenu from '../client/pages/menu/ClientMenu';
 import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
+ 
+import RegisterPage from '../client/pages/register';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -33,6 +39,7 @@ export const AppRouter: React.FC = () => {
           <Route path="menu" element={<MasterMenuManagement />} />
           <Route path="orders" element={<ChainOrdersManagement />} />
           <Route path="staff" element={<StaffManagement />} />
+          <Route path="customers" element={<CustomersPage />} />
           <Route path="tables" element={<TableManagement />} />
           <Route
             path="reports"
@@ -67,7 +74,10 @@ export const AppRouter: React.FC = () => {
           <Route path="cart" element={<ClientCart />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
           <Route path="*" element={<Navigate to="/client" replace />} />
+          
         </Route>
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
         {/* Global fallback */}
         <Route path="*" element={<Navigate to="/admin" replace />} />

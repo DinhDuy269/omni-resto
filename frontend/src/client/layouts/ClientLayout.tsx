@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { ShoppingCart, MapPin, UtensilsCrossed } from 'lucide-react';
+import { ShoppingCart, MapPin, UtensilsCrossed, LogIn, UserPlus } from 'lucide-react'; // [SỬA] thêm UserPlus cho nút Đăng ký
 import { useClientStore, selectTotalItems, selectTotalAmount } from '../store/clientStore';
 import { CartDrawer } from '../components/CartDrawer';
 import './ClientLayout.css';
@@ -29,29 +29,44 @@ export const ClientLayout: React.FC = () => {
             </div>
           )}
 
-          {/* Cart — Fitts's Law: large, right-aligned CTA */}
-          <button
-            id="client-cart-button"
-            className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}
-            onClick={openCart}
-            aria-label={`Xem giỏ hàng (${totalItems} món)`}
-          >
-            <ShoppingCart size={19} strokeWidth={2.2} />
-            {totalItems > 0 ? (
-              <>
-                <span className="client-cart-amount">
-                  {totalAmount.toLocaleString('vi-VN')}đ
-                </span>
-                <span className="client-cart-badge" aria-label={`${totalItems} món`}>
-                  {totalItems}
-                </span>
-              </>
-            ) : (
-              <span style={{ fontSize: '0.875rem' }}>Giỏ hàng</span>
-            )}
-          </button>
+          <div className="client-header-actions">
+            {/* Cart — Fitts's Law: large, right-aligned CTA */}
+            <button
+              id="client-cart-button"
+              className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}
+              onClick={openCart}
+              aria-label={`Xem giỏ hàng (${totalItems} món)`}
+            >
+              <ShoppingCart size={19} strokeWidth={2.2} />
+              {totalItems > 0 ? (
+                <>
+                  <span className="client-cart-amount">
+                    {totalAmount.toLocaleString('vi-VN')}đ
+                  </span>
+                  <span className="client-cart-badge" aria-label={`${totalItems} món`}>
+                    {totalItems}
+                  </span>
+                </>
+              ) : (
+                <span style={{ fontSize: '0.875rem' }}>Giỏ hàng</span>
+              )}
+            </button>
+
+            {/* Nút Đăng ký, nằm bên phải nút giỏ hàng */}
+            <Link to="/register" className="client-auth-btn">
+              <UserPlus size={17} strokeWidth={2.2} />
+              <span>Đăng ký</span>
+            </Link>
+
+            {/* Nút Đăng nhập */}
+            <Link to="/login" className="client-auth-btn">
+              <LogIn size={17} strokeWidth={2.2} />
+              <span>Đăng nhập</span>
+            </Link>
+          </div>
         </div>
       </header>
+      {/* [XÓA] đã bỏ đoạn </div></div></header> bị thừa ở đây */}
 
       {/* ── Main Content (Outlet) ── */}
       <main className="client-main">

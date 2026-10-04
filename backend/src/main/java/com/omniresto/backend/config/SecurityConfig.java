@@ -47,42 +47,45 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(this::configureAuthorizeHttpRequests)
-            .exceptionHandling(exceptionHandling -> exceptionHandling
-                .accessDeniedHandler((request, response, accessDeniedException) -> {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType("application/json");
-                    String msg = accessDeniedException.getMessage() != null ? accessDeniedException.getMessage() : "Access is denied";
-                    response.getWriter().write("{\"error\":\"access_denied\",\"error_description\":\"" + msg + "\"}");
-                })
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"" + HttpStatus.UNAUTHORIZED.getReasonPhrase() + "\"}");
-                })
-            )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(this::configureAuthorizeHttpRequests)
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            String msg = accessDeniedException.getMessage() != null ? accessDeniedException.getMessage() : "Access is denied";
+                            response.getWriter().write("{\"error\":\"access_denied\",\"error_description\":\"" + msg + "\"}");
+                        })
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"" + HttpStatus.UNAUTHORIZED.getReasonPhrase() + "\"}");
+                        })
+                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
 
     private void configureAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
         authorizeRequests
-            .requestMatchers(branchApiPatterns()).permitAll()
-            .requestMatchers(menuApiPatterns()).permitAll()
-            .requestMatchers(orderApiPatterns()).permitAll()
-            .requestMatchers(userApiPatterns()).permitAll()
-            .requestMatchers(tableApiPatterns()).permitAll()
-            .anyRequest().authenticated();
+                .requestMatchers(branchApiPatterns()).permitAll()
+                .requestMatchers(menuApiPatterns()).permitAll()
+                .requestMatchers(orderApiPatterns()).permitAll()
+                .requestMatchers(userApiPatterns()).permitAll()
+                .requestMatchers(tableApiPatterns()).permitAll()
+                .requestMatchers(customerApiPatterns()).permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/error")).permitAll() // [THÊM] để thấy lỗi thật thay vì 401
+
+                .anyRequest().authenticated();
     }
 
     // region branch
     private static RequestMatcher[] branchApiPatterns() {
         return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/branches"),
-            new AntPathRequestMatcher("/api/branches/**")
+                new AntPathRequestMatcher("/api/branches"),
+                new AntPathRequestMatcher("/api/branches/**")
         };
     }
     // endregion
@@ -90,8 +93,8 @@ public class SecurityConfig {
     // region menu
     private static RequestMatcher[] menuApiPatterns() {
         return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/menu-items"),
-            new AntPathRequestMatcher("/api/menu-items/**")
+                new AntPathRequestMatcher("/api/menu-items"),
+                new AntPathRequestMatcher("/api/menu-items/**")
         };
     }
     // endregion
@@ -99,8 +102,8 @@ public class SecurityConfig {
     // region order
     private static RequestMatcher[] orderApiPatterns() {
         return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/orders"),
-            new AntPathRequestMatcher("/api/orders/**")
+                new AntPathRequestMatcher("/api/orders"),
+                new AntPathRequestMatcher("/api/orders/**")
         };
     }
     // endregion
@@ -108,8 +111,8 @@ public class SecurityConfig {
     // region user
     private static RequestMatcher[] userApiPatterns() {
         return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/users"),
-            new AntPathRequestMatcher("/api/users/**")
+                new AntPathRequestMatcher("/api/users"),
+                new AntPathRequestMatcher("/api/users/**")
         };
     }
     // endregion
@@ -117,8 +120,17 @@ public class SecurityConfig {
     // region table
     private static RequestMatcher[] tableApiPatterns() {
         return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/tables"),
-            new AntPathRequestMatcher("/api/tables/**")
+                new AntPathRequestMatcher("/api/tables"),
+                new AntPathRequestMatcher("/api/tables/**")
+        };
+    }
+    // endregion
+
+    // region customer
+    private static RequestMatcher[] customerApiPatterns() {
+        return new RequestMatcher[]{
+                new AntPathRequestMatcher("/api/customers"),    // [SỬA] mở API danh sách khách hàng
+                new AntPathRequestMatcher("/api/customers/**")  // [SỬA] mở register và đổi trạng thái
         };
     }
     // endregion

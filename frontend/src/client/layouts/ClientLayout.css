@@ -199,3 +199,41 @@
   .client-branch-badge { display: none; }
   .client-cart-amount  { display: none; }
 }
+
+.client-header-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.client-auth-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  background: var(--c-surface-warm);
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--c-r-full);
+  color: var(--c-text-body);
+  font-family: var(--c-font);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all var(--c-t-fast);
+}
+
+.client-auth-btn:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  background: var(--c-primary-light);
+}
+
+@media (max-width: 768px) {
+  .client-auth-btn span { display: none; }
+  .client-auth-btn { padding: 0 12px; }
+}
