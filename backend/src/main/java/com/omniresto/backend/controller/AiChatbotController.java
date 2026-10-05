@@ -34,19 +34,16 @@ public class AiChatbotController {
 
         // 1. Xác thực phiên bàn hoặc phân định khách xem menu online
         String sessionKey;
+        boolean sessionInvalid = false;
         if (sessionToken != null && !sessionToken.trim().isEmpty()) {
             try {
                 tableSessionService.validateAndTouchSession(sessionToken.trim());
                 sessionKey = "table:" + sessionToken.trim();
             } catch (Exception e) {
-                log.warn("Invalid table session token: {}", e.getMessage());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                        AiChatResponse.builder()
-                                .reply("Dạ phiên bàn của quý khách không còn hiệu lực hoặc đã kết thúc. Quý khách vui lòng quét lại mã QR tại bàn nhé! 📱✨")
-                                .recommendedDishes(Collections.emptyList())
-                                .modelUsed("Security Gateway")
-                                .build()
-                );
+                log.info("Session token '{}' invalid or expired ({}), falling back to guest mode", sessionToken, e.getMessage());
+                sessionInvalid = true;
+                String clientIp = servletRequest != null ? servletRequest.getRemoteAddr() : "guest";
+                sessionKey = "guest:" + (clientIp != null ? clientIp : "anonymous");
             }
         } else {
             // Khách duyệt thực đơn trực tuyến: nhận diện theo IP client
@@ -69,7 +66,11 @@ public class AiChatbotController {
             request = new AiChatRequest();
         }
 
-        return ResponseEntity.ok(aiChatbotService.chat(request));
+        var responseBuilder = ResponseEntity.ok();
+        if (sessionInvalid) {
+            responseBuilder.header("X-Table-Session-Status", "INVALID");
+        }
+        return responseBuilder.body(aiChatbotService.chat(request));
     }
 
     @GetMapping("/status")

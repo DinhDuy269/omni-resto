@@ -65,20 +65,29 @@ class AiChatbotControllerTest {
     }
 
     @Test
-    @DisplayName("P1: Gọi /api/ai/chat với session token không hợp lệ/hết hạn phải trả về 401")
-    void testInvalidSessionTokenReturns401() {
+    @DisplayName("Session token không hợp lệ hoặc hết hạn: tự động fallback sang guest mode và trả về 200 OK")
+    void testInvalidSessionTokenFallsBackToGuestMode() {
         when(tableSessionService.validateAndTouchSession("invalid_token"))
                 .thenThrow(new RuntimeException("Session not found or closed"));
+        when(servletRequest.getRemoteAddr()).thenReturn("192.168.1.50");
+        when(rateLimiter.tryAcquire("guest:192.168.1.50")).thenReturn(true);
+        when(aiChatbotService.chat(any())).thenReturn(
+                AiChatResponse.builder()
+                        .reply("Dạ em chào quý khách!")
+                        .recommendedDishes(Collections.emptyList())
+                        .build()
+        );
 
         AiChatRequest request = new AiChatRequest();
         request.setMessage("Xin chào");
 
         ResponseEntity<AiChatResponse> response = aiChatbotController.chat("invalid_token", request, servletRequest);
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().getReply().contains("không còn hiệu lực"));
+        assertEquals("Dạ em chào quý khách!", response.getBody().getReply());
+        assertEquals("INVALID", response.getHeaders().getFirst("X-Table-Session-Status"));
 
-        verify(aiChatbotService, never()).chat(any());
+        verify(aiChatbotService, times(1)).chat(any());
     }
 
     @Test

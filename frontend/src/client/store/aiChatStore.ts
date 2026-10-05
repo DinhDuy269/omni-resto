@@ -131,6 +131,10 @@ export const useAiChatStore = create<AiChatState>((set, get) => ({
         }
       );
 
+      if (res.headers && (res.headers['x-table-session-status'] === 'INVALID' || res.headers['x-table-session-status'] === 'invalid')) {
+        useClientStore.getState().clearTableSession();
+      }
+
       if (res.data && res.data.reply) {
         const botMsg: ChatMessage = {
           id: `msg-${Date.now()}-bot`,
@@ -152,6 +156,10 @@ export const useAiChatStore = create<AiChatState>((set, get) => ({
       const errorObj = err as { response?: { status?: number; data?: { reply?: string; message?: string } } };
       const status = errorObj?.response?.status;
       const responseData = errorObj?.response?.data;
+
+      if (status === 401) {
+        useClientStore.getState().clearTableSession();
+      }
 
       if (status === 401 || (responseData && typeof responseData === 'object' && responseData.reply && status !== 500)) {
         fallbackText =
