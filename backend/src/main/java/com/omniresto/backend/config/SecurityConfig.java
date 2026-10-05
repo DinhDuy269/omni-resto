@@ -70,16 +70,33 @@ public class SecurityConfig {
 
     private void configureAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
         authorizeRequests
+<<<<<<< Updated upstream
+=======
+                // [ADDED] Cho phép các request xác thực (Đăng ký, Đăng nhập, OTP...) không bị chặn 401
+                .requestMatchers(authApiPatterns()).permitAll()
+>>>>>>> Stashed changes
                 .requestMatchers(branchApiPatterns()).permitAll()
                 .requestMatchers(menuApiPatterns()).permitAll()
                 .requestMatchers(orderApiPatterns()).permitAll()
                 .requestMatchers(userApiPatterns()).permitAll()
                 .requestMatchers(tableApiPatterns()).permitAll()
+<<<<<<< Updated upstream
                 .requestMatchers(customerApiPatterns()).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/error")).permitAll() // [THÊM] để thấy lỗi thật thay vì 401
 
+=======
+>>>>>>> Stashed changes
                 .anyRequest().authenticated();
     }
+
+    // [ADDED] region auth - Cấu hình cấp quyền truy cập công khai cho endpoint /api/auth/**
+    private static RequestMatcher[] authApiPatterns() {
+        return new RequestMatcher[]{
+                new AntPathRequestMatcher("/api/auth"),
+                new AntPathRequestMatcher("/api/auth/**")
+        };
+    }
+    // endregion
 
     // region branch
     private static RequestMatcher[] branchApiPatterns() {
@@ -125,6 +142,7 @@ public class SecurityConfig {
         };
     }
     // endregion
+<<<<<<< Updated upstream
 
     // region customer
     private static RequestMatcher[] customerApiPatterns() {
@@ -134,4 +152,6 @@ public class SecurityConfig {
         };
     }
     // endregion
+=======
+>>>>>>> Stashed changes
 }

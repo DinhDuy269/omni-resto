@@ -1,9 +1,10 @@
 package com.omniresto.backend.domain.enums;
 
 public enum RoleType {
-    admin, // Admin / Chủ Chuỗi (Quyền cao nhất)
-    store_manager, // Quản Lý Cửa Hàng
-    cashier, // Thu Ngân Quầy
-    waiter, // Phục Vụ / Order Bàn
-    chef // Bếp / Bar Chế Biến
+    ADMIN,          // Admin / Chủ Chuỗi
+    STORE_MANAGER,  // Quản Lý Cửa Hàng
+    CASHIER,        // Thu Ngân Quầy
+    WAITER,         // Phục Vụ / Order Bàn
+    CHEF,           // Bếp / Bar Chế Biến
+    CUSTOMER        // Khách hàng đăng ký tài khoản
 }

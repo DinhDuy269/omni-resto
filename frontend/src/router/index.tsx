@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from '../client/pages/login';  // [THÊM] cạnh import RegisterPage
 
 
+// ── Auth & User Management imports ──────────────────────────────────────────
+import { AuthPage } from '../client/pages/auth/AuthPage';
+import { UserManagementPage } from "../client/pages/users/UserManagementPage";
 // ── Admin imports ─────────────────────────────────────────────────────────────
 import { AdminLayout } from '../admin/layouts/AdminLayout';
 import { AdminDashboard } from '../admin/pages/dashboard/AdminDashboard';
@@ -23,18 +26,52 @@ import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
  
 import RegisterPage from '../client/pages/register';
 
+// ── Component Bảo vệ Route dành cho Admin ────────────────────────────────────
+const AdminProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+
+  if (!token || !userStr) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  try {
+    const user = JSON.parse(userStr);
+    if (user.role !== 'ADMIN') {
+      return <Navigate to="/client" replace />;
+    }
+  } catch (e) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 export const AppRouter: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Root redirect → Admin */}
+        {/* Root redirect → Auth hoặc Admin */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
+
+        {/* ══════════════════════════════════════════════════
+            AUTHENTICATION FLOW (Đăng nhập, Đăng ký, Quên MK)
+            ══════════════════════════════════════════════════ */}
+        <Route path="/auth" element={<AuthPage />} />
 
         {/* ══════════════════════════════════════════════════
             ADMIN FLOW — Enterprise management interface
             ══════════════════════════════════════════════════ */}
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route
+          path="/admin"
+          element={
+            <AdminProtectedRoute>
+              <AdminLayout />
+            </AdminProtectedRoute>
+          }
+        >
           <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagementPage />} />
           <Route path="branches" element={<BranchManagement />} />
           <Route path="menu" element={<MasterMenuManagement />} />
           <Route path="orders" element={<ChainOrdersManagement />} />
@@ -85,4 +122,3 @@ export const AppRouter: React.FC = () => {
     </BrowserRouter>
   );
 };
-

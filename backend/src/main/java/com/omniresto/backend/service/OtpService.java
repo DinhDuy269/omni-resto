@@ -1,5 +1,6 @@
 package com.omniresto.backend.service;
 
+<<<<<<< Updated upstream
 import com.omniresto.backend.exception.BadRequestException;
 import org.springframework.stereotype.Service;
 
@@ -58,5 +59,72 @@ public class OtpService {
         // Xóa OTP sau khi đã xác minh thành công
         otpStorage.remove(phone);
         return true;
+=======
+import com.omniresto.backend.domain.OtpVerificationEntity;
+import com.omniresto.backend.domain.enums.OtpPurpose;
+import com.omniresto.backend.repository.OtpVerificationRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class OtpService {
+
+    private final OtpVerificationRepository otpVerificationRepository;
+    private final EmailService emailService;
+    private static final SecureRandom random = new SecureRandom();
+
+    // Tạo mã OTP 6 chữ số
+    public String generateOtpCode() {
+        int number = random.nextInt(900000) + 100000;
+        return String.valueOf(number);
+    }
+
+    // Tạo và gửi mã OTP qua Email
+    @Transactional
+    public void generateAndSendOtp(String email, OtpPurpose purpose) {
+        String otpCode = generateOtpCode();
+        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(5);
+
+        OtpVerificationEntity otpEntity = OtpVerificationEntity.builder()
+                .email(email)
+                .otpCode(otpCode)
+                .purpose(purpose)
+                .expiredAt(expiredAt)
+                .isUsed(false)
+                .build();
+
+        otpVerificationRepository.save(otpEntity);
+
+        String purposeText = purpose == OtpPurpose.REGISTER_VERIFICATION
+                ? "Xác minh đăng ký tài khoản"
+                : "Đặt lại mật khẩu";
+
+        emailService.sendOtpEmail(email, otpCode, purposeText);
+    }
+
+    // Xác minh mã OTP
+    @Transactional
+    public boolean verifyOtp(String email, String otpCode, OtpPurpose purpose) {
+        var otpOpt = otpVerificationRepository
+                .findFirstByEmailAndOtpCodeAndPurposeAndIsUsedFalseAndExpiredAtAfter(
+                        email, otpCode, purpose, LocalDateTime.now()
+                );
+
+        if (otpOpt.isPresent()) {
+            OtpVerificationEntity otpEntity = otpOpt.get();
+            otpEntity.setIsUsed(true);
+            otpVerificationRepository.save(otpEntity);
+            return true;
+        }
+
+        return false;
+>>>>>>> Stashed changes
     }
 }

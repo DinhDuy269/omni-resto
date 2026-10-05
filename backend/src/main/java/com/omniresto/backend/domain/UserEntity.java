@@ -37,7 +37,7 @@ public class UserEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private UserStatus status = UserStatus.active;
+    private UserStatus status = UserStatus.ACTIVE;
 
     private String avatar;
 }
