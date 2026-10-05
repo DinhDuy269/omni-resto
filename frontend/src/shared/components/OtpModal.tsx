@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { authApi,type OtpPurpose } from '../api/authService';
+import React, { useState, useEffect, useRef } from 'react';
+import { authApi, type OtpPurpose } from '../api/authService';
+import './OtpModal.css';
 
 interface OtpModalProps {
   isOpen: boolean;
@@ -9,8 +10,16 @@ interface OtpModalProps {
   onSuccess: (otpCode: string) => void;
 }
 
-export const OtpModal: React.FC<OtpModalProps> = ({
-  isOpen,
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
+// Component con: Tự tạo mới state khi modal bật lên, sạch lỗi render
+const OtpModalDialog: React.FC<Omit<OtpModalProps, 'isOpen'>> = ({
   email,
   purpose,
   onClose,
@@ -20,40 +29,45 @@ export const OtpModal: React.FC<OtpModalProps> = ({
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(60);
-  const [canResend, setCanResend] = useState<boolean>(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const canResend = countdown === 0;
 
   useEffect(() => {
-   let timer: ReturnType<typeof setInterval>;
-    if (isOpen && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
-    } else if (countdown === 0) {
-      setCanResend(true);
-    }
-    return () => clearInterval(timer);
-  }, [isOpen, countdown]);
+    if (countdown <= 0) return;
 
-  if (!isOpen) return null;
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [countdown]);
 
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
 
     // Tự động focus sang ô tiếp theo
     if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-input-${index + 1}`);
-      nextInput?.focus();
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-input-${index - 1}`);
-      prevInput?.focus();
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').trim();
+    if (/^\d{6}$/.test(pasted)) {
+      setOtp(pasted.split(''));
+      inputRefs.current[5]?.focus();
     }
   };
 
@@ -74,8 +88,9 @@ export const OtpModal: React.FC<OtpModalProps> = ({
         await authApi.verifyResetOtp({ email, otpCode: fullOtp });
       }
       onSuccess(fullOtp);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Mã OTP không chính xác hoặc đã hết hạn');
+    } catch (err: unknown) {
+      const apiErr = err as ApiErrorResponse;
+      setError(apiErr.response?.data?.message || 'Mã OTP không chính xác hoặc đã hết hạn');
     } finally {
       setLoading(false);
     }
@@ -86,76 +101,118 @@ export const OtpModal: React.FC<OtpModalProps> = ({
       setError('');
       await authApi.resendOtp(email, purpose);
       setCountdown(60);
-      setCanResend(false);
       setOtp(['', '', '', '', '', '']);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Không thể gửi lại mã OTP, vui lòng thử lại');
+      inputRefs.current[0]?.focus();
+    } catch (err: unknown) {
+      const apiErr = err as ApiErrorResponse;
+      setError(apiErr.response?.data?.message || 'Không thể gửi lại mã OTP, vui lòng thử lại');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
-        <h3 className="text-xl font-bold text-center text-gray-800">Xác Nhập Mã OTP</h3>
-        <p className="mt-2 text-sm text-center text-gray-600">
-          Mã xác thực gồm 6 chữ số đã được gửi đến email:<br />
-          <span className="font-semibold text-orange-600">{email}</span>
+    <div
+      className="otp-modal-backdrop"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '16px',
+      }}
+    >
+      <div
+        className="otp-modal-card"
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '32px 24px',
+          width: '100%',
+          maxWidth: '430px',
+          textAlign: 'center',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        }}
+      >
+        <h3 className="otp-modal-title">Xác Nhận Mã OTP</h3>
+        <p className="otp-modal-desc">
+          Mã xác thực gồm 6 chữ số đã được gửi đến email:
+          <br />
+          <span className="otp-modal-email">{email}</span>
         </p>
 
-        {error && (
-          <div className="p-3 mt-4 text-sm text-red-600 bg-red-50 rounded-md text-center">
-            {error}
-          </div>
-        )}
+        {error && <div className="otp-modal-error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="mt-6">
-          <div className="flex justify-center gap-2">
+        <form onSubmit={handleSubmit}>
+          {/* Hàng 6 ô vuông bắt buộc nằm ngang */}
+          <div
+            className="otp-inputs-row"
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '24px',
+            }}
+          >
             {otp.map((digit, index) => (
               <input
                 key={index}
-                id={`otp-input-${index}`}
+                ref={(el) => {
+                  inputRefs.current[index] = el;
+                }}
                 type="text"
+                inputMode="numeric"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(e.target.value, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className="w-12 h-12 text-2xl font-bold text-center border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                onPaste={handlePaste}
+                className="otp-box-input"
+                style={{
+                  width: '46px',
+                  height: '52px',
+                  fontSize: '1.4rem',
+                  fontWeight: 800,
+                  textAlign: 'center',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '10px',
+                  backgroundColor: '#f8fafc',
+                  outline: 'none',
+                }}
               />
             ))}
           </div>
 
-          <div className="mt-6 flex flex-col gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-            >
+          <div>
+            <button type="submit" disabled={loading} className="otp-btn-confirm">
               {loading ? 'Đang xác minh...' : 'Xác Nhận'}
             </button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full py-2 text-gray-600 hover:text-gray-800 font-medium"
-            >
+            <button type="button" onClick={onClose} className="otp-btn-cancel">
               Hủy bỏ
             </button>
           </div>
         </form>
 
-        <div className="mt-4 text-center text-sm text-gray-600">
+        <div className="otp-resend-text">
           {canResend ? (
-            <button
-              onClick={handleResend}
-              className="font-semibold text-orange-600 hover:underline"
-            >
+            <button onClick={handleResend} className="otp-resend-link">
               Gửi lại mã OTP
             </button>
           ) : (
-            <span>Gửi lại mã sau: <strong className="text-orange-600">{countdown}s</strong></span>
+            <span>
+              Gửi lại mã sau: <strong style={{ color: '#ea580c' }}>{countdown}s</strong>
+            </span>
           )}
         </div>
       </div>
     </div>
   );
+};
+
+export const OtpModal: React.FC<OtpModalProps> = (props) => {
+  if (!props.isOpen) return null;
+  return <OtpModalDialog {...props} />;
 };

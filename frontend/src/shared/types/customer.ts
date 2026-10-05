@@ -1,27 +1,53 @@
+// ─────────────────────────────────────────────────────────────
+// PHẦN CHO TRANG ADMIN (Quản lý khách hàng hội viên)
+// ─────────────────────────────────────────────────────────────
+
+export type MembershipTier = 'standard' | 'silver' | 'gold' | 'platinum';
+export type CustomerStatus = 'active' | 'inactive';
+
+export interface CustomerResponse {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  dateOfBirth?: string;
+  membershipTier: MembershipTier;
+  loyaltyPoints: number;
+  status: CustomerStatus;
+  createdAt: string;
+}
+
+// ─────────────────────────────────────────────────────────────
+// PHẦN CHO BẠN BẠN (FoodCard, Đặt món & API Customer)
+// ─────────────────────────────────────────────────────────────
+
 export interface MenuItem {
   id: string;
   name: string;
-  description: string;
   price: number;
-  image: string;
-  category: string;
+  description?: string;
+  image?: string;
   isAvailable: boolean;
 }
 
-export interface CartItem {
-  menuItem: MenuItem;
+export interface OrderItemRequest {
+  menuItemId: string;
+  name?: string;
   quantity: number;
-  note?: string;
+  price?: number;
+  notes?: string;
 }
 
 export interface OrderRequest {
-  customerName: string;
-  phone: string;
-  tableNumber?: string;
-  items: {
-    menuItemId: string;
-    quantity: number;
-    note?: string;
-  }[];
-  totalAmount: number;
+  branchId?: string;
+  branchName?: string;
+  orderMode?: string;
+  tableNo?: string;
+  customerName?: string;
+  customerPhone?: string;
+  deliveryAddress?: string;
+  notes?: string;
+  paymentMethod?: string;
+  items?: OrderItemRequest[];
+  totalAmount?: number;
 }

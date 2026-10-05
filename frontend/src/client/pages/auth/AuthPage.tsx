@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { authApi, type RoleType } from '../../../shared/api/authService';
+import { authApi } from '../../../shared/api/authService';
 import { OtpModal } from '../../../shared/components/OtpModal';
 import './AuthPage.css';
 
 type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD' | 'RESET_PASSWORD';
+
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
 
 export const AuthPage: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>('LOGIN');
@@ -37,20 +45,19 @@ export const AuthPage: React.FC = () => {
       setMessage(null);
       const res = await authApi.login({ usernameOrEmail: email, password });
       
+      // 1. Lưu phiên đăng nhập người dùng vào localStorage
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data));
 
       setMessage({ type: 'success', text: 'Đăng nhập thành công!' });
       
+      // 2. Chuyển hướng thẳng về trang /client (không vào Admin)
       setTimeout(() => {
-        if (res.data.role === ('ADMIN' as RoleType)) {
-          window.location.href = '/admin/users';
-        } else {
-          window.location.href = '/';
-        }
-      }, 1000);
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Đăng nhập thất bại' });
+        window.location.href = '/client';
+      }, 700);
+    } catch (err: unknown) {
+      const apiErr = err as ApiErrorResponse;
+      setMessage({ type: 'error', text: apiErr.response?.data?.message || 'Đăng nhập thất bại' });
     } finally {
       setLoading(false);
     }
@@ -63,8 +70,9 @@ export const AuthPage: React.FC = () => {
       setMessage(null);
       await authApi.register({ fullName, email, phone, password });
       setIsOtpModalOpen(true);
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Đăng ký thất bại' });
+    } catch (err: unknown) {
+      const apiErr = err as ApiErrorResponse;
+      setMessage({ type: 'error', text: apiErr.response?.data?.message || 'Đăng ký thất bại' });
     } finally {
       setLoading(false);
     }
@@ -77,8 +85,9 @@ export const AuthPage: React.FC = () => {
       setMessage(null);
       await authApi.forgotPassword({ email });
       setIsOtpModalOpen(true);
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Không thể gửi yêu cầu' });
+    } catch (err: unknown) {
+      const apiErr = err as ApiErrorResponse;
+      setMessage({ type: 'error', text: apiErr.response?.data?.message || 'Không thể gửi yêu cầu' });
     } finally {
       setLoading(false);
     }
@@ -95,8 +104,9 @@ export const AuthPage: React.FC = () => {
         resetForm();
         setMode('LOGIN');
       }, 1500);
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Đặt lại mật khẩu thất bại' });
+    } catch (err: unknown) {
+      const apiErr = err as ApiErrorResponse;
+      setMessage({ type: 'error', text: apiErr.response?.data?.message || 'Đặt lại mật khẩu thất bại' });
     } finally {
       setLoading(false);
     }
