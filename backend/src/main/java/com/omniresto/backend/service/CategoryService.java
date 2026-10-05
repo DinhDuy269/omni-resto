@@ -7,12 +7,13 @@ import com.omniresto.backend.model.menu.response.CategoryResponse;
 import com.omniresto.backend.repository.CategoryOptionRepository;
 import com.omniresto.backend.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -24,7 +25,7 @@ public class CategoryService {
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public CategoryResponse getCategoryById(String id) {
@@ -35,32 +36,16 @@ public class CategoryService {
 
     public List<CategoryOptionResponse> getCategoryOptions(String categoryId) {
         return categoryOptionRepository.findByCategoryIdAndStatusOrderByDisplayOrderAsc(categoryId, "AVAILABLE").stream()
-                .map(opt -> CategoryOptionResponse.builder()
-                        .id(opt.getId())
-                        .categoryId(opt.getCategory() != null ? opt.getCategory().getId() : categoryId)
-                        .name(opt.getName())
-                        .optionType(opt.getOptionType() != null ? opt.getOptionType().name() : "TOPPING")
-                        .price(opt.getPrice())
-                        .status(opt.getStatus())
-                        .displayOrder(opt.getDisplayOrder())
-                        .build())
-                .collect(Collectors.toList());
+                .map(opt -> mapOptionToResponse(opt, categoryId))
+                .toList();
     }
 
     private CategoryResponse mapToResponse(CategoryEntity entity) {
         List<CategoryOptionResponse> options = null;
         if (entity.getOptions() != null) {
             options = entity.getOptions().stream()
-                    .map(opt -> CategoryOptionResponse.builder()
-                            .id(opt.getId())
-                            .categoryId(entity.getId())
-                            .name(opt.getName())
-                            .optionType(opt.getOptionType() != null ? opt.getOptionType().name() : "TOPPING")
-                            .price(opt.getPrice())
-                            .status(opt.getStatus())
-                            .displayOrder(opt.getDisplayOrder())
-                            .build())
-                    .collect(Collectors.toList());
+                    .map(opt -> mapOptionToResponse(opt, entity.getId()))
+                    .toList();
         }
 
         return CategoryResponse.builder()
@@ -70,6 +55,18 @@ public class CategoryService {
                 .description(entity.getDescription())
                 .displayOrder(entity.getDisplayOrder())
                 .options(options)
+                .build();
+    }
+
+    private CategoryOptionResponse mapOptionToResponse(com.omniresto.backend.domain.CategoryOptionEntity opt, String fallbackCategoryId) {
+        return CategoryOptionResponse.builder()
+                .id(opt.getId())
+                .categoryId(opt.getCategory() != null ? opt.getCategory().getId() : fallbackCategoryId)
+                .name(opt.getName())
+                .optionType(opt.getOptionType() != null ? opt.getOptionType().name().toUpperCase() : "TOPPING")
+                .price(opt.getPrice())
+                .status(opt.getStatus())
+                .displayOrder(opt.getDisplayOrder())
                 .build();
     }
 }

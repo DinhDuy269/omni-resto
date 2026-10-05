@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 
-export const API_BASE_URL = 'http://localhost:8080/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -63,10 +63,7 @@ export const checkBackendConnection = async (): Promise<boolean> => {
   try {
     const res = await apiClient.get('/menu-items', { timeout: 3000 });
     return res.status >= 200 && res.status < 400;
-  } catch (error: unknown) {
-    if (axios.isAxiosError(error) && error.response && error.response.status) {
-      return true;
-    }
+  } catch {
     return false;
   }
 };

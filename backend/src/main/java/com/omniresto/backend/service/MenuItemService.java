@@ -6,6 +6,7 @@ import com.omniresto.backend.domain.enums.MealPeriod;
 import com.omniresto.backend.domain.enums.MenuStatus;
 import com.omniresto.backend.exception.BadRequestException;
 import com.omniresto.backend.exception.ResourceNotFoundException;
+import com.omniresto.backend.helper.MealPeriodHelper;
 import com.omniresto.backend.model.menu.request.MenuItemCreateRequest;
 import com.omniresto.backend.model.menu.request.MenuItemUpdateRequest;
 import com.omniresto.backend.model.menu.response.CategoryOptionResponse;
@@ -14,6 +15,7 @@ import com.omniresto.backend.model.menu.response.MenuItemResponse;
 import com.omniresto.backend.repository.CategoryRepository;
 import com.omniresto.backend.repository.MenuItemRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,8 +24,8 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,10 +33,6 @@ public class MenuItemService {
 
     private final MenuItemRepository menuItemRepository;
     private final CategoryRepository categoryRepository;
-
-    public List<MenuItemResponse> getAllMenuItems() {
-        return getAllMenuItems(null);
-    }
 
     public List<MenuItemResponse> getAllMenuItems(String period) {
         List<MenuItemEntity> items;
@@ -45,13 +43,16 @@ public class MenuItemService {
         }
         return items.stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public MenuItemResponse getMenuItemById(String id) {
-        MenuItemEntity entity = menuItemRepository.findById(id)
+        return mapToResponse(findMenuItemById(id));
+    }
+
+    private MenuItemEntity findMenuItemById(String id) {
+        return menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
-        return mapToResponse(entity);
     }
 
     @Transactional
@@ -99,8 +100,7 @@ public class MenuItemService {
 
     @Transactional
     public MenuItemResponse updateMenuItem(String id, MenuItemUpdateRequest request) {
-        MenuItemEntity entity = menuItemRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
+        MenuItemEntity entity = findMenuItemById(id);
 
         MenuItemUpdateRequest actual = request.getActual();
 
@@ -141,8 +141,7 @@ public class MenuItemService {
 
     @Transactional
     public MenuItemResponse updateMenuItemStatus(String id, MenuStatus status) {
-        MenuItemEntity entity = menuItemRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
+        MenuItemEntity entity = findMenuItemById(id);
         entity.setStatus(status);
         MenuItemEntity updated = menuItemRepository.save(entity);
         return mapToResponse(updated);
@@ -150,27 +149,27 @@ public class MenuItemService {
 
     @Transactional
     public void deleteMenuItem(String id) {
-        MenuItemEntity entity = menuItemRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
+        MenuItemEntity entity = findMenuItemById(id);
         menuItemRepository.delete(entity);
     }
 
     public MealPeriodInfoResponse getCurrentMealPeriodInfo() {
         LocalTime now = LocalTime.now();
-        MealPeriod current = MealPeriod.getCurrentPeriod(now);
-        boolean isOrdering = (current != MealPeriod.CLOSED);
+        MealPeriod current = MealPeriodHelper.getCurrentPeriod(now);
+        boolean isOrdering = (current != MealPeriod.closed);
         String message;
         switch (current) {
-            case MORNING -> message = "Đang trong khung giờ phục vụ Thực đơn Sáng (06:00 - 10:30)";
-            case NOON -> message = "Đang trong khung giờ phục vụ Thực đơn Trưa (10:30 - 14:30)";
-            case BREAK -> message = "Giờ nghỉ bếp dọn dẹp (14:30 - 16:30). Chỉ phục vụ Đồ uống & Cà phê. Ca Tối mở lúc 16:30";
-            case EVENING -> message = "Đang trong khung giờ phục vụ Thực đơn Tối & Lẩu (16:30 - 22:00)";
+            case morning -> message = "Đang trong khung giờ phục vụ Thực đơn Sáng (06:00 - 10:30)";
+            case noon -> message = "Đang trong khung giờ phục vụ Thực đơn Trưa (10:30 - 14:30)";
+            case break_time -> message = "Giờ nghỉ bếp dọn dẹp (14:30 - 16:30). Chỉ phục vụ Đồ uống & Cà phê. Ca Tối mở lúc 16:30";
+            case evening -> message = "Đang trong khung giờ phục vụ Thực đơn Tối & Lẩu (16:30 - 22:00)";
             default -> message = "Nhà hàng hiện đang đóng cửa (22:00 - 06:00)";
         }
+        String currentPeriodStr = (current == MealPeriod.break_time) ? "BREAK" : current.name().toUpperCase();
         return MealPeriodInfoResponse.builder()
-                .currentPeriod(current.name())
-                .periodName(current.getDisplayName())
-                .timeRange(current.getTimeRange())
+                .currentPeriod(currentPeriodStr)
+                .periodName(MealPeriodHelper.getDisplayName(current))
+                .timeRange(MealPeriodHelper.getTimeRange(current))
                 .currentTime(now.format(DateTimeFormatter.ofPattern("HH:mm")))
                 .isOrderingAvailable(isOrdering)
                 .message(message)
@@ -193,12 +192,12 @@ public class MenuItemService {
                                 .id(opt.getId())
                                 .categoryId(entity.getCategory().getId())
                                 .name(opt.getName())
-                                .optionType(opt.getOptionType() != null ? opt.getOptionType().name() : "TOPPING")
+                                .optionType(opt.getOptionType() != null ? opt.getOptionType().name().toUpperCase() : "TOPPING")
                                 .price(opt.getPrice())
                                 .status(opt.getStatus())
                                 .displayOrder(opt.getDisplayOrder())
                                 .build())
-                        .collect(Collectors.toList()));
+                        .toList());
             }
         }
 
@@ -209,9 +208,9 @@ public class MenuItemService {
         res.setMealPeriods(entity.getMealPeriods());
 
         LocalTime now = LocalTime.now();
-        boolean availableNow = MealPeriod.isAvailableNow(entity.getMealPeriods(), now);
+        boolean availableNow = MealPeriodHelper.isAvailableNow(entity.getMealPeriods(), now);
         res.setIsAvailableNow(availableNow);
-        res.setMealPeriodNote(MealPeriod.getPeriodDescription(entity.getMealPeriods()));
+        res.setMealPeriodNote(MealPeriodHelper.getPeriodDescription(entity.getMealPeriods()));
 
         res.setStatus(entity.getStatus());
         res.setIsBestSeller(Boolean.TRUE.equals(entity.getIsBestSeller()));

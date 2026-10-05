@@ -25,9 +25,7 @@ export const orderApi = {
 
   createOrder: async (request: Partial<Order>): Promise<Order> => {
     try {
-      const res = await apiClient.post<Order | OrderResponse>('/orders', {
-        order: request,
-      });
+      const res = await apiClient.post<Order | OrderResponse>('/orders', request);
       if ('order' in res.data && res.data.order) return res.data.order;
       return res.data as Order;
     } catch (error) {

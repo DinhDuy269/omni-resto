@@ -35,7 +35,7 @@ public class PaymentTransactionEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private PaymentTransactionStatus status = PaymentTransactionStatus.SUCCESS;
+    private PaymentTransactionStatus status = PaymentTransactionStatus.success;
 
     @Column(name = "raw_payload", columnDefinition = "TEXT")
     private String rawPayload;

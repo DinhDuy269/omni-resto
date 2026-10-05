@@ -279,7 +279,7 @@ const ClientCart: React.FC = () => {
 
                 {tableSession && orderMode === 'DINE_IN' && (
                   <div style={{
-                    background: tableSession.status === 'PAYMENT_REQUESTED' ? '#eff6ff' : '#f0fdf4',
+                    background: tableSession.status?.toUpperCase() === 'PAYMENT_REQUESTED' ? '#eff6ff' : '#f0fdf4',
                     borderBottom: '1px solid var(--c-border-light)',
                     padding: '12px 20px',
                     display: 'flex',
@@ -294,7 +294,7 @@ const ClientCart: React.FC = () => {
                           {tableSession.tableNo}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          {tableSession.status === 'PAYMENT_REQUESTED' ? (
+                          {tableSession.status?.toUpperCase() === 'PAYMENT_REQUESTED' ? (
                             <span style={{ color: '#0284c7', fontWeight: 700 }}>❄️ Hóa đơn đang đóng băng để thanh toán</span>
                           ) : tableSession.isVerified ? (
                             <span style={{ color: '#16a34a', fontWeight: 700 }}>✅ Bàn đã xác nhận · Món gọi thêm vào thẳng bếp</span>
@@ -304,7 +304,7 @@ const ClientCart: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    {tableSession.status === 'PAYMENT_REQUESTED' && (
+                    {tableSession.status?.toUpperCase() === 'PAYMENT_REQUESTED' && (
                       <button
                         onClick={async () => {
                           await cancelPaymentRequest();
@@ -387,7 +387,7 @@ const ClientCart: React.FC = () => {
 
                 {tableSession && orderMode === 'DINE_IN' ? (
                   <div style={{ padding: '18px 20px' }}>
-                    {tableSession.status === 'PAYMENT_REQUESTED' ? (
+                    {tableSession.status?.toUpperCase() === 'PAYMENT_REQUESTED' ? (
                       <button
                         className="c-btn c-btn-primary c-btn-lg c-btn-block"
                         disabled

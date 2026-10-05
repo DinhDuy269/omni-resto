@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { Reservation, ReservationStatus } from '../../shared/types/reservation';
 import { reservationApi } from '../../shared/api/reservation';
-import { checkBackendConnection } from '../../shared/api/client';
 
 // ─── Seed data — mock fallback when backend is offline ────────────────────────
 const today = new Date().toISOString().split('T')[0];
@@ -110,15 +109,10 @@ export const useReservationStore = create<ReservationState>((set, get) => ({
   initialize: async () => {
     set({ loading: true, error: null });
     try {
-      const connected = await checkBackendConnection();
-      if (connected) {
-        const data = await reservationApi.getAll();
-        set({ reservations: data, isApiMode: true, loading: false });
-      } else {
-        // Offline — use mock data
-        set({ reservations: MOCK_RESERVATIONS, isApiMode: false, loading: false });
-      }
+      const data = await reservationApi.getAll();
+      set({ reservations: data, isApiMode: true, loading: false });
     } catch {
+      // Offline / API error — use mock data
       set({ reservations: MOCK_RESERVATIONS, isApiMode: false, loading: false });
     }
   },

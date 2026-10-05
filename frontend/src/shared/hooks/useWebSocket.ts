@@ -20,9 +20,7 @@ export const useWebSocket = (
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // Connect to backend ws-raw endpoint or proxied /ws-raw
-        const wsUrl = import.meta.env.PROD 
-          ? `${protocol}//${window.location.host}/ws-raw`
-          : `ws://localhost:8080/ws-raw`;
+        const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/ws-raw`;
 
         const ws = new WebSocket(wsUrl);
         socketRef.current = ws;

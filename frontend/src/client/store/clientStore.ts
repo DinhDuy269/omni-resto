@@ -464,7 +464,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
     }
 
     // Chặn đặt món nếu hóa đơn đang đóng băng để thanh toán
-    if (state.tableSession?.status === 'PAYMENT_REQUESTED') {
+    if (state.tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED') {
       alert('Hóa đơn của bàn đang được đóng băng để thanh toán. Quý khách vui lòng bấm "Hủy yêu cầu thanh toán" trên ứng dụng nếu muốn tiếp tục gọi thêm món!');
       return null;
     }

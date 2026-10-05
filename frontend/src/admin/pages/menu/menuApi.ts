@@ -34,9 +34,7 @@ export const menuApi = {
 
   createMenuItem: async (request: Partial<MenuItem>): Promise<MenuItem> => {
     try {
-      const res = await apiClient.post<MenuItem | MenuItemResponse>('/menu-items', {
-        menu_item: request,
-      });
+      const res = await apiClient.post<MenuItem | MenuItemResponse>('/menu-items', request);
       if ('menu_item' in res.data && res.data.menu_item) return res.data.menu_item;
       return res.data as MenuItem;
     } catch (error) {

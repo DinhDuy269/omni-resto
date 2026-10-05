@@ -17,7 +17,6 @@ import com.omniresto.backend.repository.TableSessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +32,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TableSessionService {
 
     private final TableSessionRepository tableSessionRepository;
@@ -40,7 +40,6 @@ public class TableSessionService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
-    private final SimpMessagingTemplate messagingTemplate;
 
     // Configurable VietQR merchant credentials
     @Value("${vietqr.bank-id:MB}")
@@ -83,13 +82,13 @@ public class TableSessionService {
 
         // Check if table already has an ACTIVE session
         Optional<TableSessionEntity> activeSessionOpt = tableSessionRepository
-                .findFirstByTableIdAndStatus(table.getId(), TableSessionStatus.ACTIVE);
+                .findFirstByTableIdAndStatus(table.getId(), TableSessionStatus.active);
 
         if (activeSessionOpt.isPresent()) {
             TableSessionEntity existing = activeSessionOpt.get();
             // Check if expired
             if (existing.getExpiresAt().isBefore(LocalDateTime.now())) {
-                existing.setStatus(TableSessionStatus.EXPIRED);
+                existing.setStatus(TableSessionStatus.expired);
                 tableSessionRepository.save(existing);
                 log.info("Old session {} for table {} expired. Creating fresh session.", existing.getId(), table.getTableNo());
             } else {
@@ -112,8 +111,8 @@ public class TableSessionService {
                 .tableId(table.getId())
                 .tableNo(table.getTableNo())
                 .sessionToken(sessionToken)
-                .status(TableSessionStatus.ACTIVE)
-                .mode(mode != null ? mode : TableSessionMode.PAY_AFTER)
+                .status(TableSessionStatus.active)
+                .mode(mode != null ? mode : TableSessionMode.pay_after)
                 .lastActivityAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusHours(SESSION_TIMEOUT_HOURS))
                 .build();
@@ -144,22 +143,7 @@ public class TableSessionService {
         TableSessionEntity session = tableSessionRepository.findBySessionToken(sessionToken.trim())
                 .orElseThrow(() -> new BadRequestException("Phiên bàn không tồn tại hoặc đã bị hủy. Vui lòng quét lại mã QR tại bàn!"));
 
-        if (session.getStatus() != TableSessionStatus.ACTIVE
-                && session.getStatus() != TableSessionStatus.PAYMENT_PENDING
-                && session.getStatus() != TableSessionStatus.PAYMENT_REQUESTED) {
-            throw new BadRequestException("Phiên đặt món của " + session.getTableNo() + " đã kết thúc (" + session.getStatus() + "). Vui lòng quét lại mã QR tại bàn!");
-        }
-
-        if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
-            session.setStatus(TableSessionStatus.EXPIRED);
-            tableSessionRepository.save(session);
-            throw new BadRequestException("Phiên đặt món đã hết hạn do quá thời gian chờ. Vui lòng quét lại mã QR tại bàn!");
-        }
-
-        // Touch activity
-        session.setLastActivityAt(LocalDateTime.now());
-        session.setExpiresAt(LocalDateTime.now().plusHours(SESSION_TIMEOUT_HOURS));
-        return tableSessionRepository.save(session);
+        return validateAndTouch(session);
     }
 
     @Transactional
@@ -171,14 +155,18 @@ public class TableSessionService {
         TableSessionEntity session = tableSessionRepository.findBySessionTokenWithLock(sessionToken.trim())
                 .orElseThrow(() -> new BadRequestException("Phiên bàn không tồn tại hoặc đã bị hủy. Vui lòng quét lại mã QR tại bàn!"));
 
-        if (session.getStatus() != TableSessionStatus.ACTIVE
-                && session.getStatus() != TableSessionStatus.PAYMENT_PENDING
-                && session.getStatus() != TableSessionStatus.PAYMENT_REQUESTED) {
+        return validateAndTouch(session);
+    }
+
+    private TableSessionEntity validateAndTouch(TableSessionEntity session) {
+        if (session.getStatus() != TableSessionStatus.active
+                && session.getStatus() != TableSessionStatus.payment_pending
+                && session.getStatus() != TableSessionStatus.payment_requested) {
             throw new BadRequestException("Phiên đặt món của " + session.getTableNo() + " đã kết thúc (" + session.getStatus() + "). Vui lòng quét lại mã QR tại bàn!");
         }
 
         if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
-            session.setStatus(TableSessionStatus.EXPIRED);
+            session.setStatus(TableSessionStatus.expired);
             tableSessionRepository.save(session);
             throw new BadRequestException("Phiên đặt món đã hết hạn do quá thời gian chờ. Vui lòng quét lại mã QR tại bàn!");
         }
@@ -229,18 +217,6 @@ public class TableSessionService {
 
         log.info("🛡️ Table session {} for table {} VERIFIED by staff {}", saved.getId(), saved.getTableNo(), staffId);
 
-        try {
-            messagingTemplate.convertAndSend("/topic/table-session/" + saved.getTableId(), Map.of(
-                    "eventType", "TABLE_SESSION_VERIFIED",
-                    "sessionToken", saved.getSessionToken(),
-                    "tableId", saved.getTableId(),
-                    "tableNo", saved.getTableNo(),
-                    "verifiedAt", now.toString()
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast session verified event: {}", e.getMessage());
-        }
-
         return mapToResponse(saved);
     }
 
@@ -251,12 +227,12 @@ public class TableSessionService {
     public TableSessionResponse requestPayment(String sessionToken) {
         TableSessionEntity session = validateAndTouchSessionWithLock(sessionToken);
 
-        if (session.getStatus() == TableSessionStatus.PAYMENT_REQUESTED) {
+        if (session.getStatus() == TableSessionStatus.payment_requested) {
             // Idempotent: Nếu đã ở trạng thái này rồi thì trả về thông tin đóng băng hiện tại
             return mapToResponse(session);
         }
 
-        if (session.getStatus() != TableSessionStatus.ACTIVE && session.getStatus() != TableSessionStatus.PAYMENT_PENDING) {
+        if (session.getStatus() != TableSessionStatus.active && session.getStatus() != TableSessionStatus.payment_pending) {
             throw new BadRequestException("Không thể yêu cầu thanh toán khi phiên bàn ở trạng thái: " + session.getStatus());
         }
 
@@ -271,23 +247,9 @@ public class TableSessionService {
             throw new BadRequestException("Bàn hiện chưa có món nào cần thanh toán!");
         }
 
-        session.setStatus(TableSessionStatus.PAYMENT_REQUESTED);
+        session.setStatus(TableSessionStatus.payment_requested);
         TableSessionEntity saved = tableSessionRepository.save(session);
         log.info("❄️ Table session {} for table {} is now PAYMENT_REQUESTED (frozen for payment)", saved.getId(), saved.getTableNo());
-
-        // Broadcast to POS / Cashier
-        try {
-            messagingTemplate.convertAndSend("/topic/tables", Map.of(
-                    "eventType", "TABLE_PAYMENT_REQUESTED",
-                    "tableId", saved.getTableId(),
-                    "tableNo", saved.getTableNo(),
-                    "sessionId", saved.getId(),
-                    "orderNumber", activeOrderOpt.get().getOrderNumber(),
-                    "totalAmount", activeOrderOpt.get().getTotalAmount()
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast payment requested event: {}", e.getMessage());
-        }
 
         return mapToResponse(saved);
     }
@@ -299,24 +261,13 @@ public class TableSessionService {
     public TableSessionResponse cancelPaymentRequest(String sessionToken) {
         TableSessionEntity session = validateAndTouchSessionWithLock(sessionToken);
 
-        if (session.getStatus() != TableSessionStatus.PAYMENT_REQUESTED) {
+        if (session.getStatus() != TableSessionStatus.payment_requested) {
             throw new BadRequestException("Bàn hiện không ở trạng thái yêu cầu thanh toán!");
         }
 
-        session.setStatus(TableSessionStatus.ACTIVE);
+        session.setStatus(TableSessionStatus.active);
         TableSessionEntity saved = tableSessionRepository.save(session);
         log.info("🔓 Table session {} for table {} cancelled payment request, back to ACTIVE", saved.getId(), saved.getTableNo());
-
-        try {
-            messagingTemplate.convertAndSend("/topic/tables", Map.of(
-                    "eventType", "TABLE_PAYMENT_REQUEST_CANCELLED",
-                    "tableId", saved.getTableId(),
-                    "tableNo", saved.getTableNo(),
-                    "sessionId", saved.getId()
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast payment request cancelled event: {}", e.getMessage());
-        }
 
         return mapToResponse(saved);
     }
@@ -345,7 +296,7 @@ public class TableSessionService {
                     .amountExpected(expected)
                     .amountReceived(received)
                     .paymentGateway(method != null ? method.name() : "CASH")
-                    .status(PaymentTransactionStatus.SUCCESS)
+                    .status(PaymentTransactionStatus.success)
                     .rawPayload("Staff confirmed: " + (staffId != null ? staffId : "POS"))
                     .build();
             tx.setId("tx-" + UUID.randomUUID().toString().substring(0, 8));
@@ -356,45 +307,32 @@ public class TableSessionService {
             orderRepository.save(order);
         }
 
-        session.setStatus(TableSessionStatus.PAID);
+        session.setStatus(TableSessionStatus.paid);
         TableSessionEntity saved = tableSessionRepository.save(session);
         log.info("✅ Table session {} for table {} confirmed PAID", saved.getId(), saved.getTableNo());
-
-        try {
-            messagingTemplate.convertAndSend("/topic/tables", Map.of(
-                    "eventType", "TABLE_PAYMENT_CONFIRMED",
-                    "tableId", saved.getTableId(),
-                    "tableNo", saved.getTableNo(),
-                    "sessionId", saved.getId()
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast payment confirmed event: {}", e.getMessage());
-        }
 
         return mapToResponse(saved);
     }
 
     @Transactional
     public void closeSessionsForTable(String tableId, String reason) {
-        List<TableSessionEntity> activeSessions = tableSessionRepository.findByTableIdAndStatus(tableId, TableSessionStatus.ACTIVE);
-        List<TableSessionEntity> requestedSessions = tableSessionRepository.findByTableIdAndStatus(tableId, TableSessionStatus.PAYMENT_REQUESTED);
-        List<TableSessionEntity> pendingSessions = tableSessionRepository.findByTableIdAndStatus(tableId, TableSessionStatus.PAYMENT_PENDING);
-        List<TableSessionEntity> paidSessions = tableSessionRepository.findByTableIdAndStatus(tableId, TableSessionStatus.PAID);
+        List<TableSessionStatus> activeStatuses = List.of(
+                TableSessionStatus.active,
+                TableSessionStatus.payment_requested,
+                TableSessionStatus.payment_pending,
+                TableSessionStatus.paid
+        );
+        List<TableSessionEntity> sessions = tableSessionRepository.findByTableIdAndStatusIn(tableId, activeStatuses);
 
-        LocalDateTime now = LocalDateTime.now();
-        java.util.function.Consumer<TableSessionEntity> closeSession = s -> {
-            s.setStatus(TableSessionStatus.CLOSED);
-            s.setClosedAt(now);
-            tableSessionRepository.save(s);
-        };
-
-        activeSessions.forEach(closeSession);
-        requestedSessions.forEach(closeSession);
-        pendingSessions.forEach(closeSession);
-        paidSessions.forEach(closeSession);
-
-        int totalClosed = activeSessions.size() + requestedSessions.size() + pendingSessions.size() + paidSessions.size();
-        log.info("Closed {} sessions for table {} due to {}", totalClosed, tableId, reason);
+        if (!sessions.isEmpty()) {
+            LocalDateTime now = LocalDateTime.now();
+            sessions.forEach(s -> {
+                s.setStatus(TableSessionStatus.closed);
+                s.setClosedAt(now);
+            });
+            tableSessionRepository.saveAll(sessions);
+            log.info("Closed {} sessions for table {} due to {}", sessions.size(), tableId, reason);
+        }
 
         // Update table status back to available
         Optional<TableEntity> tableOpt = tableRepository.findById(tableId);
@@ -403,30 +341,10 @@ public class TableSessionService {
             tableRepository.save(t);
             notifyTableStatusChanged(tableId, TableStatus.available);
         });
-
-        // Broadcast session closed event to WebSocket
-        try {
-            messagingTemplate.convertAndSend("/topic/table-session/" + tableId, Map.of(
-                    "eventType", "TABLE_SESSION_CLOSED",
-                    "tableId", tableId,
-                    "reason", reason,
-                    "closedAt", now.toString()
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast session closed event: {}", e.getMessage());
-        }
     }
 
     private void notifyTableStatusChanged(String tableId, TableStatus newStatus) {
-        try {
-            messagingTemplate.convertAndSend("/topic/tables", Map.of(
-                    "eventType", "TABLE_STATUS_CHANGED",
-                    "tableId", tableId,
-                    "status", newStatus.name()
-            ));
-        } catch (Exception e) {
-            log.error("Failed to broadcast table status event: {}", e.getMessage());
-        }
+        log.debug("Table status changed: {} -> {}", tableId, newStatus);
     }
 
     public TableSessionResponse mapToResponse(TableSessionEntity entity) {
@@ -459,7 +377,7 @@ public class TableSessionService {
             builder.paymentStatus(order.getPaymentStatus());
 
             // Nếu đang trong tiến trình yêu cầu thanh toán, tạo mã VietQR cố định
-            if (entity.getStatus() == TableSessionStatus.PAYMENT_REQUESTED && order.getTotalAmount() != null) {
+            if (entity.getStatus() == TableSessionStatus.payment_requested && order.getTotalAmount() != null) {
                 String transferContent = "OMNIRESTO " + order.getOrderNumber();
                 String encodedContent = URLEncoder.encode(transferContent, StandardCharsets.UTF_8);
                 String encodedAccountName = URLEncoder.encode(accountName, StandardCharsets.UTF_8);

@@ -26,7 +26,7 @@ public class CategoryOptionEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "option_type", nullable = false, length = 20)
     @Builder.Default
-    private OptionType optionType = OptionType.TOPPING;
+    private OptionType optionType = OptionType.topping;
 
     @Column(nullable = false, precision = 12, scale = 2)
     @Builder.Default

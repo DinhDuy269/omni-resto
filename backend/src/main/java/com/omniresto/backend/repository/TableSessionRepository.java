@@ -25,5 +25,7 @@ public interface TableSessionRepository extends JpaRepository<TableSessionEntity
 
     List<TableSessionEntity> findByTableIdAndStatus(String tableId, TableSessionStatus status);
 
+    List<TableSessionEntity> findByTableIdAndStatusIn(String tableId, java.util.Collection<TableSessionStatus> statuses);
+
     List<TableSessionEntity> findByStatusAndExpiresAtBefore(TableSessionStatus status, LocalDateTime now);
 }

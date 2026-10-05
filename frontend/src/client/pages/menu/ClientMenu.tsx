@@ -82,7 +82,7 @@ export const ClientMenu: React.FC = () => {
       .catch(() => {
         // Giữ menuItems từ adminStore
       });
-  }, [setMenuItems]);
+  }, []);
 
   // Kiểm tra một món có đang trong giờ phục vụ thực tế hay không
   const checkIsItemAvailableNow = (item: MenuItem): boolean => {
