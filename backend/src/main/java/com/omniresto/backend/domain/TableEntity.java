@@ -14,8 +14,6 @@ import lombok.*;
 @Builder
 public class TableEntity extends BaseEntity {
 
-    @Column(name = "branch_id", nullable = false, length = 36)
-    private String branchId;
 
     @Column(name = "table_no", nullable = false, length = 30)
     private String tableNo;
@@ -31,4 +29,7 @@ public class TableEntity extends BaseEntity {
 
     @Column(name = "current_order_id", length = 36)
     private String currentOrderId;
+
+    @Column(name = "qr_secret_token", unique = true, length = 64)
+    private String qrSecretToken;
 }

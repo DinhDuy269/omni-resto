@@ -5,5 +5,4 @@ export interface UserFormData {
   email: string;
   phone: string;
   role: RoleType;
-  branchId: string;
 }

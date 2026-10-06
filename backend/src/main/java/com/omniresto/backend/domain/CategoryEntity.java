@@ -4,6 +4,9 @@ import com.omniresto.backend.domain.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "categories")
 @Getter
@@ -24,4 +27,9 @@ public class CategoryEntity extends BaseEntity {
     @Column(name = "display_order")
     @Builder.Default
     private Integer displayOrder = 0;
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    @Builder.Default
+    private List<CategoryOptionEntity> options = new ArrayList<>();
 }

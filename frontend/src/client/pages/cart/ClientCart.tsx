@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Utensils, ShoppingBag, Bike, QrCode, Banknote, Credit
 import { useClientStore, selectTotalAmount } from '../../store/clientStore';
 import { useAdminStore } from '../../../admin/store/adminStore';
 import type { OrderMode, ClientPaymentMethod } from '../../../shared/types/client';
+import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
 
 /**
  * ClientCart — Multi-step checkout
@@ -21,8 +22,8 @@ const ClientCart: React.FC = () => {
   const {
     cart, updateQuantity, removeFromCart,
     orderMode, setOrderMode,
-    selectedBranchId, selectedBranchName,
-    placeOrder,
+    placeOrder, tableSession,
+    refreshTableSession, cancelPaymentRequest,
   } = useClientStore();
   const totalAmount = useClientStore(selectTotalAmount);
   const { vouchers } = useAdminStore();
@@ -30,10 +31,6 @@ const ClientCart: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [tableNo, setTableNo] = useState('');
-  const [deliveryAddr, setDeliveryAddr] = useState('');
-  const [notes, setNotes] = useState('');
-  const [payMethod, setPayMethod] = useState<ClientPaymentMethod>('QR_CODE');
   const [voucherCode, setVoucherCode] = useState('');
   // 1. Thêm state lưu giữ voucher đã áp dụng thành công
   const [appliedVoucher, setAppliedVoucher] = useState<typeof vouchers[0] | null>(null);
@@ -59,6 +56,10 @@ const ClientCart: React.FC = () => {
     // Đảm bảo không giảm âm tiền của đơn hàng
     return Math.min(discount, totalAmount);
   }, [appliedVoucher, totalAmount]);
+
+  const activeVouchers = useMemo(() => {
+    return vouchers.filter(v => v.status === 'ACTIVE' || v.status === 'active');
+  }, [vouchers]);
 
   // Tổng tiền thanh toán cuối cùng
   const finalAmount = totalAmount - discountAmount;
@@ -96,43 +97,113 @@ const ClientCart: React.FC = () => {
       type: 'success'
     });
   };
+  const tableNo                           = tableSession?.tableNo || '';
+  const [deliveryAddr, setDeliveryAddr]   = useState('');
+  const [notes, setNotes]                 = useState('');
+  const [payMethod, setPayMethod]         = useState<ClientPaymentMethod>('QR_CODE');
+  const [isSubmitting, setIsSubmitting]   = useState(false);
+
+  // VietQR modal state (Dành cho TAKEAWAY / DELIVERY hoặc khi nhà hàng cài đặt PAY_FIRST)
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentOrder, setCurrentOrder]         = useState<any>(null);
+  const [isPaidSuccess, setIsPaidSuccess]       = useState(false);
+  const [timeLeft, setTimeLeft]                 = useState(600); // 10 minutes
 
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
   const isEmpty = cart.length === 0;
-  const activeVouchers = useMemo(() => {
-    return vouchers.filter(v => v.status === 'ACTIVE' || v.status === 'active');
-  }, [vouchers]);
+
+  // Tự động làm mới trạng thái phiên từ Server khi mở giỏ hàng (Zero-trust)
+  React.useEffect(() => {
+    if (tableSession?.sessionToken) {
+      refreshTableSession();
+    }
+  }, []);
 
   const ORDER_MODES: Array<{ mode: OrderMode; icon: typeof Utensils; label: string; desc: string; emoji: string }> = [
-    { mode: 'DINE_IN', icon: Utensils, label: 'Tại bàn', desc: 'Dùng bữa ngay tại nhà hàng', emoji: '🍽️' },
+    { mode: 'DINE_IN',  icon: Utensils,  label: 'Tại bàn',  desc: 'Dùng bữa ngay tại nhà hàng (Yêu cầu quét QR)', emoji: '🍽️' },
     { mode: 'TAKEAWAY', icon: ShoppingBag, label: 'Mang về', desc: 'Đóng gói mang đi, nhận tại quầy', emoji: '📦' },
     { mode: 'DELIVERY', icon: Bike, label: 'Giao hàng', desc: 'Giao đến tận địa chỉ của bạn', emoji: '🚴' },
   ];
 
   const PAY_METHODS: Array<{ key: ClientPaymentMethod; label: string; icon: typeof QrCode }> = [
-    { key: 'QR_CODE', label: 'Quét QR', icon: QrCode },
-    { key: 'CASH', label: 'Tiền mặt', icon: Banknote },
-    { key: 'CARD', label: 'Thẻ ngân hàng', icon: CreditCard },
+    { key: 'QR_CODE', label: 'Quét QR Ngân hàng (VietQR)', icon: QrCode },
+    { key: 'CASH',    label: 'Tiền mặt', icon: Banknote },
+    { key: 'CARD',    label: 'Thẻ ngân hàng', icon: CreditCard },
   ];
 
-  const handlePlaceOrder = () => {
-    const placed = placeOrder({
-      branchId: selectedBranchId || 'br-01',
-      branchName: selectedBranchName || 'OmniResto',
-      orderMode,
-      tableNo: orderMode === 'DINE_IN' ? tableNo : undefined,
-      customerName: customerName || undefined,
-      customerPhone: customerPhone || undefined,
-      deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddr : undefined,
-      notes: notes || undefined,
-      paymentMethod: payMethod,
-    });
-    navigate(`/client/order/${placed.id}`);
+  const handlePlaceOrder = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const placed = await placeOrder({
+        orderMode,
+        tableNo:         orderMode === 'DINE_IN' ? (tableSession?.tableNo || tableNo) : undefined,
+        sessionToken:    orderMode === 'DINE_IN' ? tableSession?.sessionToken : undefined,
+        customerName:    customerName || undefined,
+        customerPhone:   customerPhone || undefined,
+        deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddr : undefined,
+        notes:           notes || undefined,
+        paymentMethod:   orderMode === 'DINE_IN' ? 'CASH' : payMethod,
+      });
+
+      if (!placed) {
+        // Đặt hàng thất bại hoặc server báo lỗi: Giữ nguyên giỏ hàng và không chuyển trang
+        return;
+      }
+
+      // Ăn tại bàn (Dine-in) chế độ Trả sau (POSTPAID): Không bắt thanh toán trước, chuyển thẳng sang trang theo dõi đơn!
+      if (orderMode === 'DINE_IN' && tableSession?.mode !== 'PAY_FIRST') {
+        navigate('/client/orders');
+      } else if (payMethod === 'QR_CODE' || tableSession?.mode === 'PAY_FIRST') {
+        setCurrentOrder(placed);
+        setShowPaymentModal(true);
+        setTimeLeft(600);
+      } else {
+        navigate(`/client/orders`);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Không thể đặt món. Quý khách vui lòng thử lại!');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Timer & Polling for VietQR payment
+  React.useEffect(() => {
+    let timer: any;
+    let poller: any;
+
+    if (showPaymentModal && currentOrder && !isPaidSuccess) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+
+      poller = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/payments/status/${currentOrder.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isPaid) {
+              setIsPaidSuccess(true);
+              setTimeout(() => {
+                setShowPaymentModal(false);
+                navigate(`/client/order/${currentOrder.id}`);
+              }, 2000);
+            }
+          }
+        } catch {}
+      }, 2500);
+    }
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(poller);
+    };
+  }, [showPaymentModal, currentOrder, isPaidSuccess]);
 
   const canGoStep2 = cart.length > 0;
   const canGoStep3 = orderMode !== undefined;
-  const canConfirm = orderMode !== 'DINE_IN' || tableNo.trim() !== '';
+  const canConfirm = orderMode !== 'DINE_IN' ? true : Boolean(tableSession);
 
   /* Step progress indicator */
   const StepIndicator = () => (
@@ -301,6 +372,56 @@ const ClientCart: React.FC = () => {
                     🛒 Giỏ hàng ({totalItems} món)
                   </h2>
                 </div>
+
+                {tableSession && orderMode === 'DINE_IN' && (
+                  <div style={{
+                    background: tableSession.status === 'PAYMENT_REQUESTED' ? '#eff6ff' : '#f0fdf4',
+                    borderBottom: '1px solid var(--c-border-light)',
+                    padding: '12px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: '1.3rem' }}>🍽️</span>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
+                          {tableSession.tableNo}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {tableSession.status === 'PAYMENT_REQUESTED' ? (
+                            <span style={{ color: '#0284c7', fontWeight: 700 }}>❄️ Hóa đơn đang đóng băng để thanh toán</span>
+                          ) : tableSession.isVerified ? (
+                            <span style={{ color: '#16a34a', fontWeight: 700 }}>✅ Bàn đã xác nhận · Món gọi thêm vào thẳng bếp</span>
+                          ) : (
+                            <span style={{ color: '#d97706', fontWeight: 700 }}>⏳ Đợt 1 · Chờ nhân viên xác nhận tại bàn</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {tableSession.status === 'PAYMENT_REQUESTED' && (
+                      <button
+                        onClick={async () => {
+                          await cancelPaymentRequest();
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #bae6fd',
+                          color: '#0284c7',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🔓 Hủy đóng băng
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {cart.map((item) => (
                   <div key={item.menuItemId} style={{
                     display: 'flex', gap: 14, padding: '16px 20px',
@@ -339,16 +460,71 @@ const ClientCart: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                <div style={{ padding: 20 }}>
-                  <button
-                    id="cart-step2-btn"
-                    className="c-btn c-btn-primary c-btn-lg c-btn-block"
-                    onClick={() => setStep(2)}
-                    disabled={!canGoStep2}
-                  >
-                    Chọn hình thức đặt →
-                  </button>
+
+                {/* Kitchen Notes */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--c-border-light)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--c-text-body)' }}>
+                      Ghi chú cho bếp (tùy chọn)
+                    </span>
+                    <input
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Ít cay, không hành, làm nhanh..."
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--c-border)',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                  </label>
                 </div>
+
+                {tableSession && orderMode === 'DINE_IN' ? (
+                  <div style={{ padding: '18px 20px' }}>
+                    {tableSession.status === 'PAYMENT_REQUESTED' ? (
+                      <button
+                        className="c-btn c-btn-primary c-btn-lg c-btn-block"
+                        disabled
+                        style={{ opacity: 0.6, cursor: 'not-allowed', background: '#94a3b8' }}
+                      >
+                        ❄️ Hóa đơn đang đóng băng để thanh toán
+                      </button>
+                    ) : (
+                      <button
+                        id="cart-submit-dine-in-btn"
+                        className="c-btn c-btn-primary c-btn-lg c-btn-block"
+                        onClick={handlePlaceOrder}
+                        disabled={isSubmitting || !canGoStep2}
+                        style={{
+                          boxShadow: '0 4px 14px rgba(234, 88, 12, 0.35)',
+                          fontSize: '0.95rem',
+                          fontWeight: 800,
+                        }}
+                      >
+                        {isSubmitting ? (
+                          'Đang gửi đơn...'
+                        ) : tableSession.isVerified ? (
+                          `🚀 Gửi bếp ngay (${totalItems} món • ${totalAmount.toLocaleString('vi-VN')}đ)`
+                        ) : (
+                          `📋 Gửi đơn — Chờ nhân viên duyệt (${totalItems} món • ${totalAmount.toLocaleString('vi-VN')}đ)`
+                        )}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ padding: 20 }}>
+                    <button
+                      id="cart-step2-btn"
+                      className="c-btn c-btn-primary c-btn-lg c-btn-block"
+                      onClick={() => setStep(2)}
+                      disabled={!canGoStep2}
+                    >
+                      Chọn hình thức đặt →
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -553,19 +729,70 @@ const ClientCart: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {/* Conditional fields based on order mode */}
                   {orderMode === 'DINE_IN' && (
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--c-text-body)' }}>
-                        Số bàn <span style={{ color: 'var(--c-error)' }}>*</span>
-                      </span>
-                      <input
-                        id="table-no-input"
-                        className="form-control"
-                        style={{ fontFamily: 'var(--c-font)', borderRadius: 'var(--c-r-md)', borderColor: 'var(--c-border)', padding: '12px 16px' }}
-                        placeholder="VD: Bàn 05"
-                        value={tableNo}
-                        onChange={(e) => setTableNo(e.target.value)}
-                      />
-                    </label>
+                    tableSession ? (
+                      <div style={{
+                        background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+                        border: '1.5px solid #6ee7b7',
+                        borderRadius: 'var(--c-r-md)',
+                        padding: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <span>🛡️ Phiên bàn bảo mật hợp lệ</span>
+                          </div>
+                          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#064e3b', marginTop: 2 }}>
+                            {tableSession.tableNo}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#059669', marginTop: 2 }}>
+                            Mã phiên: {tableSession.sessionToken.substring(0, 16)}... (Đã khóa)
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/client/scan?change=true')}
+                          style={{
+                            background: '#fff', border: '1px solid #10b981', color: '#047857',
+                            padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          Đổi bàn
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{
+                        background: '#fff7ed',
+                        border: '1.5px solid #fed7aa',
+                        borderRadius: 'var(--c-r-md)',
+                        padding: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                      }}>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: '1.4rem' }}>📱</span>
+                          <div>
+                            <strong style={{ fontSize: '0.9rem', color: '#9a3412', display: 'block' }}>
+                              Yêu cầu quét mã QR tại bàn để gọi món
+                            </strong>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#c2410c', lineHeight: 1.4 }}>
+                              Để bảo mật, chống gọi nhầm bàn và đảm bảo bếp làm đúng bàn của quý khách, hình thức <strong>Tại bàn</strong> yêu cầu quét mã QR dán trên bàn ăn.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="c-btn c-btn-primary c-btn-sm"
+                          onClick={() => navigate('/client/scan')}
+                          style={{ alignSelf: 'flex-start' }}
+                        >
+                          📷 Quét QR nhận bàn ngay
+                        </button>
+                      </div>
+                    )
                   )}
 
                   {orderMode === 'DELIVERY' && (
@@ -629,11 +856,125 @@ const ClientCart: React.FC = () => {
                     onClick={handlePlaceOrder}
                     disabled={!canConfirm}
                   >
-                    ✅ Xác nhận đặt hàng · {finalAmount.toLocaleString('vi-VN')}đ
+                    {orderMode === 'DINE_IN' && !tableSession
+                      ? '⚠️ Vui lòng quét QR bàn trước khi đặt món'
+                      : `✅ Xác nhận đặt hàng · ${totalAmount.toLocaleString('vi-VN')}đ`}
                   </button>
                   <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--c-text-muted)', margin: 0 }}>
                     Bằng cách đặt hàng, bạn đồng ý với điều khoản dịch vụ của OmniResto
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* ─ VietQR Live Payment Modal ─ */}
+            {showPaymentModal && currentOrder && (
+              <div style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+              }}>
+                <div style={{
+                  maxWidth: 440, width: '100%', background: '#fff',
+                  borderRadius: 20, padding: 28, textAlign: 'center',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                }}>
+                  {isPaidSuccess ? (
+                    <div style={{ padding: '24px 0' }}>
+                      <div style={{ fontSize: '4rem', marginBottom: 12 }}>🎉</div>
+                      <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#059669', margin: '0 0 8px' }}>
+                        Thanh toán thành công!
+                      </h3>
+                      <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                        Hệ thống đã nhận được tiền và tự động gửi đơn sang bếp để chế biến.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <span style={{ fontWeight: 800, color: '#111', fontSize: '1.1rem' }}>Thanh toán VietQR</span>
+                        <span style={{ fontSize: '0.8rem', background: '#fee2e2', color: '#b91c1c', padding: '3px 8px', borderRadius: 99, fontWeight: 700 }}>
+                          ⏱️ {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+
+                      <div style={{
+                        background: '#fafafa', border: '1px solid #eee', borderRadius: 14,
+                        padding: 12, marginBottom: 16, display: 'inline-block',
+                      }}>
+                        <img
+                          src={generateVietQRUrl(currentOrder.totalAmount, `OMNIRESTO ${currentOrder.orderNumber}`)}
+                          alt="VietQR"
+                          style={{ width: 220, height: 220, objectFit: 'contain', margin: '0 auto', display: 'block' }}
+                        />
+                      </div>
+
+                      <div style={{ fontSize: '0.875rem', color: '#444', textAlign: 'left', background: '#f8fafc', padding: 12, borderRadius: 10, marginBottom: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Số tiền:</span>
+                          <strong style={{ color: '#ea580c', fontSize: '1rem' }}>{currentOrder.totalAmount.toLocaleString('vi-VN')}đ</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Nội dung CK:</span>
+                          <strong style={{ color: '#111' }}>OMNIRESTO {currentOrder.orderNumber}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Ngân hàng:</span>
+                          <span style={{ fontWeight: 600 }}>{PAYMENT_CONFIG.bankName}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Số tài khoản:</span>
+                          <span style={{ fontWeight: 600 }}>{PAYMENT_CONFIG.accountNumber}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Chủ tài khoản:</span>
+                          <span style={{ fontWeight: 600 }}>{PAYMENT_CONFIG.accountName}</span>
+                        </div>
+                      </div>
+
+                      {/* Simulation button for demo testing */}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await fetch('/api/payments/webhook', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              orderId: currentOrder.id,
+                              transactionId: 'TXN-' + Date.now(),
+                              amount: currentOrder.totalAmount,
+                            }),
+                          }).catch(() => {});
+                          setIsPaidSuccess(true);
+                          setTimeout(() => {
+                            setShowPaymentModal(false);
+                            navigate(`/client/order/${currentOrder.id}`);
+                          }, 1500);
+                        }}
+                        style={{
+                          width: '100%', padding: '12px', borderRadius: 10,
+                          background: '#059669', color: '#fff', border: 'none',
+                          fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', marginBottom: 10,
+                        }}
+                      >
+                        ⚡ Giả lập Chuyển khoản thành công (Webhook Ngân Hàng)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPaymentModal(false);
+                          navigate(`/client/order/${currentOrder.id}`);
+                        }}
+                        style={{
+                          background: 'none', border: 'none', color: '#888',
+                          fontSize: '0.8rem', cursor: 'pointer',
+                        }}
+                      >
+                        Thanh toán sau tại quầy hoặc đóng
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

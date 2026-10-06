@@ -2,50 +2,94 @@ package com.omniresto.backend.service;
 
 import com.omniresto.backend.domain.CategoryEntity;
 import com.omniresto.backend.domain.MenuItemEntity;
+import com.omniresto.backend.domain.enums.MealPeriod;
 import com.omniresto.backend.domain.enums.MenuStatus;
-import com.omniresto.backend.model.menu.request.MenuItemRequest;
+import com.omniresto.backend.exception.BadRequestException;
+import com.omniresto.backend.exception.ResourceNotFoundException;
+import com.omniresto.backend.model.menu.request.MenuItemCreateRequest;
+import com.omniresto.backend.model.menu.request.MenuItemUpdateRequest;
+import com.omniresto.backend.model.menu.response.CategoryOptionResponse;
+import com.omniresto.backend.model.menu.response.MealPeriodInfoResponse;
 import com.omniresto.backend.model.menu.response.MenuItemResponse;
 import com.omniresto.backend.repository.CategoryRepository;
 import com.omniresto.backend.repository.MenuItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class MenuItemService {
 
     private final MenuItemRepository menuItemRepository;
     private final CategoryRepository categoryRepository;
 
     public List<MenuItemResponse> getAllMenuItems() {
-        return menuItemRepository.findAll().stream()
+        return getAllMenuItems(null);
+    }
+
+    public List<MenuItemResponse> getAllMenuItems(String period) {
+        List<MenuItemEntity> items;
+        if (period != null && !period.isBlank()) {
+            items = menuItemRepository.findByMealPeriodsContainingIgnoreCase(period.trim());
+        } else {
+            items = menuItemRepository.findAll();
+        }
+        return items.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     public MenuItemResponse getMenuItemById(String id) {
-        return menuItemRepository.findById(id)
-                .map(this::mapToResponse)
-                .orElse(null);
+        MenuItemEntity entity = menuItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
+        return mapToResponse(entity);
     }
 
-    public MenuItemResponse createMenuItem(MenuItemRequest request) {
-        CategoryEntity category = categoryRepository.findById(request.getCategoryId() != null ? request.getCategoryId() : "cat-01")
-                .orElse(null);
+    @Transactional
+    public MenuItemResponse createMenuItem(MenuItemCreateRequest request) {
+        String categoryId = request.getEffectiveCategoryId();
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new BadRequestException("Mã danh mục (categoryId) là bắt buộc");
+        }
+
+        CategoryEntity category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục món ăn với ID: " + categoryId));
+
+        String code = request.getEffectiveCode();
+        if (code == null || code.isBlank()) {
+            code = "MN-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        }
+
+        BigDecimal price = request.getEffectivePrice();
+        if (price == null) {
+            price = BigDecimal.ZERO;
+        }
+
+        String mealPeriods = request.getEffectiveMealPeriods();
+        if (mealPeriods == null || mealPeriods.isBlank()) {
+            mealPeriods = "MORNING,NOON,EVENING";
+        }
 
         MenuItemEntity entity = MenuItemEntity.builder()
-                .code(request.getCode())
-                .name(request.getName())
+                .code(code)
+                .name(request.getEffectiveName())
                 .category(category)
-                .basePrice(request.getBasePrice())
-                .description(request.getDescription())
-                .status(request.getStatus() != null ? request.getStatus() : MenuStatus.available)
-                .isBestSeller(request.getIsBestSeller() != null ? request.getIsBestSeller() : false)
-                .imageUrl(request.getImageUrl() != null ? request.getImageUrl() : request.getImage())
+                .basePrice(price)
+                .description(request.getEffectiveDescription())
+                .ingredients(request.getEffectiveIngredients())
+                .mealPeriods(mealPeriods)
+                .status(request.getEffectiveStatus() != null ? request.getEffectiveStatus() : MenuStatus.available)
+                .isBestSeller(Boolean.TRUE.equals(request.getEffectiveIsBestSeller()))
+                .imageUrl(request.getEffectiveImageUrl())
                 .build();
         entity.setId("m-" + UUID.randomUUID().toString().substring(0, 8));
 
@@ -53,12 +97,84 @@ public class MenuItemService {
         return mapToResponse(saved);
     }
 
+    @Transactional
+    public MenuItemResponse updateMenuItem(String id, MenuItemUpdateRequest request) {
+        MenuItemEntity entity = menuItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
+
+        MenuItemUpdateRequest actual = request.getActual();
+
+        if (actual.getName() != null && !actual.getName().isBlank()) {
+            entity.setName(actual.getName());
+        }
+        if (actual.getEffectivePrice() != null) {
+            entity.setBasePrice(actual.getEffectivePrice());
+        }
+        if (actual.getDescription() != null) {
+            entity.setDescription(actual.getDescription());
+        }
+        if (actual.getIngredients() != null) {
+            entity.setIngredients(actual.getIngredients());
+        }
+        if (actual.getMealPeriods() != null && !actual.getMealPeriods().isBlank()) {
+            entity.setMealPeriods(actual.getMealPeriods());
+        }
+        if (actual.getStatus() != null) {
+            entity.setStatus(actual.getStatus());
+        }
+        if (actual.getIsBestSeller() != null) {
+            entity.setIsBestSeller(actual.getIsBestSeller());
+        }
+        if (actual.getEffectiveImageUrl() != null) {
+            entity.setImageUrl(actual.getEffectiveImageUrl());
+        }
+
+        if (actual.getCategoryId() != null && !actual.getCategoryId().isBlank()) {
+            CategoryEntity category = categoryRepository.findById(actual.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục món ăn với ID: " + actual.getCategoryId()));
+            entity.setCategory(category);
+        }
+
+        MenuItemEntity updated = menuItemRepository.save(entity);
+        return mapToResponse(updated);
+    }
+
+    @Transactional
     public MenuItemResponse updateMenuItemStatus(String id, MenuStatus status) {
         MenuItemEntity entity = menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu item not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
         entity.setStatus(status);
         MenuItemEntity updated = menuItemRepository.save(entity);
         return mapToResponse(updated);
+    }
+
+    @Transactional
+    public void deleteMenuItem(String id) {
+        MenuItemEntity entity = menuItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
+        menuItemRepository.delete(entity);
+    }
+
+    public MealPeriodInfoResponse getCurrentMealPeriodInfo() {
+        LocalTime now = LocalTime.now();
+        MealPeriod current = MealPeriod.getCurrentPeriod(now);
+        boolean isOrdering = (current != MealPeriod.CLOSED);
+        String message;
+        switch (current) {
+            case MORNING -> message = "Đang trong khung giờ phục vụ Thực đơn Sáng (06:00 - 10:30)";
+            case NOON -> message = "Đang trong khung giờ phục vụ Thực đơn Trưa (10:30 - 14:30)";
+            case BREAK -> message = "Giờ nghỉ bếp dọn dẹp (14:30 - 16:30). Chỉ phục vụ Đồ uống & Cà phê. Ca Tối mở lúc 16:30";
+            case EVENING -> message = "Đang trong khung giờ phục vụ Thực đơn Tối & Lẩu (16:30 - 22:00)";
+            default -> message = "Nhà hàng hiện đang đóng cửa (22:00 - 06:00)";
+        }
+        return MealPeriodInfoResponse.builder()
+                .currentPeriod(current.name())
+                .periodName(current.getDisplayName())
+                .timeRange(current.getTimeRange())
+                .currentTime(now.format(DateTimeFormatter.ofPattern("HH:mm")))
+                .isOrderingAvailable(isOrdering)
+                .message(message)
+                .build();
     }
 
     private MenuItemResponse mapToResponse(MenuItemEntity entity) {
@@ -66,15 +182,43 @@ public class MenuItemService {
         res.setId(entity.getId());
         res.setCode(entity.getCode());
         res.setName(entity.getName());
-        res.setCategoryId(entity.getCategory() != null ? entity.getCategory().getId() : "cat-01");
-        res.setCategory(entity.getCategory() != null ? entity.getCategory().getName() : "Phở & Bún");
+
+        if (entity.getCategory() != null) {
+            res.setCategoryId(entity.getCategory().getId());
+            res.setCategory(entity.getCategory().getName());
+            if (entity.getCategory().getOptions() != null) {
+                res.setOptions(entity.getCategory().getOptions().stream()
+                        .filter(opt -> "AVAILABLE".equalsIgnoreCase(opt.getStatus()))
+                        .map(opt -> CategoryOptionResponse.builder()
+                                .id(opt.getId())
+                                .categoryId(entity.getCategory().getId())
+                                .name(opt.getName())
+                                .optionType(opt.getOptionType() != null ? opt.getOptionType().name() : "TOPPING")
+                                .price(opt.getPrice())
+                                .status(opt.getStatus())
+                                .displayOrder(opt.getDisplayOrder())
+                                .build())
+                        .collect(Collectors.toList()));
+            }
+        }
+
         res.setBasePrice(entity.getBasePrice());
+        res.setPrice(entity.getBasePrice());
         res.setDescription(entity.getDescription());
+        res.setIngredients(entity.getIngredients());
+        res.setMealPeriods(entity.getMealPeriods());
+
+        LocalTime now = LocalTime.now();
+        boolean availableNow = MealPeriod.isAvailableNow(entity.getMealPeriods(), now);
+        res.setIsAvailableNow(availableNow);
+        res.setMealPeriodNote(MealPeriod.getPeriodDescription(entity.getMealPeriods()));
+
         res.setStatus(entity.getStatus());
-        res.setIsBestSeller(entity.getIsBestSeller());
+        res.setIsBestSeller(Boolean.TRUE.equals(entity.getIsBestSeller()));
         res.setImage(entity.getImageUrl());
-        res.setBranchesCount(3);
+        res.setImageUrl(entity.getImageUrl());
         res.setCreatedAt(entity.getCreatedAt());
+        res.setUpdatedAt(entity.getUpdatedAt());
         return res;
     }
 }

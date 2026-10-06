@@ -22,6 +22,5 @@ public class MenuItemResponse {
     private MenuStatus status;
     private Boolean isBestSeller;
     private String image;
-    private Integer branchesCount;
     private LocalDateTime createdAt;
 }

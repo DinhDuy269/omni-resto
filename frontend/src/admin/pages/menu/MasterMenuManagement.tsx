@@ -1,263 +1,1249 @@
 import React, { useState } from 'react';
-import { Plus, Search, Star, ToggleLeft, ToggleRight, Edit3 } from 'lucide-react';
-import { useAdminStore } from '../../store/adminStore';
-import { StatusBadge } from '../../components/StatusBadge';
+import {
+  Plus,
+  Search,
+  Star,
+  ToggleLeft,
+  ToggleRight,
+  Edit3,
+  Trash2,
+  Utensils,
+  Layers,
+  CheckCircle2,
+  XCircle,
+  LayoutGrid,
+  List,
+  Clock,
+  RotateCcw,
+} from 'lucide-react';
+import { useAdminStore, DISH_CATEGORIES } from '../../store/adminStore';
 import { Modal } from '../../../shared/components/Modal';
-import type { MenuCategory, MenuStatus } from '../../../shared/types/admin';
+import type { MenuCategory, MenuStatus, MenuItem, CategoryOption } from '../../../shared/types/admin';
 
 const CATEGORIES: MenuCategory[] = [
-  'Phở & Bún',
-  'Cơm & Món Chính',
-  'Món Ăn Kèm',
-  'Đồ Uống',
-  'Tráng Miệng',
+  'Phở & Bún Nước',
+  'Cơm Tấm & Món Mặn',
+  'Bánh Mì & Điểm Tâm',
+  'Lẩu & Món Nhắm',
+  'Đồ Uống & Tráng Miệng',
+];
+
+const MEAL_PERIOD_OPTIONS = [
+  { value: 'ALL_DAY', label: 'Cả Ngày (Toàn Thời Gian)' },
+  { value: 'MORNING', label: 'Điểm Tâm Sáng (06:00 - 10:30)' },
+  { value: 'NOON', label: 'Cơm Trưa (10:30 - 14:30)' },
+  { value: 'EVENING', label: 'Bữa Tối & Nhậu (17:00 - 23:00)' },
 ];
 
 export const MasterMenuManagement: React.FC = () => {
-  const { menuItems, addMenuItem, toggleMenuItemStatus } = useAdminStore();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('ALL');
+  const {
+    menuItems,
+    categoryOptions,
+    addMenuItem,
+    updateMenuItem,
+    deleteMenuItem,
+    toggleMenuItemStatus,
+    addCategoryOption,
+    updateCategoryOption,
+    deleteCategoryOption,
+    toggleCategoryOptionStatus,
+  } = useAdminStore();
 
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  // Active top-level sub-view: 'DISHES' or 'OPTIONS'
+  const [activeTab, setActiveTab] = useState<'DISHES' | 'OPTIONS'>('DISHES');
+
+  // View Mode for Dishes: 'TABLE' or 'GRID' (Default: TABLE for fast admin overview)
+  const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('TABLE');
+
+  // Search & Filter for Dishes
+  const [dishSearch, setDishSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('ALL');
+  const [dishMealPeriodFilter, setDishMealPeriodFilter] = useState<string>('ALL');
+  const [dishStatusFilter, setDishStatusFilter] = useState<string>('ALL');
+  // Search & Filter for Category Options
+  const [optionSearch, setOptionSearch] = useState('');
+  const [optionCategoryFilter, setOptionCategoryFilter] = useState<string>('ALL');
+  const [optionTypeFilter, setOptionTypeFilter] = useState<string>('ALL');
+
+  // Dish Modals State
+  const [isAddDishModalOpen, setIsAddDishModalOpen] = useState(false);
+  const [editingDish, setEditingDish] = useState<MenuItem | null>(null);
+
+  const [dishFormData, setDishFormData] = useState({
     code: '',
     name: '',
-    category: 'Phở & Bún' as MenuCategory,
+    category: 'Phở & Bún Nước' as MenuCategory,
     basePrice: 79000,
+    mealPeriods: 'ALL_DAY',
     description: '',
+    ingredients: '',
     isBestSeller: false,
     image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
   });
 
-  const filteredItems = menuItems.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'ALL' || item.category === activeCategory;
-    return matchesSearch && matchesCategory;
+  // Option Modals State
+  const [isAddOptionModalOpen, setIsAddOptionModalOpen] = useState(false);
+  const [editingOption, setEditingOption] = useState<CategoryOption | null>(null);
+
+  const [optionFormData, setOptionFormData] = useState({
+    categoryId: 'cat-pho',
+    name: '',
+    optionType: 'TOPPING' as 'SIZE' | 'TOPPING',
+    price: 10000,
+    status: 'AVAILABLE',
   });
 
-  const handleSubmitNewDish = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.code) return;
+  // Helper format ca phục vụ
+  const formatMealPeriodBadge = (periods?: string) => {
+    if (!periods || periods.toUpperCase().includes('ALL_DAY') || periods.toUpperCase().includes('ALLDAY')) {
+      return { label: 'Cả ngày (06h - 22h)', color: '#0d9488', bg: 'rgba(13, 148, 136, 0.1)' };
+    }
+    const p = periods.toUpperCase();
+    const labels: string[] = [];
+    if (p.includes('MORNING')) labels.push('Sáng');
+    if (p.includes('NOON')) labels.push('Trưa');
+    if (p.includes('EVENING')) labels.push('Tối');
+    return {
+      label: labels.length > 0 ? labels.join(' & ') : periods,
+      color: '#ea580c',
+      bg: 'rgba(234, 88, 12, 0.1)'
+    };
+  };
 
-    addMenuItem({
-      code: formData.code,
-      name: formData.name,
-      category: formData.category,
-      basePrice: Number(formData.basePrice),
-      description: formData.description,
-      status: 'AVAILABLE',
-      isBestSeller: formData.isBestSeller,
-      image: formData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
-    });
+  // Filtered Dishes
+  const filteredDishes = menuItems.filter((item) => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(dishSearch.toLowerCase()) ||
+      item.code.toLowerCase().includes(dishSearch.toLowerCase()) ||
+      (item.ingredients && item.ingredients.toLowerCase().includes(dishSearch.toLowerCase()));
+    const matchesCategory = activeCategory === 'ALL' || item.category === activeCategory;
+    const matchesPeriod =
+      dishMealPeriodFilter === 'ALL' ||
+      (item.mealPeriods && item.mealPeriods.toUpperCase().includes(dishMealPeriodFilter));
+    const matchesStatus =
+      dishStatusFilter === 'ALL' ||
+      (dishStatusFilter === 'AVAILABLE' && (item.status === 'AVAILABLE' || item.status === 'available')) ||
+      (dishStatusFilter === 'OUT_OF_STOCK' && (item.status === 'OUT_OF_STOCK' || item.status === 'out_of_stock'));
+    return matchesSearch && matchesCategory && matchesPeriod && matchesStatus;
+  });
 
-    setIsModalOpen(false);
-    setFormData({
-      code: '',
+  // Filtered Options
+  const filteredOptions = categoryOptions.filter((opt) => {
+    const matchesSearch = opt.name.toLowerCase().includes(optionSearch.toLowerCase());
+    const matchesCat = optionCategoryFilter === 'ALL' || opt.categoryId === optionCategoryFilter;
+    const matchesType = optionTypeFilter === 'ALL' || opt.optionType === optionTypeFilter;
+    return matchesSearch && matchesCat && matchesType;
+  });
+
+  // Handlers for Dish
+  const handleOpenAddDish = () => {
+    setDishFormData({
+      code: `M-${Math.floor(100 + Math.random() * 900)}`,
       name: '',
-      category: 'Phở & Bún',
-      basePrice: 79000,
+      category: 'Phở & Bún Nước',
+      basePrice: 65000,
+      mealPeriods: 'ALL_DAY',
       description: '',
+      ingredients: '',
       isBestSeller: false,
       image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
     });
+    setIsAddDishModalOpen(true);
+  };
+
+  const handleOpenEditDish = (dish: MenuItem) => {
+    setEditingDish(dish);
+    setDishFormData({
+      code: dish.code,
+      name: dish.name,
+      category: dish.category as MenuCategory,
+      basePrice: dish.basePrice,
+      mealPeriods: dish.mealPeriods || 'ALL_DAY',
+      description: dish.description || '',
+      ingredients: dish.ingredients || '',
+      isBestSeller: dish.isBestSeller,
+      image: dish.image,
+    });
+  };
+
+  const handleSubmitNewDish = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dishFormData.name || !dishFormData.code) return;
+
+    addMenuItem({
+      code: dishFormData.code,
+      name: dishFormData.name,
+      category: dishFormData.category,
+      basePrice: Number(dishFormData.basePrice),
+      mealPeriods: dishFormData.mealPeriods,
+      description: dishFormData.description,
+      ingredients: dishFormData.ingredients.trim() || undefined,
+      status: 'AVAILABLE',
+      isBestSeller: dishFormData.isBestSeller,
+      image: dishFormData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
+    });
+
+    setIsAddDishModalOpen(false);
+  };
+
+  const handleSubmitEditDish = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDish || !dishFormData.name) return;
+
+    updateMenuItem({
+      ...editingDish,
+      code: dishFormData.code,
+      name: dishFormData.name,
+      category: dishFormData.category,
+      basePrice: Number(dishFormData.basePrice),
+      mealPeriods: dishFormData.mealPeriods,
+      description: dishFormData.description,
+      ingredients: dishFormData.ingredients.trim() || undefined,
+      isBestSeller: dishFormData.isBestSeller,
+      image: dishFormData.image,
+    });
+
+    setEditingDish(null);
+  };
+
+  const handleDeleteDish = (id: string, name: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa món "${name}" khỏi thực đơn chuỗi?`)) {
+      deleteMenuItem(id);
+    }
+  };
+
+  // Handlers for Category Options
+  const handleOpenAddOption = () => {
+    setOptionFormData({
+      categoryId: optionCategoryFilter !== 'ALL' ? optionCategoryFilter : 'cat-pho',
+      name: '',
+      optionType: 'TOPPING',
+      price: 10000,
+      status: 'AVAILABLE',
+    });
+    setIsAddOptionModalOpen(true);
+  };
+
+  const handleOpenEditOption = (option: CategoryOption) => {
+    setEditingOption(option);
+    setOptionFormData({
+      categoryId: option.categoryId,
+      name: option.name,
+      optionType: option.optionType,
+      price: option.price,
+      status: option.status,
+    });
+  };
+
+  const handleSubmitNewOption = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!optionFormData.name) return;
+
+    addCategoryOption({
+      categoryId: optionFormData.categoryId,
+      name: optionFormData.name,
+      optionType: optionFormData.optionType,
+      price: Number(optionFormData.price),
+      status: optionFormData.status,
+    });
+
+    setIsAddOptionModalOpen(false);
+  };
+
+  const handleSubmitEditOption = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOption || !optionFormData.name) return;
+
+    updateCategoryOption({
+      ...editingOption,
+      categoryId: optionFormData.categoryId,
+      name: optionFormData.name,
+      optionType: optionFormData.optionType,
+      price: Number(optionFormData.price),
+      status: optionFormData.status,
+    });
+
+    setEditingOption(null);
+  };
+
+  const handleDeleteOption = (id: string, name: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa tùy chọn "${name}"?`)) {
+      deleteCategoryOption(id);
+    }
   };
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      {/* Page Title & Action */}
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      {/* Page Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)' }}>
             Quản Lý Thực Đơn Chuỗi (Master Menu)
           </h2>
           <p style={{ fontSize: '0.925rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Chuẩn hóa danh mục món ăn, công thức và áp dụng đồng bộ trên tất cả chi nhánh
+            Chuẩn hóa danh mục món ăn, tùy chọn kích cỡ, topping và áp dụng đồng bộ trên toàn chuỗi
           </p>
         </div>
 
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={19} />
-          Thêm Món Mới Vào Chuỗi
-        </button>
-      </div>
-
-      {/* Category Pills & Search */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
-          <div className="search-bar" style={{ width: '380px' }}>
-            <Search size={18} color="var(--text-muted)" />
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Tìm theo tên món hoặc mã (PHO-01)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Category Filters - Spacious */}
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-          <button
-            className={`btn ${activeCategory === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setActiveCategory('ALL')}
-          >
-            Tất Cả Món ({menuItems.length})
-          </button>
-          {CATEGORIES.map((cat) => {
-            const count = menuItems.filter((m) => m.category === cat).length;
-            return (
-              <button
-                key={cat}
-                className={`btn ${activeCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setActiveCategory(cat)}
-              >
-                {cat} ({count})
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Dish Catalog Grid - Spacious & Clean */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '28px' }}>
-        {filteredItems.map((dish) => (
+        {/* View Switcher Tabs */}
+        <div style={{ display: 'flex', gap: '12px' }}>
           <div
-            key={dish.id}
-            className="card"
             style={{
+              backgroundColor: 'var(--bg-card)',
+              padding: '4px',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-color)',
               display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '20px',
-              padding: '0',
-              overflow: 'hidden',
+              gap: '4px',
             }}
           >
-            {/* Image & Badges */}
-            <div style={{ position: 'relative', height: '210px', width: '100%' }}>
-              <img
-                src={dish.image}
-                alt={dish.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+            <button
+              className={`btn btn-sm ${activeTab === 'DISHES' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ border: 'none' }}
+              onClick={() => setActiveTab('DISHES')}
+            >
+              <Utensils size={16} />
+              <span>Danh Mục Món Ăn ({menuItems.length})</span>
+            </button>
+            <button
+              className={`btn btn-sm ${activeTab === 'OPTIONS' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ border: 'none' }}
+              onClick={() => setActiveTab('OPTIONS')}
+            >
+              <Layers size={16} />
+              <span>Kích Cỡ & Topping ({categoryOptions.length})</span>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className={`btn ${activeTab === 'DISHES' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => {
+                setActiveTab('DISHES');
+                handleOpenAddDish();
+              }}
+            >
+              <Plus size={18} />
+              <span>Thêm Món Mới</span>
+            </button>
+            <button
+              className={`btn ${activeTab === 'OPTIONS' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => {
+                setActiveTab('OPTIONS');
+                handleOpenAddOption();
+              }}
+            >
+              <Plus size={18} />
+              <span>Thêm Topping / Size</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          TAB 1: DANH MỤC MÓN ĂN (DISHES)
+         ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'DISHES' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Quick Metrics KPI Counters */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+              gap: '14px',
+            }}
+          >
+            <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', margin: 0 }}>
               <div
                 style={{
-                  position: 'absolute',
-                  top: '14px',
-                  left: '14px',
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: 'rgba(232, 93, 38, 0.1)',
+                  color: 'var(--primary)',
                   display: 'flex',
-                  gap: '8px',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <StatusBadge status={dish.status} />
-                {dish.isBestSeller && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '5px 12px',
-                      fontSize: '0.78125rem',
-                      fontWeight: 800,
-                      backgroundColor: 'var(--primary)',
-                      color: '#ffffff',
-                      borderRadius: 'var(--radius-full)',
-                      boxShadow: 'var(--shadow-md)',
-                    }}
+                <Utensils size={20} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Tổng thực đơn</span>
+                <strong style={{ fontSize: '1.35rem', color: 'var(--text-main)', lineHeight: 1.2 }}>{menuItems.length} món</strong>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', margin: 0 }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  color: '#16a34a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Đang mở bán</span>
+                <strong style={{ fontSize: '1.35rem', color: '#16a34a', lineHeight: 1.2 }}>
+                  {menuItems.filter((m) => m.status === 'AVAILABLE' || m.status === 'available').length} món
+                </strong>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', margin: 0 }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <XCircle size={20} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Tạm hết món</span>
+                <strong style={{ fontSize: '1.35rem', color: '#dc2626', lineHeight: 1.2 }}>
+                  {menuItems.filter((m) => m.status === 'OUT_OF_STOCK' || m.status === 'out_of_stock').length} món
+                </strong>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', margin: 0 }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  color: '#d97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Star size={20} fill="#d97706" />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Món bán chạy</span>
+                <strong style={{ fontSize: '1.35rem', color: '#d97706', lineHeight: 1.2 }}>
+                  {menuItems.filter((m) => m.isBestSeller).length} món
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Search, Filter Toolbar & View Mode Switcher */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
+              {/* Search input */}
+              <div className="search-bar" style={{ width: '320px', minWidth: '220px' }}>
+                <Search size={18} color="var(--text-muted)" />
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Tìm theo tên món, mã SKU, nguyên liệu..."
+                  value={dishSearch}
+                  onChange={(e) => setDishSearch(e.target.value)}
+                />
+                {dishSearch && (
+                  <button
+                    onClick={() => setDishSearch('')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 4px' }}
+                    title="Xóa tìm kiếm"
                   >
-                    <Star size={13} fill="#ffffff" /> BEST SELLER
-                  </span>
+                    ✕
+                  </button>
                 )}
               </div>
 
+              {/* Multi-Filters: Ca bán & Trạng thái */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {/* Lọc Ca bán */}
+                <select
+                  value={dishMealPeriodFilter}
+                  onChange={(e) => setDishMealPeriodFilter(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                  title="Lọc theo khung giờ / ca phục vụ"
+                >
+                  <option value="ALL">🕒 Tất Cả Khung Giờ</option>
+                  <option value="ALL_DAY">☕ Cả Ngày (Đồ uống / 06h - 22h)</option>
+                  <option value="MORNING">☀️ Điểm Tâm Sáng (06h - 10h30)</option>
+                  <option value="NOON">🍚 Bữa Trưa (10h30 - 14h30)</option>
+                  <option value="EVENING">🍲 Bữa Tối & Lẩu (16h30 - 22h)</option>
+                </select>
+
+                {/* Lọc Trạng thái */}
+                <select
+                  value={dishStatusFilter}
+                  onChange={(e) => setDishStatusFilter(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                  title="Lọc theo trạng thái món"
+                >
+                  <option value="ALL">⚡ Tất Cả Trạng Thái</option>
+                  <option value="AVAILABLE">🟢 Đang Mở Bán</option>
+                  <option value="OUT_OF_STOCK">🔴 Tạm Hết Món</option>
+                </select>
+
+                {(dishSearch || dishMealPeriodFilter !== 'ALL' || dishStatusFilter !== 'ALL' || activeCategory !== 'ALL') && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      setDishSearch('');
+                      setDishMealPeriodFilter('ALL');
+                      setDishStatusFilter('ALL');
+                      setActiveCategory('ALL');
+                    }}
+                    style={{ fontSize: '0.8rem', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    title="Đặt lại tất cả bộ lọc"
+                  >
+                    <RotateCcw size={14} />
+                    <span>Đặt lại</span>
+                  </button>
+                )}
+              </div>
+
+              {/* View Mode Switcher: TABLE vs GRID */}
               <div
                 style={{
-                  position: 'absolute',
-                  bottom: '14px',
-                  right: '14px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.88)',
-                  color: '#ffffff',
-                  fontSize: '0.78125rem',
-                  fontWeight: 800,
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-sm)',
+                  display: 'flex',
+                  backgroundColor: 'var(--bg-app)',
+                  padding: '3px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  gap: '2px',
                 }}
               >
-                MÃ: {dish.code}
+                <button
+                  className={`btn btn-sm ${viewMode === 'TABLE' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{
+                    border: 'none',
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.8125rem',
+                    fontWeight: viewMode === 'TABLE' ? 700 : 500,
+                  }}
+                  onClick={() => setViewMode('TABLE')}
+                  title="Xem dạng Bảng dữ liệu (Nhanh gọn, mật độ thông tin cao)"
+                >
+                  <List size={16} />
+                  <span>Bảng</span>
+                </button>
+                <button
+                  className={`btn btn-sm ${viewMode === 'GRID' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{
+                    border: 'none',
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.8125rem',
+                    fontWeight: viewMode === 'GRID' ? 700 : 500,
+                  }}
+                  onClick={() => setViewMode('GRID')}
+                  title="Xem dạng Lưới thẻ gọn"
+                >
+                  <LayoutGrid size={16} />
+                  <span>Thẻ gọn</span>
+                </button>
               </div>
             </div>
 
-            {/* Content Details - Spacious */}
-            <div style={{ padding: '0 24px 24px 24px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-              <div>
-                <span style={{ fontSize: '0.78125rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {dish.category}
-                </span>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
-                  {dish.name}
-                </h3>
-              </div>
-
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.5', flex: 1 }}>
-                {dish.description}
-              </p>
-
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: '8px' }}>
-                <span style={{ fontSize: '0.84rem', color: 'var(--text-light)', fontWeight: 600 }}>
-                  Áp dụng: <strong>{dish.branchesCount} chi nhánh</strong>
-                </span>
-                <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>
-                  {dish.basePrice.toLocaleString('vi-VN')} đ
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '10px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  style={{ flex: 1 }}
-                  onClick={() => {
-                    const nextStatus: MenuStatus = dish.status === 'AVAILABLE' ? 'OUT_OF_STOCK' : 'AVAILABLE';
-                    toggleMenuItemStatus(dish.id, nextStatus);
-                  }}
-                >
-                  {dish.status === 'AVAILABLE' ? <ToggleLeft size={18} /> : <ToggleRight size={18} />}
-                  {dish.status === 'AVAILABLE' ? 'Báo Hết Món' : 'Mở Bán Lại'}
-                </button>
-                <button className="btn btn-secondary btn-sm btn-icon">
-                  <Edit3 size={16} />
-                </button>
-              </div>
+            {/* Category Filter Pills */}
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
+              <button
+                className={`btn btn-sm ${activeCategory === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ borderRadius: 'var(--radius-full)', padding: '5px 14px', fontSize: '0.82rem' }}
+                onClick={() => setActiveCategory('ALL')}
+              >
+                Tất Cả Danh Mục ({menuItems.length})
+              </button>
+              {CATEGORIES.map((cat) => {
+                const count = menuItems.filter((m) => m.category === cat).length;
+                return (
+                  <button
+                    key={cat}
+                    className={`btn btn-sm ${activeCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ borderRadius: 'var(--radius-full)', padding: '5px 14px', fontSize: '0.82rem' }}
+                    onClick={() => setActiveCategory(cat)}
+                  >
+                    {cat} ({count})
+                  </button>
+                );
+              })}
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Modal: Add Dish */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Thêm Món Mới Vào Master Menu">
+          {/* Results Summary Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+            <span>
+              Tìm thấy <strong style={{ color: 'var(--text-main)' }}>{filteredDishes.length}</strong> / {menuItems.length} món ăn
+              {activeCategory !== 'ALL' && ` · Thuộc "${activeCategory}"`}
+              {dishMealPeriodFilter !== 'ALL' && ` · Lọc theo ca`}
+              {dishStatusFilter !== 'ALL' && ` · ${dishStatusFilter === 'AVAILABLE' ? 'Đang mở bán' : 'Tạm hết món'}`}
+            </span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-light)' }}>
+              * Mẹo: Click trực tiếp vào nút trạng thái để Đổi nhanh Sẵn sàng / Hết món
+            </span>
+          </div>
+
+          {/* ──────────────────────────────────────────
+              VIEW MODE 1: DATA TABLE (BẢNG DANH SÁCH)
+             ────────────────────────────────────────── */}
+          {viewMode === 'TABLE' && (
+            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)' }}>
+                      <th style={{ padding: '12px 18px', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)', width: '330px' }}>
+                        MÓN ĂN & MÃ SKU
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                        DANH MỤC
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                        KHUNG GIỜ PHỤC VỤ
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)', textAlign: 'right' }}>
+                        GIÁ BÁN
+                      </th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)', textAlign: 'center', width: '150px' }}>
+                        TRẠNG THÁI (BẬT/TẮT)
+                      </th>
+                      <th style={{ padding: '12px 18px', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)', textAlign: 'right', width: '100px' }}>
+                        THAO TÁC
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDishes.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                          Không tìm thấy món ăn nào phù hợp với bộ lọc hiện tại.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredDishes.map((dish) => {
+                        const isAvailable = dish.status === 'AVAILABLE' || dish.status === 'available';
+                        const periodBadge = formatMealPeriodBadge(dish.mealPeriods);
+                        return (
+                          <tr
+                            key={dish.id}
+                            style={{
+                              borderBottom: '1px solid var(--border-subtle)',
+                              transition: 'background-color 0.15s ease',
+                              backgroundColor: isAvailable ? 'transparent' : 'rgba(239, 68, 68, 0.02)',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = isAvailable ? 'transparent' : 'rgba(239, 68, 68, 0.02)')}
+                          >
+                            {/* Món ăn & SKU */}
+                            <td style={{ padding: '12px 18px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ position: 'relative', width: '46px', height: '46px', flexShrink: 0 }}>
+                                  <img
+                                    src={dish.image}
+                                    alt={dish.name}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      borderRadius: '8px',
+                                      objectFit: 'cover',
+                                      border: '1px solid var(--border-subtle)',
+                                      opacity: isAvailable ? 1 : 0.6,
+                                    }}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src =
+                                        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop';
+                                    }}
+                                  />
+                                  {dish.isBestSeller && (
+                                    <div
+                                      title="Món bán chạy (Best Seller)"
+                                      style={{
+                                        position: 'absolute',
+                                        top: -4,
+                                        right: -4,
+                                        width: '18px',
+                                        height: '18px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#f59e0b',
+                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                      }}
+                                    >
+                                      <Star size={10} fill="#fff" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <span
+                                      style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: 'var(--bg-app)',
+                                        color: 'var(--text-muted)',
+                                        border: '1px solid var(--border-subtle)',
+                                      }}
+                                    >
+                                      {dish.code}
+                                    </span>
+                                    <strong
+                                      style={{
+                                        fontSize: '0.9rem',
+                                        color: isAvailable ? 'var(--text-main)' : 'var(--text-muted)',
+                                        textDecoration: isAvailable ? 'none' : 'line-through',
+                                      }}
+                                    >
+                                      {dish.name}
+                                    </strong>
+                                  </div>
+                                  {dish.description && (
+                                    <p
+                                      style={{
+                                        fontSize: '0.76rem',
+                                        color: 'var(--text-light)',
+                                        margin: '3px 0 0',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        maxWidth: '260px',
+                                      }}
+                                      title={dish.description}
+                                    >
+                                      {dish.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Danh mục */}
+                            <td style={{ padding: '12px 16px' }}>
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '3px 10px',
+                                  borderRadius: 'var(--radius-full)',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  backgroundColor: 'rgba(232, 93, 38, 0.08)',
+                                  color: 'var(--primary)',
+                                  border: '1px solid rgba(232, 93, 38, 0.18)',
+                                }}
+                              >
+                                {dish.category}
+                              </span>
+                            </td>
+
+                            {/* Ca phục vụ */}
+                            <td style={{ padding: '12px 16px' }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '3px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  backgroundColor: periodBadge.bg,
+                                  color: periodBadge.color,
+                                }}
+                              >
+                                <Clock size={12} />
+                                {periodBadge.label}
+                              </span>
+                            </td>
+
+                            {/* Giá bán */}
+                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+                                {dish.basePrice.toLocaleString('vi-VN')} đ
+                              </span>
+                            </td>
+
+                            {/* Trạng thái Bật/Tắt nhanh 1 click */}
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => {
+                                  const nextStatus: MenuStatus = isAvailable ? 'OUT_OF_STOCK' : 'AVAILABLE';
+                                  toggleMenuItemStatus(dish.id, nextStatus);
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '5px 12px',
+                                  borderRadius: 'var(--radius-full)',
+                                  border: isAvailable ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                                  backgroundColor: isAvailable ? '#f0fdf4' : '#fef2f2',
+                                  color: isAvailable ? '#15803d' : '#b91c1c',
+                                  cursor: 'pointer',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  transition: 'all 0.15s ease',
+                                }}
+                                title={isAvailable ? 'Click để Báo Hết Món' : 'Click để Mở Bán Lại'}
+                              >
+                                {isAvailable ? (
+                                  <>
+                                    <ToggleRight size={18} color="#16a34a" />
+                                    <span>Đang bán</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ToggleLeft size={18} color="#dc2626" />
+                                    <span>Tạm hết</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+
+                            {/* Thao tác */}
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                <button
+                                  className="btn btn-secondary btn-sm btn-icon"
+                                  title="Chỉnh sửa món"
+                                  onClick={() => handleOpenEditDish(dish)}
+                                  style={{ width: '32px', height: '32px', padding: 0 }}
+                                >
+                                  <Edit3 size={15} />
+                                </button>
+                                <button
+                                  className="btn btn-secondary btn-sm btn-icon"
+                                  title="Xóa món khỏi thực đơn"
+                                  style={{ width: '32px', height: '32px', padding: 0, color: 'var(--danger)' }}
+                                  onClick={() => handleDeleteDish(dish.id, dish.name)}
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ──────────────────────────────────────────
+              VIEW MODE 2: COMPACT GRID (LƯỚI THẺ GỌN)
+             ────────────────────────────────────────── */}
+          {viewMode === 'GRID' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
+              {filteredDishes.length === 0 ? (
+                <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                  Không tìm thấy món ăn nào phù hợp với bộ lọc hiện tại.
+                </div>
+              ) : (
+                filteredDishes.map((dish) => {
+                  const isAvailable = dish.status === 'AVAILABLE' || dish.status === 'available';
+                  const periodBadge = formatMealPeriodBadge(dish.mealPeriods);
+                  return (
+                    <div
+                      key={dish.id}
+                      className="card"
+                      style={{
+                        padding: '12px',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'stretch',
+                        borderRadius: 'var(--radius-lg)',
+                        border: isAvailable ? '1px solid var(--border-color)' : '1px solid #fecaca',
+                        backgroundColor: isAvailable ? 'var(--bg-card)' : '#fffafa',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {/* Thumbnail */}
+                      <div style={{ position: 'relative', width: '92px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden' }}>
+                        <img
+                          src={dish.image}
+                          alt={dish.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            opacity: isAvailable ? 1 : 0.6,
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop';
+                          }}
+                        />
+                        {dish.isBestSeller && (
+                          <span
+                            style={{
+                              position: 'absolute',
+                              top: '4px',
+                              left: '4px',
+                              backgroundColor: '#f59e0b',
+                              color: '#fff',
+                              fontSize: '0.625rem',
+                              fontWeight: 800,
+                              padding: '2px 5px',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                            }}
+                          >
+                            <Star size={9} fill="#fff" /> HOT
+                          </span>
+                        )}
+                        <span
+                          style={{
+                            position: 'absolute',
+                            bottom: '4px',
+                            right: '4px',
+                            backgroundColor: 'rgba(0,0,0,0.7)',
+                            color: '#fff',
+                            fontSize: '0.625rem',
+                            fontWeight: 700,
+                            padding: '1px 4px',
+                            borderRadius: '3px',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          {dish.code}
+                        </span>
+                      </div>
+
+                      {/* Details */}
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)' }}>
+                              {dish.category}
+                            </span>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: periodBadge.color, backgroundColor: periodBadge.bg, padding: '1px 6px', borderRadius: '4px' }}>
+                              {periodBadge.label}
+                            </span>
+                          </div>
+                          <h4
+                            style={{
+                              margin: '0 0 4px',
+                              fontSize: '0.92rem',
+                              fontWeight: 800,
+                              color: isAvailable ? 'var(--text-main)' : 'var(--text-muted)',
+                              textDecoration: isAvailable ? 'none' : 'line-through',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                            title={dish.name}
+                          >
+                            {dish.name}
+                          </h4>
+                          <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)' }}>
+                            {dish.basePrice.toLocaleString('vi-VN')} đ
+                          </span>
+                        </div>
+
+                        {/* Quick Actions Row */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                          <button
+                            onClick={() => {
+                              const nextStatus: MenuStatus = isAvailable ? 'OUT_OF_STOCK' : 'AVAILABLE';
+                              toggleMenuItemStatus(dish.id, nextStatus);
+                            }}
+                            style={{
+                              border: 'none',
+                              background: 'none',
+                              padding: 0,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              color: isAvailable ? '#15803d' : '#dc2626',
+                            }}
+                          >
+                            {isAvailable ? <ToggleRight size={18} color="#16a34a" /> : <ToggleLeft size={18} color="#dc2626" />}
+                            <span>{isAvailable ? 'Đang bán' : 'Tạm hết'}</span>
+                          </button>
+
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              className="btn btn-secondary btn-sm btn-icon"
+                              style={{ width: '28px', height: '28px', padding: 0 }}
+                              title="Chỉnh sửa món"
+                              onClick={() => handleOpenEditDish(dish)}
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm btn-icon"
+                              style={{ width: '28px', height: '28px', padding: 0, color: 'var(--danger)' }}
+                              title="Xóa món"
+                              onClick={() => handleDeleteDish(dish.id, dish.name)}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          TAB 2: KÍCH CỠ & TOPPING (OPTIONS)
+         ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'OPTIONS' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Filters Card */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+              <div className="search-bar" style={{ width: '340px' }}>
+                <Search size={18} color="var(--text-muted)" />
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Tìm tên tùy chọn (Tô Lớn, Quẩy, Trân châu...)..."
+                  value={optionSearch}
+                  onChange={(e) => setOptionSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Type Filter */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className={`btn btn-sm ${optionTypeFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setOptionTypeFilter('ALL')}
+                >
+                  Tất Cả Loại
+                </button>
+                <button
+                  className={`btn btn-sm ${optionTypeFilter === 'SIZE' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setOptionTypeFilter('SIZE')}
+                >
+                  Kích Cỡ (Chọn 1)
+                </button>
+                <button
+                  className={`btn btn-sm ${optionTypeFilter === 'TOPPING' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setOptionTypeFilter('TOPPING')}
+                >
+                  Topping / Món Thêm (Chọn Nhiều)
+                </button>
+              </div>
+            </div>
+
+            {/* Category Pills */}
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+              <button
+                className={`btn btn-sm ${optionCategoryFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setOptionCategoryFilter('ALL')}
+              >
+                Tất Cả Kiểu Món ({categoryOptions.length})
+              </button>
+              {DISH_CATEGORIES.map((cat) => {
+                const count = categoryOptions.filter((o) => o.categoryId === cat.id).length;
+                return (
+                  <button
+                    key={cat.id}
+                    className={`btn btn-sm ${optionCategoryFilter === cat.id ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setOptionCategoryFilter(cat.id)}
+                  >
+                    {cat.name} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Options Table */}
+          <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)' }}>
+                  <th style={{ padding: '14px 20px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                    TÊN TÙY CHỌN
+                  </th>
+                  <th style={{ padding: '14px 20px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                    PHÂN LOẠI
+                  </th>
+                  <th style={{ padding: '14px 20px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                    ÁP DỤNG CHO NHÓM MÓN
+                  </th>
+                  <th style={{ padding: '14px 20px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                    GIÁ CỘNG THÊM
+                  </th>
+                  <th style={{ padding: '14px 20px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                    TRẠNG THÁI
+                  </th>
+                  <th style={{ padding: '14px 20px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', textAlign: 'right' }}>
+                    THAO TÁC
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOptions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      Không có tùy chọn kích cỡ hay topping nào phù hợp.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOptions.map((opt) => {
+                    const catObj = DISH_CATEGORIES.find((c) => c.id === opt.categoryId);
+                    const isAvailable = opt.status === 'AVAILABLE';
+                    return (
+                      <tr key={opt.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '16px 20px' }}>
+                          <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{opt.name}</strong>
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              backgroundColor: opt.optionType === 'SIZE' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(232, 93, 38, 0.12)',
+                              color: opt.optionType === 'SIZE' ? '#2563eb' : 'var(--primary)',
+                            }}
+                          >
+                            {opt.optionType === 'SIZE' ? 'Kích Cỡ (Size)' : 'Topping Thêm'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                          {catObj ? catObj.name : opt.categoryId}
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <span style={{ fontSize: '1rem', fontWeight: 800, color: opt.price > 0 ? 'var(--primary)' : 'var(--success)' }}>
+                            {opt.price > 0 ? `+${opt.price.toLocaleString('vi-VN')} đ` : 'Miễn Phí (0 đ)'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              color: isAvailable ? 'var(--success)' : 'var(--text-muted)',
+                            }}
+                          >
+                            {isAvailable ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                            {isAvailable ? 'Sẵn sàng phục vụ' : 'Tạm ngưng phục vụ'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '8px' }}>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                const nextStatus = isAvailable ? 'UNAVAILABLE' : 'AVAILABLE';
+                                toggleCategoryOptionStatus(opt.id, nextStatus);
+                              }}
+                            >
+                              {isAvailable ? 'Báo Hết' : 'Mở Lại'}
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm btn-icon"
+                              title="Sửa tùy chọn"
+                              onClick={() => handleOpenEditOption(opt)}
+                            >
+                              <Edit3 size={15} />
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm btn-icon"
+                              title="Xóa tùy chọn"
+                              style={{ color: 'var(--danger)' }}
+                              onClick={() => handleDeleteOption(opt.id, opt.name)}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: THÊM MÓN ĂN MỚI
+         ───────────────────────────────────────────────────────────── */}
+      <Modal isOpen={isAddDishModalOpen} onClose={() => setIsAddDishModalOpen(false)} title="Thêm Món Mới Vào Master Menu">
         <form onSubmit={handleSubmitNewDish}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="form-group">
-              <label className="form-label">Mã Món (Mã SKU)*</label>
+              <label className="form-label">Mã Món (SKU)*</label>
               <input
                 type="text"
                 className="form-input"
                 placeholder="VD: PHO-05, COM-03"
                 required
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                value={dishFormData.code}
+                onChange={(e) => setDishFormData({ ...dishFormData, code: e.target.value })}
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Danh Mục Món*</label>
+              <label className="form-label">Danh Mục Kiểu Món*</label>
               <select
                 className="form-select"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value as MenuCategory })}
+                value={dishFormData.category}
+                onChange={(e) => setDishFormData({ ...dishFormData, category: e.target.value as MenuCategory })}
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -268,38 +1254,65 @@ export const MasterMenuManagement: React.FC = () => {
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Tên Món Ăn*</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="VD: Phở Bò Sườn Cây Đặc Biệt"
+                required
+                value={dishFormData.name}
+                onChange={(e) => setDishFormData({ ...dishFormData, name: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Giá Chuẩn Master (VNĐ)*</label>
+              <input
+                type="number"
+                className="form-input"
+                step={1000}
+                required
+                value={dishFormData.basePrice}
+                onChange={(e) => setDishFormData({ ...dishFormData, basePrice: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
           <div className="form-group">
-            <label className="form-label">Tên Món Ăn*</label>
+            <label className="form-label">Khung Giờ / Ca Bán Phục Vụ*</label>
+            <select
+              className="form-select"
+              value={dishFormData.mealPeriods}
+              onChange={(e) => setDishFormData({ ...dishFormData, mealPeriods: e.target.value })}
+            >
+              {MEAL_PERIOD_OPTIONS.map((period) => (
+                <option key={period.value} value={period.value}>
+                  {period.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Mô Tả Hương Vị & Nét Đặc Trưng</label>
+            <textarea
+              className="form-textarea"
+              rows={2}
+              placeholder="Mô tả công thức chế biến đặc trưng..."
+              value={dishFormData.description}
+              onChange={(e) => setDishFormData({ ...dishFormData, description: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Nguyên Liệu Nổi Bật (Phân cách bằng dấu phẩy)</label>
             <input
               type="text"
               className="form-input"
-              placeholder="VD: Phở Bò Sườn Cây Đặc Biệt"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Giá Chuẩn Master (VNĐ)*</label>
-            <input
-              type="number"
-              className="form-input"
-              step={1000}
-              required
-              value={formData.basePrice}
-              onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Mô Tả & Thành Phần Món Ăn</label>
-            <textarea
-              className="form-textarea"
-              rows={3}
-              placeholder="Mô tả hương vị, nguyên liệu công thức chuẩn..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="VD: Thịt sườn bò, Nước hầm 24h, Hành tây, Quế hồi..."
+              value={dishFormData.ingredients}
+              onChange={(e) => setDishFormData({ ...dishFormData, ingredients: e.target.value })}
             />
           </div>
 
@@ -308,31 +1321,303 @@ export const MasterMenuManagement: React.FC = () => {
             <input
               type="url"
               className="form-input"
-              placeholder="https://images.unsplash.com/..."
-              value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              value={dishFormData.image}
+              onChange={(e) => setDishFormData({ ...dishFormData, image: e.target.value })}
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '16px 0' }}>
             <input
               type="checkbox"
-              id="bestSeller"
-              checked={formData.isBestSeller}
-              onChange={(e) => setFormData({ ...formData, isBestSeller: e.target.checked })}
+              id="newDishBestSeller"
+              checked={dishFormData.isBestSeller}
+              onChange={(e) => setDishFormData({ ...dishFormData, isBestSeller: e.target.checked })}
               style={{ width: '18px', height: '18px' }}
             />
-            <label htmlFor="bestSeller" style={{ fontSize: '0.925rem', fontWeight: 700, cursor: 'pointer' }}>
+            <label htmlFor="newDishBestSeller" style={{ fontSize: '0.925rem', fontWeight: 700, cursor: 'pointer' }}>
               Đánh dấu là Món Bán Chạy (Best Seller)
             </label>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '14px', marginTop: '28px' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsAddDishModalOpen(false)}>
               Hủy
             </button>
             <button type="submit" className="btn btn-primary">
               Lưu Món Mới
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: CHỈNH SỬA MÓN ĂN
+         ───────────────────────────────────────────────────────────── */}
+      <Modal isOpen={!!editingDish} onClose={() => setEditingDish(null)} title="Chỉnh Sửa Thông Tin Món Ăn">
+        <form onSubmit={handleSubmitEditDish}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Mã Món (SKU)*</label>
+              <input
+                type="text"
+                className="form-input"
+                required
+                value={dishFormData.code}
+                onChange={(e) => setDishFormData({ ...dishFormData, code: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Danh Mục Kiểu Món*</label>
+              <select
+                className="form-select"
+                value={dishFormData.category}
+                onChange={(e) => setDishFormData({ ...dishFormData, category: e.target.value as MenuCategory })}
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Tên Món Ăn*</label>
+              <input
+                type="text"
+                className="form-input"
+                required
+                value={dishFormData.name}
+                onChange={(e) => setDishFormData({ ...dishFormData, name: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Giá Chuẩn Master (VNĐ)*</label>
+              <input
+                type="number"
+                className="form-input"
+                step={1000}
+                required
+                value={dishFormData.basePrice}
+                onChange={(e) => setDishFormData({ ...dishFormData, basePrice: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Khung Giờ / Ca Bán Phục Vụ*</label>
+            <select
+              className="form-select"
+              value={dishFormData.mealPeriods}
+              onChange={(e) => setDishFormData({ ...dishFormData, mealPeriods: e.target.value })}
+            >
+              {MEAL_PERIOD_OPTIONS.map((period) => (
+                <option key={period.value} value={period.value}>
+                  {period.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Mô Tả Hương Vị & Nét Đặc Trưng</label>
+            <textarea
+              className="form-textarea"
+              rows={2}
+              value={dishFormData.description}
+              onChange={(e) => setDishFormData({ ...dishFormData, description: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Nguyên Liệu Nổi Bật (Phân cách bằng dấu phẩy)</label>
+            <input
+              type="text"
+              className="form-input"
+              value={dishFormData.ingredients}
+              onChange={(e) => setDishFormData({ ...dishFormData, ingredients: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">URL Hình Ảnh Món Ăn</label>
+            <input
+              type="url"
+              className="form-input"
+              value={dishFormData.image}
+              onChange={(e) => setDishFormData({ ...dishFormData, image: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '16px 0' }}>
+            <input
+              type="checkbox"
+              id="editDishBestSeller"
+              checked={dishFormData.isBestSeller}
+              onChange={(e) => setDishFormData({ ...dishFormData, isBestSeller: e.target.checked })}
+              style={{ width: '18px', height: '18px' }}
+            />
+            <label htmlFor="editDishBestSeller" style={{ fontSize: '0.925rem', fontWeight: 700, cursor: 'pointer' }}>
+              Đánh dấu là Món Bán Chạy (Best Seller)
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setEditingDish(null)}>
+              Hủy
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Cập Nhật Món
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: THÊM TÙY CHỌN (OPTION: SIZE / TOPPING)
+         ───────────────────────────────────────────────────────────── */}
+      <Modal isOpen={isAddOptionModalOpen} onClose={() => setIsAddOptionModalOpen(false)} title="Thêm Kích Cỡ hoặc Topping Mới">
+        <form onSubmit={handleSubmitNewOption}>
+          <div className="form-group">
+            <label className="form-label">Áp Dụng Cho Nhóm Món*</label>
+            <select
+              className="form-select"
+              value={optionFormData.categoryId}
+              onChange={(e) => setOptionFormData({ ...optionFormData, categoryId: e.target.value })}
+            >
+              {DISH_CATEGORIES.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Loại Tùy Chọn*</label>
+              <select
+                className="form-select"
+                value={optionFormData.optionType}
+                onChange={(e) => setOptionFormData({ ...optionFormData, optionType: e.target.value as 'SIZE' | 'TOPPING' })}
+              >
+                <option value="SIZE">Kích Cỡ / Size (Khách chọn 1)</option>
+                <option value="TOPPING">Topping / Món Thêm (Khách chọn nhiều)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Giá Cộng Thêm (VNĐ)*</label>
+              <input
+                type="number"
+                className="form-input"
+                step={1000}
+                required
+                value={optionFormData.price}
+                onChange={(e) => setOptionFormData({ ...optionFormData, price: Number(e.target.value) })}
+              />
+              <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>0 đ = Miễn phí / Size tiêu chuẩn</small>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tên Kích Cỡ / Topping*</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="VD: Tô Lớn, Quẩy Giòn, Thêm Thịt Bò Tái..."
+              required
+              value={optionFormData.name}
+              onChange={(e) => setOptionFormData({ ...optionFormData, name: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsAddOptionModalOpen(false)}>
+              Hủy
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Tạo Tùy Chọn
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: SỬA TÙY CHỌN (OPTION)
+         ───────────────────────────────────────────────────────────── */}
+      <Modal isOpen={!!editingOption} onClose={() => setEditingOption(null)} title="Chỉnh Sửa Kích Cỡ / Topping">
+        <form onSubmit={handleSubmitEditOption}>
+          <div className="form-group">
+            <label className="form-label">Áp Dụng Cho Nhóm Món*</label>
+            <select
+              className="form-select"
+              value={optionFormData.categoryId}
+              onChange={(e) => setOptionFormData({ ...optionFormData, categoryId: e.target.value })}
+            >
+              {DISH_CATEGORIES.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Loại Tùy Chọn*</label>
+              <select
+                className="form-select"
+                value={optionFormData.optionType}
+                onChange={(e) => setOptionFormData({ ...optionFormData, optionType: e.target.value as 'SIZE' | 'TOPPING' })}
+              >
+                <option value="SIZE">Kích Cỡ / Size (Khách chọn 1)</option>
+                <option value="TOPPING">Topping / Món Thêm (Khách chọn nhiều)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Giá Cộng Thêm (VNĐ)*</label>
+              <input
+                type="number"
+                className="form-input"
+                step={1000}
+                required
+                value={optionFormData.price}
+                onChange={(e) => setOptionFormData({ ...optionFormData, price: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tên Kích Cỡ / Topping*</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              value={optionFormData.name}
+              onChange={(e) => setOptionFormData({ ...optionFormData, name: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Trạng Thái Phục Vụ*</label>
+            <select
+              className="form-select"
+              value={optionFormData.status}
+              onChange={(e) => setOptionFormData({ ...optionFormData, status: e.target.value })}
+            >
+              <option value="AVAILABLE">Sẵn Sàng Phục Vụ (AVAILABLE)</option>
+              <option value="UNAVAILABLE">Tạm Hết Hàng (UNAVAILABLE)</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setEditingOption(null)}>
+              Hủy
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Cập Nhật
             </button>
           </div>
         </form>

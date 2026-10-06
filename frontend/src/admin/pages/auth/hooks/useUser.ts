@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAdminStore } from '../../../store/adminStore';
 
 export const useUser = () => {
-  const { staffList, branches, addStaff, toggleStaffStatus } = useAdminStore();
+  const { staffList, addStaff, toggleStaffStatus } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
@@ -15,5 +15,5 @@ export const useUser = () => {
     return matchesSearch && matchesRole;
   });
 
-  return { staffList: filteredStaff, branches, searchQuery, setSearchQuery, roleFilter, setRoleFilter, addStaff, toggleStaffStatus };
+  return { staffList: filteredStaff, searchQuery, setSearchQuery, roleFilter, setRoleFilter, addStaff, toggleStaffStatus };
 };

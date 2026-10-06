@@ -59,24 +59,39 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
 
   /* Radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   /* Dimensions */
-  --header-height: 56px;
-  --sidebar-width: 240px;
+  --header-height: 60px;
+  --sidebar-width: 248px;
 
-  /* Standard Clean System Font */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  /* ─── Typography System ─────────────────────────────────────────────────────
+     Vai trò font:
+     - --font-display   → Admin heading, page title (Plus Jakarta Sans – hiện đại)
+     - --font-family    → Admin body, label, table (Inter – sắc nét, dữ liệu)
+     - --font-mono      → Số liệu, giá, mã đơn, badge (JetBrains Mono)
+     ──────────────────────────────────────────────────────────────────────── */
+  --font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-family:  'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
 
   /* ═════════════════════════════════════════════════════════════
      CLIENT DESIGN SYSTEM TOKENS (Warm Food Palette)
      ═════════════════════════════════════════════════════════════ */
-  --c-font: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* ─── Client Typography System ──────────────────────────────────────────────
+     Vai trò font (Client / Customer-facing):
+     - --c-font-display → Tiêu đề lớn, hero heading (Cormorant Garamond – sang trọng)
+     - --c-font         → Body, nút, label, UI (Be Vietnam Pro – đậm chất Việt)
+     - --font-mono      → Giá tiền, số lượng (duy nhất - dùng chung với Admin)
+     ──────────────────────────────────────────────────────────────────────── */
+  --c-font-display: 'Cormorant Garamond', 'Georgia', 'Times New Roman', serif;
+  --c-font:         'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --c-bg: #fffbf7;
   --c-surface: #ffffff;
   --c-surface-warm: #fff7ed;
@@ -132,10 +147,13 @@ body {
   font-family: var(--font-family);
   background-color: var(--bg-app);
   color: var(--text-body);
-  line-height: 1.5;
+  font-size: 0.9375rem;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
 }
 
 /* Custom Scrollbar */
@@ -161,10 +179,14 @@ body {
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 16px 20px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
   transition: all var(--transition-fast);
+}
+
+.card:hover {
+  border-color: #cbd5e1;
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -406,9 +428,26 @@ body {
   outline: none;
 }
 
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.2px;
+}
+
+.form-input,
+.form-select,
+.form-textarea,
 .form-control {
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   font-family: var(--font-family);
@@ -419,21 +458,166 @@ body {
   transition: all var(--transition-fast);
 }
 
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
 .form-control:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--primary-glow);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
 /* Simple Fade In */
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
+    transform: none;
   }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.15s ease-out forwards;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Glassmorphism & Modern Utility Classes */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.05);
+}
+
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.1);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+  display: inline-block;
+}
+
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.4;
+  animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ═════════════════════════════════════════════════════════════
+   TYPOGRAPHY UTILITIES
+   ═════════════════════════════════════════════════════════════ */
+
+/* ── Admin Heading font — Plus Jakarta Sans ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+/* ── Mono for numbers, codes, prices in admin ── */
+.font-mono,
+[data-font="mono"] {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1, 'kern' 0;
+  letter-spacing: 0;
+}
+
+/* ── Utility helpers ── */
+.font-display { font-family: var(--font-display) !important; }
+.font-body    { font-family: var(--font-family)  !important; }
+
+/* ── Admin-specific: apply display font to section titles ── */
+.page-title,
+.section-title,
+.stat-label,
+.sidebar-section-label {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* ── Client-specific heading display override ── */
+.c-heading,
+.c-display {
+  font-family: var(--c-font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* Price / Amount display — monospaced for digit alignment */
+.c-price,
+.price-mono,
+[data-role="price"],
+[data-role="amount"] {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ── c-fade-up animation (used by MenuCard, floating buttons) ── */
+@keyframes c-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Text clamp utilities ── */
+.c-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.c-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.c-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+
+/* ── Badge utilities ── */
+.c-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--c-r-full, 9999px);
+  font-family: var(--c-font);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.c-badge-orange { background: var(--c-primary-light, #fff3eb); color: var(--c-primary, #ff6b00); }
+.c-badge-gray   { background: #f1f5f9;   color: #64748b; }
+.c-badge-green  { background: #f0fdf4;   color: #16a34a; }
+.c-badge-red    { background: #fef2f2;   color: #dc2626; }

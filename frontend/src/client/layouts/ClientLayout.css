@@ -37,23 +37,25 @@
   gap: 16px;
 }
 
-/* Logo */
+/* Logo — dùng display font để tạo nhận diện thương hiệu sang trọng */
 .client-logo {
   display: flex;
   align-items: center;
   gap: 10px;
   text-decoration: none;
   color: var(--c-text-main);
-  font-weight: 800;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
+  font-family: var(--c-font-display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
   flex-shrink: 0;
   transition: color var(--c-t-fast);
+  font-style: italic;
 }
 
 .client-logo:hover { color: var(--c-primary); }
 
-.client-logo svg { color: var(--c-primary); }
+.client-logo svg { color: var(--c-primary); font-style: normal; }
 
 .client-logo-dot {
   width: 6px;
@@ -146,9 +148,31 @@
   color: var(--c-primary);
 }
 
+/* Cart amount — dùng mono cho số tiền */
 .client-cart-amount {
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: 0.875rem;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.01em;
+}
+
+/* ─── Headings trong client area ─────────────────────────────────── */
+
+/* h1 — hero title duy nhất dùng Cormorant Garamond (display) */
+.client-layout h1 {
+  font-family: var(--c-font-display);
+  letter-spacing: -0.01em;
+}
+
+/* h2/h3/h4/h5/h6 — UI headings (section, card, form) dùng Be Vietnam Pro */
+.client-layout h2,
+.client-layout h3,
+.client-layout h4,
+.client-layout h5,
+.client-layout h6 {
+  font-family: var(--c-font);
+  letter-spacing: -0.01em;
 }
 
 /* ─── Main ────────────────────────────────────────────────────────── */

@@ -70,23 +70,23 @@ public class SecurityConfig {
 
     private void configureAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
         authorizeRequests
-            .requestMatchers(branchApiPatterns()).permitAll()
             .requestMatchers(menuApiPatterns()).permitAll()
             .requestMatchers(orderApiPatterns()).permitAll()
             .requestMatchers(userApiPatterns()).permitAll()
             .requestMatchers(tableApiPatterns()).permitAll()
+            .requestMatchers(reservationApiPatterns()).permitAll()
+            .requestMatchers(eventApiPatterns()).permitAll()
+            .requestMatchers(newsletterApiPatterns()).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/ws/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/ws-raw/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/api/payments/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/api/ai/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/error")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/v3/api-docs/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/swagger-ui/**")).permitAll()
+            .requestMatchers(new AntPathRequestMatcher("/swagger-ui.html")).permitAll()
             .anyRequest().authenticated();
     }
-
-    // region branch
-    private static RequestMatcher[] branchApiPatterns() {
-        return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/branches"),
-            new AntPathRequestMatcher("/api/branches/**")
-        };
-    }
-    // endregion
-
     // region menu
     private static RequestMatcher[] menuApiPatterns() {
         return new RequestMatcher[]{
@@ -119,6 +119,33 @@ public class SecurityConfig {
         return new RequestMatcher[]{
             new AntPathRequestMatcher("/api/tables"),
             new AntPathRequestMatcher("/api/tables/**")
+        };
+    }
+    // endregion
+
+    // region reservation
+    private static RequestMatcher[] reservationApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/reservations"),
+            new AntPathRequestMatcher("/api/reservations/**")
+        };
+    }
+    // endregion
+
+    // region event
+    private static RequestMatcher[] eventApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/events"),
+            new AntPathRequestMatcher("/api/events/**")
+        };
+    }
+    // endregion
+
+    // region newsletter
+    private static RequestMatcher[] newsletterApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/newsletter"),
+            new AntPathRequestMatcher("/api/newsletter/**")
         };
     }
     // endregion

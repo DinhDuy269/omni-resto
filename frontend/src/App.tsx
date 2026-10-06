@@ -1,5 +1,5 @@
 import { AppRouter } from './router';
-import { BackendConnectionGate } from './shared/components/BackendConnectionGate';
+import { ErrorBoundary } from './shared/components/ErrorBoundary';
 
 function App() {
   return (

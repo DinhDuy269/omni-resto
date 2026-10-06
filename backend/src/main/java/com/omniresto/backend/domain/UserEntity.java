@@ -31,8 +31,6 @@ public class UserEntity extends BaseEntity {
     @Column(nullable = false, length = 30)
     private RoleType role;
 
-    @Column(name = "branch_id", length = 36)
-    private String branchId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

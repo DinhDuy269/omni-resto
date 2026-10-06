@@ -2,9 +2,9 @@ import { apiClient, transformAxiosErrorResponse, toQueryString } from '../../../
 import type { TableInfo, TableResponse, TableStatus } from '../../../shared/types/admin';
 
 export const tableApi = {
-  getTables: async (branchId: string, status?: TableStatus): Promise<TableInfo[]> => {
+  getTables: async (status?: TableStatus): Promise<TableInfo[]> => {
     try {
-      const q = toQueryString({ branchId, status });
+      const q = toQueryString({ status });
       const res = await apiClient.get<TableInfo[] | TableResponse>(`/tables${q}`);
       if (Array.isArray(res.data)) return res.data;
       return res.data.tables || [];

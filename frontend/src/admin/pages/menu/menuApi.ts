@@ -2,11 +2,21 @@ import { apiClient, transformAxiosErrorResponse } from '../../../shared/api/clie
 import type { MenuItem, MenuItemResponse, MenuStatus } from '../../../shared/types/admin';
 
 export const menuApi = {
-  getMenuItems: async (): Promise<MenuItem[]> => {
+  getMenuItems: async (period?: string): Promise<MenuItem[]> => {
     try {
-      const res = await apiClient.get<MenuItem[] | MenuItemResponse>('/menu-items');
+      const url = period ? `/menu-items?period=${period}` : '/menu-items';
+      const res = await apiClient.get<MenuItem[] | MenuItemResponse>(url);
       if (Array.isArray(res.data)) return res.data;
       return res.data.menu_items || [];
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  getMealPeriodInfo: async (): Promise<any> => {
+    try {
+      const res = await apiClient.get('/menu-items/current-period');
+      return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }

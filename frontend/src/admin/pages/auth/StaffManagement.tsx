@@ -14,7 +14,7 @@ const ROLE_MAP: Record<string, { label: string; bg: string; color: string; isMas
 };
 
 export const StaffManagement: React.FC = () => {
-  const { staffList, branches, addStaff, toggleStaffStatus } = useAdminStore();
+  const { staffList, addStaff, toggleStaffStatus } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
@@ -25,7 +25,6 @@ export const StaffManagement: React.FC = () => {
     email: '',
     phone: '',
     role: 'store_manager' as RoleType,
-    branchId: 'br-01',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
   });
 
@@ -43,15 +42,11 @@ export const StaffManagement: React.FC = () => {
     e.preventDefault();
     if (!formData.fullName || !formData.email) return;
 
-    const assignedBranch = branches.find((b) => b.id === formData.branchId);
-
     addStaff({
       fullName: formData.fullName,
       email: formData.email,
       phone: formData.phone,
       role: formData.role,
-      branchId: formData.branchId,
-      branchName: assignedBranch ? assignedBranch.name : 'Trụ Sở HQ',
       status: 'active',
       avatar: formData.avatar,
     });
@@ -62,7 +57,6 @@ export const StaffManagement: React.FC = () => {
       email: '',
       phone: '',
       role: 'store_manager',
-      branchId: 'br-01',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
     });
   };
@@ -124,7 +118,6 @@ export const StaffManagement: React.FC = () => {
             <tr style={{ backgroundColor: 'var(--bg-app)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.8125rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
               <th style={{ padding: '18px 24px' }}>NHÂN VIÊN</th>
               <th style={{ padding: '18px 24px' }}>VỊ TRÍ & QUYỀN HẠN</th>
-              <th style={{ padding: '18px 24px' }}>CHI NHÁNH PHỤ TRÁCH</th>
               <th style={{ padding: '18px 24px' }}>LIÊN HỆ</th>
               <th style={{ padding: '18px 24px' }}>TRẠNG THÁI</th>
               <th style={{ padding: '18px 24px', textAlign: 'right' }}>THAO TÁC</th>
@@ -168,9 +161,6 @@ export const StaffManagement: React.FC = () => {
                     >
                       {roleInfo.isMaster ? <Crown size={14} /> : <Shield size={14} />} {roleInfo.label}
                     </span>
-                  </td>
-                  <td style={{ padding: '18px 24px', fontWeight: 700, color: 'var(--text-body)' }}>
-                    {usr.branchName}
                   </td>
                   <td style={{ padding: '18px 24px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     <div>{usr.email}</div>
@@ -254,22 +244,6 @@ export const StaffManagement: React.FC = () => {
                 <option value="cashier">Thu Ngân Quầy</option>
                 <option value="waiter">Phục Vụ / Order Bàn</option>
                 <option value="chef">Bếp / Bar Chế Biến</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Gán Cho Chi Nhánh*</label>
-              <select
-                className="form-select"
-                value={formData.branchId}
-                onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-              >
-                <option value="ALL">Trụ Sở HQ (Tất cả chi nhánh)</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
               </select>
             </div>
           </div>

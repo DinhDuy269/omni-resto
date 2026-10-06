@@ -6,9 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TableRepository extends JpaRepository<TableEntity, String> {
-    List<TableEntity> findByBranchId(String branchId);
-    List<TableEntity> findByBranchIdAndStatus(String branchId, TableStatus status);
+    List<TableEntity> findByStatus(TableStatus status);
+    Optional<TableEntity> findByQrSecretToken(String qrSecretToken);
+    Optional<TableEntity> findByTableNo(String tableNo);
 }

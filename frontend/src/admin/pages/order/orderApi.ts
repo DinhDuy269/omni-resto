@@ -2,9 +2,9 @@ import { apiClient, transformAxiosErrorResponse, toQueryString } from '../../../
 import type { Order, OrderResponse, OrderStatus } from '../../../shared/types/admin';
 
 export const orderApi = {
-  getOrders: async (branchId?: string, status?: OrderStatus): Promise<Order[]> => {
+  getOrders: async (status?: OrderStatus): Promise<Order[]> => {
     try {
-      const q = toQueryString({ branchId, status });
+      const q = toQueryString({ status });
       const res = await apiClient.get<Order[] | OrderResponse>(`/orders${q}`);
       if (Array.isArray(res.data)) return res.data;
       return res.data.orders || [];

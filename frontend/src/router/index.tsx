@@ -1,14 +1,15 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // ── Admin imports ─────────────────────────────────────────────────────────────
 import { AdminLayout } from '../admin/layouts/AdminLayout';
 import { AdminDashboard } from '../admin/pages/dashboard/AdminDashboard';
-import { BranchManagement } from '../admin/pages/branch/BranchManagement';
 import { MasterMenuManagement } from '../admin/pages/menu/MasterMenuManagement';
 import { ChainOrdersManagement } from '../admin/pages/order/ChainOrdersManagement';
 import { StaffManagement } from '../admin/pages/auth/StaffManagement';
 import { TableManagement } from '../admin/pages/table/TableManagement';
+import { KitchenDisplaySystem } from '../admin/pages/kds/KitchenDisplaySystem';
+import { ReservationManagement } from '../admin/pages/reservation/ReservationManagement';
 
 // ── Client imports ────────────────────────────────────────────────────────────
 import { ClientLayout } from '../client/layouts/ClientLayout';
@@ -18,10 +19,26 @@ import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
 import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
 import ClientGacha from '../client/pages/gacha/ClientGacha';
+import ClientOrdersPage from '../client/pages/order/ClientOrdersPage';
+import ClientReservation from '../client/pages/reservation/ClientReservation';
+import ClientEvents from '../client/pages/events/ClientEvents';
+import ClientAbout from '../client/pages/about/ClientAbout';
+import ClientCheckIn from '../client/pages/scan/ClientCheckIn';
+
+/** Normalizes uppercase or mixed-case paths (e.g. /Client -> /client) seamlessly */
+const PathCaseNormalizer: React.FC = () => {
+  const location = useLocation();
+  const lowerPath = location.pathname.toLowerCase();
+  if (location.pathname !== lowerPath) {
+    return <Navigate to={lowerPath + location.search + location.hash} replace />;
+  }
+  return null;
+};
 
 export const AppRouter: React.FC = () => {
   return (
     <BrowserRouter>
+      <PathCaseNormalizer />
       <Routes>
         {/* Root redirect → Admin */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
@@ -31,12 +48,13 @@ export const AppRouter: React.FC = () => {
             ══════════════════════════════════════════════════ */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="branches" element={<BranchManagement />} />
           <Route path="menu" element={<MasterMenuManagement />} />
           <Route path="orders" element={<ChainOrdersManagement />} />
           <Route path="staff" element={<StaffManagement />} />
           <Route path="tables" element={<TableManagement />} />
           <Route path="vouchers" element={<VoucherManagement />} />
+          <Route path="kds" element={<KitchenDisplaySystem />} />
+          <Route path="reservations" element={<ReservationManagement />} />
           <Route
             path="reports"
             element={
@@ -69,7 +87,13 @@ export const AppRouter: React.FC = () => {
           <Route path="menu" element={<ClientMenu />} />
           <Route path="cart" element={<ClientCart />} />
           <Route path="gacha" element={<ClientGacha />} /> {/* <--- Thêm dòng này */}
+          <Route path="orders" element={<ClientOrdersPage />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
+          <Route path="reservation" element={<ClientReservation />} />
+          <Route path="events" element={<ClientEvents />} />
+          <Route path="about" element={<ClientAbout />} />
+          <Route path="scan" element={<ClientCheckIn />} />
+          <Route path="table/:token" element={<ClientCheckIn />} />
           <Route path="*" element={<Navigate to="/client" replace />} />
         </Route>
 
@@ -79,4 +103,3 @@ export const AppRouter: React.FC = () => {
     </BrowserRouter>
   );
 };
-

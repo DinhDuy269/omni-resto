@@ -12,13 +12,12 @@ import java.util.List;
 @Getter
 @Setter
 public class OrderRequest {
-    private String branchId;
-    private String branchName;
     private OrderType orderType;
     private String tableNo;
     private OrderStatus status;
     private BigDecimal totalAmount;
     private String customerName;
     private PaymentMethod paymentMethod;
+    private String sessionToken;
     private List<OrderItemRequest> items;
 }

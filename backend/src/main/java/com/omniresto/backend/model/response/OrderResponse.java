@@ -17,8 +17,6 @@ import java.util.List;
 public class OrderResponse {
     private String id;
     private String orderNumber;
-    private String branchId;
-    private String branchName;
     private OrderType orderType;
     private String tableNo;
     private OrderStatus status;

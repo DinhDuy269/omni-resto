@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Store,
   UtensilsCrossed,
   ShoppingBag,
   Grid2x2,
@@ -11,29 +10,39 @@ import {
   Settings,
   Flame,
   Ticket, // <-- Đã thêm icon Ticket
+  ChefHat,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
+import { useReservationStore } from '../store/reservationStore';
 import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
   const { orders } = useAdminStore();
-  const pendingOrdersCount = orders.filter((o) => o.status === 'pending').length;
+  const { reservations } = useReservationStore();
+  const pendingOrdersCount = orders.filter(
+    (o) => o.status?.toUpperCase() === 'PENDING'
+  ).length;
+  const pendingReservationsCount = reservations.filter(
+    (r) => r.status?.toUpperCase() === 'PENDING'
+  ).length;
 
   const navItems = [
     {
-      section: 'VẬN HÀNH CHUỖI',
+      section: 'VẬN HÀNH NHÀ HÀNG',
       items: [
-        { label: 'Tổng Quan Hệ Thống', path: '/admin', icon: LayoutDashboard },
-        { label: 'Quản Lý Chi Nhánh', path: '/admin/branches', icon: Store },
-        { label: 'Master Menu & Món', path: '/admin/menu', icon: UtensilsCrossed },
-        {
-          label: 'Đơn Hàng Chuỗi',
-          path: '/admin/orders',
-          icon: ShoppingBag,
+        { label: 'Tổng Quan Nhà Hàng', path: '/admin', icon: LayoutDashboard },
+        { label: 'Menu & Món Ăn', path: '/admin/menu', icon: UtensilsCrossed },
+        { label: 'Quản Lý Đơn Hàng', path: '/admin/orders', icon: ShoppingBag,
           badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
         },
         { label: 'Sơ Đồ Bàn & Đặt Bàn', path: '/admin/tables', icon: Grid2x2 },
         { label: 'Voucher', path: '/admin/vouchers', icon: Ticket }, // <-- Đã thêm menu Voucher
+        { label: 'Màn Hình Bếp (KDS)', path: '/admin/kds', icon: ChefHat },
+        { label: 'Sơ Đồ Bàn', path: '/admin/tables', icon: Grid2x2 },
+        { label: 'Quản Lý Đặt Bàn', path: '/admin/reservations', icon: CalendarCheck,
+          badge: pendingReservationsCount > 0 ? pendingReservationsCount : undefined,
+        },
       ],
     },
     {
@@ -94,6 +103,19 @@ export const Sidebar: React.FC = () => {
           </div>
         ))}
       </nav>
+
+      {/* Branch & System Footer */}
+      <div className="sidebar-footer">
+        <div className="sidebar-footer-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className="pulse-dot" style={{ backgroundColor: '#10b981' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8' }}>Hệ Thống Trực Tuyến</span>
+          </div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', marginTop: '3px' }}>
+            Chi Nhánh Hoàn Kiếm • HN
+          </div>
+        </div>
+      </div>
     </aside>
   );
 };

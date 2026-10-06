@@ -4,6 +4,7 @@ import com.omniresto.backend.domain.base.BaseEntity;
 import com.omniresto.backend.domain.enums.OrderStatus;
 import com.omniresto.backend.domain.enums.OrderType;
 import com.omniresto.backend.domain.enums.PaymentMethod;
+import com.omniresto.backend.domain.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,8 +24,8 @@ public class OrderEntity extends BaseEntity {
     @Column(name = "order_number", nullable = false, unique = true, length = 30)
     private String orderNumber;
 
-    @Column(name = "branch_id", nullable = false, length = 36)
-    private String branchId;
+    @Column(name = "table_session_id", length = 36)
+    private String tableSessionId;
 
     @Column(name = "table_id", length = 36)
     private String tableId;
@@ -41,6 +42,11 @@ public class OrderEntity extends BaseEntity {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private OrderStatus status = OrderStatus.pending;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.unpaid;
 
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     @Builder.Default

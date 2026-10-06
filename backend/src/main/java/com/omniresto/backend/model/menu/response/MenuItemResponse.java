@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -18,10 +19,17 @@ public class MenuItemResponse {
     private String categoryId;
     private String category;
     private BigDecimal basePrice;
+    private BigDecimal price;
     private String description;
+    private String ingredients;
     private MenuStatus status;
     private Boolean isBestSeller;
+    private String mealPeriods;
+    private Boolean isAvailableNow;
+    private String mealPeriodNote;
     private String image;
-    private Integer branchesCount;
+    private String imageUrl;
+    private List<CategoryOptionResponse> options;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

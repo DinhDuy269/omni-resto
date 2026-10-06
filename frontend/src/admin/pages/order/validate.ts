@@ -2,11 +2,6 @@ import * as yup from 'yup';
 
 export const getValidateOrderCreateSchema = () => {
   return yup.object().shape({
-    branchId: yup
-      .string()
-      .trim()
-      .nullable()
-      .required('Chi nhánh không được để trống'),
     items: yup
       .array()
       .min(1, 'Đơn hàng phải có ít nhất 1 món ăn')

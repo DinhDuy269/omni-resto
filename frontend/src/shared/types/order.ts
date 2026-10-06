@@ -1,5 +1,5 @@
 export type OrderType = 'dine_in' | 'takeaway' | 'delivery' | 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
-export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'PENDING' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
 
 export interface OrderItemInfo {
   id: string;
@@ -12,8 +12,6 @@ export interface OrderItemInfo {
 export interface Order {
   id: string;
   orderNumber: string;
-  branchId: string;
-  branchName: string;
   orderType: OrderType;
   tableNo?: string;
   status: OrderStatus;
@@ -25,7 +23,6 @@ export interface Order {
 }
 
 export interface OrderRequest {
-  branchId: string;
   orderType: OrderType;
   tableNo?: string;
   items: OrderItemInfo[];

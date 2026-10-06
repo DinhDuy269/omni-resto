@@ -1,4 +1,4 @@
-export type MenuCategory = 'Phở & Bún' | 'Cơm & Món Chính' | 'Món Ăn Kèm' | 'Đồ Uống' | 'Tráng Miệng';
+export type MenuCategory = 'Phở & Bún Nước' | 'Cơm Tấm & Món Mặn' | 'Bánh Mì & Điểm Tâm' | 'Lẩu & Món Nhắm' | 'Đồ Uống & Tráng Miệng' | string;
 export type MenuStatus = 'available' | 'out_of_stock' | 'discontinued' | 'AVAILABLE' | 'OUT_OF_STOCK' | 'DISCONTINUED';
 
 export interface MenuItemFormData {

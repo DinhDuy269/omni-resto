@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bell, Store, Calendar, ChevronDown, User, Package, LogOut, HelpCircle } from 'lucide-react';
-import { useAdminStore } from '../store/adminStore';
 import { Modal } from '../../shared/components/Modal';
+import { useAdminStore } from '../store/adminStore';
 import './Header.css';
 
 interface HeaderProps {
@@ -9,10 +9,13 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = () => {
-  const { branches, selectedBranchId, setSelectedBranchId } = useAdminStore();
+  const { serviceRequests, resolveServiceRequest, clearAllServiceRequests, orders } = useAdminStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const openRequests = serviceRequests.filter((r) => r.status === 'OPEN');
+  const recentOrders = orders.slice(0, 3);
 
   const todayStr = new Date().toLocaleDateString('vi-VN', {
     weekday: 'long',
@@ -29,24 +32,42 @@ export const Header: React.FC<HeaderProps> = () => {
   return (
     <>
       <header className="header">
-        {/* Left: Branch Selector Only */}
+        {/* Left: Restaurant Info & Status */}
         <div className="header-left">
-          <div className="branch-selector-wrapper">
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--bg-main)',
+              border: '1px solid var(--border-color)',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              color: 'var(--text-main)',
+            }}
+          >
             <Store size={16} color="var(--primary)" />
-            <span className="branch-selector-label">Chi nhánh:</span>
-            <select
-              className="branch-selector"
-              value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
-            >
-              <option value="ALL">Tất cả Chi Nhánh (Trụ Sở HQ)</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.code})
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} color="var(--primary)" />
+            <span>Hệ Thống Nhà Hàng OmniResto</span>
+          </div>
+
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-full)',
+              backgroundColor: 'var(--success-bg)',
+              border: '1px solid var(--success-border)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: 'var(--success)',
+            }}
+          >
+            <span className="pulse-dot" style={{ backgroundColor: 'var(--success)' }} />
+            Realtime Sync
           </div>
         </div>
 
@@ -61,15 +82,39 @@ export const Header: React.FC<HeaderProps> = () => {
           <div className="icon-btn-wrapper">
             <button
               className="btn btn-secondary btn-icon"
+              style={{ position: 'relative' }}
               onClick={() => {
                 setShowNotifications(!showNotifications);
                 setShowProfileDropdown(false);
               }}
-              title="Thông báo hệ thống"
+              title="Thông báo phục vụ & đơn mới"
             >
               <Bell size={18} />
+              {openRequests.length > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-4px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
+                    animation: 'pulse 1.5s infinite',
+                  }}
+                >
+                  {openRequests.length}
+                </span>
+              )}
             </button>
-            <span className="notification-dot" />
+            {openRequests.length === 0 && <span className="notification-dot" />}
 
             {showNotifications && (
               <div
@@ -78,37 +123,99 @@ export const Header: React.FC<HeaderProps> = () => {
                   position: 'absolute',
                   top: '48px',
                   right: '0',
-                  width: '320px',
+                  width: '360px',
                   zIndex: 200,
                   boxShadow: 'var(--shadow-xl)',
                   padding: '16px',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <strong style={{ fontSize: '0.9rem' }}>Thông báo mới (2)</strong>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--primary)', cursor: 'pointer' }}>Đã đọc tất cả</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <strong style={{ fontSize: '0.9rem' }}>
+                    Yêu cầu phục vụ & Thông báo ({openRequests.length})
+                  </strong>
+                  {openRequests.length > 0 && (
+                    <span
+                      style={{ fontSize: '0.75rem', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}
+                      onClick={() => clearAllServiceRequests()}
+                    >
+                      Xử lý tất cả
+                    </span>
+                  )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div
-                    style={{
-                      padding: '8px 10px',
-                      backgroundColor: 'var(--primary-subtle)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8125rem',
-                    }}
-                  >
-                    <strong>Đơn hàng mới:</strong> ORD-HCM-9022 vừa được tạo tại Chi nhánh Quận 1.
-                  </div>
-                  <div
-                    style={{
-                      padding: '8px 10px',
-                      backgroundColor: 'var(--warning-bg)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8125rem',
-                    }}
-                  >
-                    <strong>Cảnh báo kho:</strong> Món "Chè Hạt Sen" tạm thời hết hàng ở Hoàn Kiếm.
-                  </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '320px', overflowY: 'auto' }}>
+                  {openRequests.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '16px 8px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                      ✨ Không có yêu cầu phục vụ nào đang chờ xử lý
+                    </div>
+                  ) : (
+                    openRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        style={{
+                          padding: '10px 12px',
+                          backgroundColor: '#fef2f2',
+                          border: '1px solid #fee2e2',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.8125rem',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                            <span
+                              style={{
+                                background: '#dc2626',
+                                color: '#ffffff',
+                                fontSize: '0.7rem',
+                                fontWeight: 800,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              {req.tableNo}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{req.timestamp}</span>
+                          </div>
+                          <div style={{ fontWeight: 600, color: '#991b1b' }}>{req.requestText}</div>
+                        </div>
+
+                        <button
+                          className="btn btn-sm"
+                          style={{
+                            padding: '3px 8px',
+                            fontSize: '0.72rem',
+                            background: '#16a34a',
+                            color: '#ffffff',
+                            border: 'none',
+                            whiteSpace: 'nowrap',
+                            alignSelf: 'center',
+                          }}
+                          onClick={() => resolveServiceRequest(req.id)}
+                        >
+                          ✓ Đã phục vụ
+                        </button>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Recent Orders info */}
+                  {recentOrders.map((ord) => (
+                    <div
+                      key={ord.id}
+                      style={{
+                        padding: '8px 10px',
+                        backgroundColor: 'var(--primary-subtle)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.8125rem',
+                      }}
+                    >
+                      <strong>Đơn mới {ord.orderNumber}:</strong> {ord.items.length} món • {ord.tableNo || 'Mang về'} ({ord.totalAmount.toLocaleString('vi-VN')}đ)
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

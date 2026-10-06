@@ -4,7 +4,7 @@ import type { DashboardMetrics } from './types';
 export const dashboardApi = {
   getSummaryMetrics: async (): Promise<DashboardMetrics> => {
     try {
-      const res = await apiClient.get<DashboardMetrics>('/branches/summary');
+      const res = await apiClient.get<DashboardMetrics>('/dashboard/summary');
       return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
