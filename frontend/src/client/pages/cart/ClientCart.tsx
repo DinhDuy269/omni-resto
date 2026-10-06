@@ -65,12 +65,24 @@ const ClientCart: React.FC = () => {
 
   // 3. Hàm xử lý khi bấm nút "Áp dụng"
   const handleApplyVoucher = () => {
-    const selected = activeVouchers.find(v => v.code === voucherCode);
-    if (!selected) return;
+    // Chuẩn hóa mã nhập vào: cắt khoảng trắng và viết hoa
+    const codeToApply = voucherCode.trim().toUpperCase();
+    
+    // Tìm xem mã có tồn tại trong danh sách activeVouchers không
+    const selected = activeVouchers.find(v => v.code.toUpperCase() === codeToApply);
+
+    if (!selected) {
+      setAppliedVoucher(null);
+      setVoucherMsg({
+        text: 'Mã voucher không tồn tại hoặc đã hết hạn.',
+        type: 'error'
+      });
+      return;
+    }
 
     // Kiểm tra điều kiện đơn hàng tối thiểu
     if (totalAmount < selected.minOrderAmount) {
-      setAppliedVoucher(null); // Gỡ bỏ voucher cũ nếu có
+      setAppliedVoucher(null);
       setVoucherMsg({
         text: `Đơn hàng chưa đạt mức tối thiểu ${selected.minOrderAmount.toLocaleString('vi-VN')}đ để áp dụng mã này.`,
         type: 'error'
@@ -84,6 +96,7 @@ const ClientCart: React.FC = () => {
       type: 'success'
     });
   };
+
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
   const isEmpty = cart.length === 0;
   const activeVouchers = useMemo(() => {
@@ -438,43 +451,68 @@ const ClientCart: React.FC = () => {
 
                   <div style={{ display: 'flex', gap: 10 }}>
                     <div style={{ flex: 1 }}>
-                      <select
+                      {/* Đổi thành thẻ input để cho phép gõ tay */}
+                      <input
+                        type="text"
+                        placeholder="Nhập mã voucher..."
                         className="form-control"
                         value={voucherCode}
                         onChange={(e) => {
-                          setVoucherCode(e.target.value);
-                          setVoucherMsg(null); // Ẩn thông báo khi khách hàng đổi mã khác
+                          setVoucherCode(e.target.value.toUpperCase()); // Tự động viết hoa khi gõ
+                          setVoucherMsg(null); 
                         }}
                         style={{
                           width: '100%', fontFamily: 'var(--c-font)', borderRadius: 'var(--c-r-md)',
-                          borderColor: 'var(--c-border)', padding: '12px 16px', appearance: 'none',
-                          background: 'var(--c-surface-warm)', cursor: 'pointer', outline: 'none',
-                          fontSize: '0.875rem', color: voucherCode ? 'var(--c-text-main)' : 'var(--c-text-muted)'
+                          borderColor: 'var(--c-border)', padding: '12px 16px',
+                          background: 'var(--c-surface-warm)', outline: 'none',
+                          fontSize: '0.875rem', color: 'var(--c-text-main)'
                         }}
-                      >
-                        <option value="">Chọn Voucher</option>
-                        {activeVouchers.map(v => (
-                          <option key={v.id} value={v.code}>
-                            🎁 {v.code} - {v.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     <button
                       className="c-btn c-btn-primary"
                       style={{ padding: '0 24px', borderRadius: 'var(--c-r-md)', fontWeight: 700 }}
-                      disabled={!voucherCode}
+                      disabled={!voucherCode.trim()}
                       onClick={handleApplyVoucher}
                     >
                       Áp dụng
                     </button>
                   </div>
 
-                  {/* Hiển thị thông báo (Inline Message) thay cho alert() */}
+                  {/* Danh sách các mã có sẵn để bấm chọn nhanh */}
+                  {activeVouchers.length > 0 && (
+                    <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {activeVouchers.map(v => (
+                        <div
+                          key={v.id}
+                          onClick={() => {
+                            setVoucherCode(v.code);
+                            setVoucherMsg(null);
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '100px',
+                            border: voucherCode === v.code ? '1px solid var(--c-primary)' : '1px solid var(--c-border)',
+                            background: voucherCode === v.code ? 'rgba(232, 93, 38, 0.1)' : 'var(--c-surface-warm)',
+                            color: voucherCode === v.code ? 'var(--c-primary)' : 'var(--c-text-main)',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            transition: 'all 0.2s'
+                          }}
+                          title={v.name}
+                        >
+                          🎁 {v.code}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Hiển thị thông báo (Inline Message) */}
                   {voucherMsg && (
                     <div className="c-animate-fade-up" style={{
-                      marginTop: 12,
+                      marginTop: 16,
                       padding: '10px 14px',
                       borderRadius: 'var(--c-r-md)',
                       background: voucherMsg.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',

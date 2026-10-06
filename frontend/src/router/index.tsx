@@ -17,6 +17,7 @@ import ClientMenu from '../client/pages/menu/ClientMenu';
 import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
 import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
+import ClientGacha from '../client/pages/gacha/ClientGacha';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -67,6 +68,7 @@ export const AppRouter: React.FC = () => {
           <Route index element={<ClientHome />} />
           <Route path="menu" element={<ClientMenu />} />
           <Route path="cart" element={<ClientCart />} />
+          <Route path="gacha" element={<ClientGacha />} /> {/* <--- Thêm dòng này */}
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
           <Route path="*" element={<Navigate to="/client" replace />} />
         </Route>
