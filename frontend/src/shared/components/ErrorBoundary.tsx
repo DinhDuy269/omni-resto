@@ -2,22 +2,22 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
-  fallbackTitle?: string;
+  fallback_title?: string;
 }
 
 interface State {
-  hasError: boolean;
+  has_error: boolean;
   error: Error | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false,
+    has_error: false,
     error: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { has_error: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public render() {
-    if (this.state.hasError) {
+    if (this.state.has_error) {
       return (
         <div
           style={{
@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
         >
           <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>⚠️</div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--c-text-main, #1e293b)', margin: '0 0 8px' }}>
-            {this.props.fallbackTitle || 'Đã xảy ra lỗi hiển thị'}
+            {this.props.fallback_title || 'Đã xảy ra lỗi hiển thị'}
           </h2>
           <p style={{ color: 'var(--c-text-muted, #64748b)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '24px' }}>
             {this.state.error?.message || 'Giao diện gặp sự cố tạm thời. Vui lòng tải lại hoặc quay lại trang chủ.'}
@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button
               onClick={() => {
-                this.setState({ hasError: false, error: null });
+                this.setState({ has_error: false, error: null });
                 window.location.reload();
               }}
               style={{
@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </button>
             <button
               onClick={() => {
-                this.setState({ hasError: false, error: null });
+                this.setState({ has_error: false, error: null });
                 window.location.href = '/client';
               }}
               style={{

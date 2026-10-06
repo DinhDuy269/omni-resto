@@ -3,22 +3,22 @@ export type MenuStatus = 'available' | 'out_of_stock' | 'discontinued' | 'AVAILA
 export type MealPeriod = 'MORNING' | 'NOON' | 'EVENING' | 'ALL_DAY' | 'BREAK' | 'CLOSED';
 
 export interface MealPeriodInfo {
-  currentPeriod: string;
-  periodName: string;
-  timeRange: string;
-  currentTime: string;
-  isOrderingAvailable: boolean;
+  current_period: string;
+  period_name: string;
+  time_range: string;
+  current_time: string;
+  is_ordering_available: boolean;
   message: string;
 }
 
 export interface CategoryOption {
   id: string;
-  categoryId: string;
+  category_id: string;
   name: string;
-  optionType: 'SIZE' | 'TOPPING';
+  option_type: 'SIZE' | 'TOPPING';
   price: number;
   status: string;
-  displayOrder?: number;
+  display_order?: number;
 }
 
 export interface MenuItem {
@@ -26,36 +26,36 @@ export interface MenuItem {
   code: string;
   name: string;
   category: string;
-  categoryId?: string;
-  basePrice: number;
+  category_id?: string;
+  base_price: number;
   price?: number;
   description: string;
   ingredients?: string;
   status: MenuStatus;
-  isBestSeller: boolean;
-  mealPeriods?: string;
-  isAvailableNow?: boolean;
-  mealPeriodNote?: string;
+  is_best_seller: boolean;
+  meal_periods?: string;
+  is_available_now?: boolean;
+  meal_period_note?: string;
   image: string;
-  imageUrl?: string;
+  image_url?: string;
   options?: CategoryOption[];
-  isVegetarian?: boolean;
-  spicyLevel?: number;
+  is_vegetarian?: boolean;
+  spicy_level?: number;
   allergens?: string[];
 }
 
 export interface MenuItemRequest {
   code?: string;
   name: string;
-  categoryId?: string;
+  category_id?: string;
   category?: string;
-  basePrice: number;
+  base_price: number;
   price?: number;
   description?: string;
   ingredients?: string;
-  mealPeriods?: string;
+  meal_periods?: string;
   image?: string;
-  imageUrl?: string;
+  image_url?: string;
 }
 
 export interface MenuItemResponse {

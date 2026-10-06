@@ -25,13 +25,18 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-
-    @Bean
+   
+    @Bean //nghĩa là Spring gọi hàm này một lần khi khởi động, giữ kết quả để dùng chung.
+    
     public PasswordEncoder passwordEncoder() {
+         // Hàm băm pass thành chuỗi băm 1 chiều và chứa salt(không thể đảo ngược lại)
         return new BCryptPasswordEncoder();
     }
 
+
     @Bean
+    // CORS dùng để cho phép các domain khác truy cập vào server.
+    //Chỉ chặn truy cập trình duyệt không chặn truy cập Api vì CORS do trình duyệt thực thi không do máy chủ
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("*"));
@@ -45,11 +50,12 @@ public class SecurityConfig {
     }
 
     @Bean
+    //Chuỗi lọc bảo mật
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(this::configureAuthorizeHttpRequests)
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))//Gọi hàm cho phép truy cập từ domain khác(Cors)
+            .csrf(AbstractHttpConfigurer::disable)//Tắt bảo vệ CSRF(Cross-Site Request Forgery)
+            .authorizeHttpRequests(this::configureAuthorizeHttpRequests)//Cấu hình quyền truy cập vào các API
             .exceptionHandling(exceptionHandling -> exceptionHandling
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);

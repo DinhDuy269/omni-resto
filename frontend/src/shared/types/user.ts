@@ -3,17 +3,17 @@ export type UserStatus = 'active' | 'inactive' | 'ACTIVE' | 'INACTIVE';
 
 export interface StaffUser {
   id: string;
-  fullName: string;
+  full_name: string;
   email: string;
   phone: string;
   role: RoleType;
   status: UserStatus;
   avatar: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface UserRequest {
-  fullName: string;
+  full_name: string;
   email: string;
   phone: string;
   role: RoleType;

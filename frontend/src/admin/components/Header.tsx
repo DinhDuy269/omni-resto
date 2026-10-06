@@ -213,7 +213,7 @@ export const Header: React.FC<HeaderProps> = () => {
                         fontSize: '0.8125rem',
                       }}
                     >
-                      <strong>Đơn mới {ord.orderNumber}:</strong> {ord.items.length} món • {ord.tableNo || 'Mang về'} ({ord.totalAmount.toLocaleString('vi-VN')}đ)
+                      <strong>Đơn mới {ord.order_number}:</strong> {ord.items.length} món • {ord.table_no || 'Mang về'} ({ord.total_amount.toLocaleString('vi-VN')}đ)
                     </div>
                   ))}
                 </div>

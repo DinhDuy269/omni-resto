@@ -10,7 +10,7 @@ const ClientHome: React.FC = () => {
   const navigate = useNavigate();
   const { menuItems } = useAdminStore();
 
-  const bestSellers = menuItems.filter((m) => m.isBestSeller).slice(0, 4);
+  const bestSellers = menuItems.filter((m) => m.is_best_seller).slice(0, 4);
 
   return (
     <div style={{ fontFamily: 'var(--c-font)' }}>
@@ -319,7 +319,7 @@ const ClientHome: React.FC = () => {
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--c-primary)' }}>
-                      {item.basePrice.toLocaleString('vi-VN')}đ
+                      {item.base_price.toLocaleString('vi-VN')}đ
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--c-text-muted)' }}>
                       {item.category}

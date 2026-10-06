@@ -37,7 +37,7 @@ export const ClientOrderTracking: React.FC = () => {
 
   // Tìm đơn hàng theo ID hoặc orderNumber
   const matchedOrder = orders.find(
-    (o) => o.id === orderId || o.orderNumber === orderId
+    (o) => o.id === orderId || o.order_number === orderId
   ) || (placedOrder?.id === orderId ? placedOrder : null);
 
   const [simulatedStatus, setSimulatedStatus] = useState<PlacedOrderStatus>(
@@ -85,7 +85,7 @@ export const ClientOrderTracking: React.FC = () => {
 
   const currentOrder = matchedOrder;
   const isCompleted = simulatedStatus === 'COMPLETED';
-  const tableDisplay = currentOrder.tableNo || tableSession?.tableNo || 'Tại bàn';
+  const tableDisplay = currentOrder.table_no || tableSession?.table_no || 'Tại bàn';
 
   const currentStepIdx = STEPS.findIndex((s) => s.key === simulatedStatus);
   const progressPercent = currentStepIdx === -1 ? 0 : (currentStepIdx / (STEPS.length - 1)) * 100;
@@ -180,7 +180,7 @@ export const ClientOrderTracking: React.FC = () => {
                     : 'Đã gửi vào bếp (Chờ nấu)'}
                 </h1>
                 <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  Đơn {currentOrder.orderNumber} · Đặt lúc {currentOrder.placedAt || 'vừa xong'}
+                  Đơn {currentOrder.order_number} · Đặt lúc {currentOrder.placed_at || 'vừa xong'}
                 </div>
               </div>
             </div>
@@ -194,7 +194,7 @@ export const ClientOrderTracking: React.FC = () => {
                   Dự kiến
                 </span>
                 <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#ea580c' }}>
-                  ~{currentOrder.estimatedMinutes || 15}p
+                  ~{currentOrder.estimated_minutes || 15}p
                 </span>
               </div>
             )}
@@ -284,7 +284,7 @@ export const ClientOrderTracking: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {currentOrder.items.map((item, idx) => (
               <div
-                key={`${item.menuItemId}-${idx}`}
+                key={`${item.id}-${idx}`}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '10px 0',
@@ -337,19 +337,19 @@ export const ClientOrderTracking: React.FC = () => {
             marginTop: 14, paddingTop: 12, borderTop: '1.5px dashed #e2e8f0',
           }}>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              Hình thức: <strong>{currentOrder.paymentMethod === 'QR_CODE' ? 'Quét QR' : 'Tiền mặt/Tại quầy'}</strong>
+              Hình thức: <strong>{currentOrder.payment_method === 'QR_CODE' ? 'Quét QR' : 'Tiền mặt/Tại quầy'}</strong>
             </div>
             <div style={{ textAlign: 'right' }}>
               <span style={{ fontSize: '0.78rem', color: '#64748b', marginRight: 6 }}>Tổng cộng:</span>
               <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ea580c' }}>
-                {currentOrder.totalAmount.toLocaleString('vi-VN')}đ
+                {currentOrder.total_amount.toLocaleString('vi-VN')}đ
               </span>
             </div>
           </div>
         </div>
 
         {/* ── 3. COLLAPSIBLE VIETQR PAYMENT (Tối giản: Mở khi cần) ── */}
-        {currentOrder.paymentMethod === 'QR_CODE' && !isCompleted && (
+        {currentOrder.payment_method === 'QR_CODE' && !isCompleted && (
           <div style={{
             background: '#ffffff',
             borderRadius: 16,
@@ -380,7 +380,7 @@ export const ClientOrderTracking: React.FC = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ea580c' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                  {currentOrder.totalAmount.toLocaleString('vi-VN')}đ
+                  {currentOrder.total_amount.toLocaleString('vi-VN')}đ
                 </span>
                 {isQrAccordionOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </div>
@@ -393,19 +393,19 @@ export const ClientOrderTracking: React.FC = () => {
                   borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                 }}>
                   <img
-                    src={generateVietQRUrl(currentOrder.totalAmount, currentOrder.orderNumber)}
+                    src={generateVietQRUrl(currentOrder.total_amount, currentOrder.order_number)}
                     alt="VietQR"
                     style={{ width: 190, height: 190, borderRadius: 8, display: 'block' }}
                   />
                 </div>
                 <div style={{ marginTop: 10, fontSize: '0.8rem', color: '#64748b' }}>
-                  Ngân hàng: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.bankName}</strong> | STK: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.accountNumber}</strong>
+                  Ngân hàng: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.bank_name}</strong> | STK: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.account_number}</strong>
                 </div>
                 <div style={{ marginTop: 4, fontSize: '0.8rem', color: '#64748b' }}>
-                  Chủ TK: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.accountName}</strong>
+                  Chủ TK: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.account_name}</strong>
                 </div>
                 <div style={{ marginTop: 4, fontSize: '0.8rem', color: '#64748b' }}>
-                  Nội dung CK: <strong style={{ color: '#ea580c' }}>{currentOrder.orderNumber}</strong>
+                  Nội dung CK: <strong style={{ color: '#ea580c' }}>{currentOrder.order_number}</strong>
                 </div>
               </div>
             )}
@@ -451,7 +451,7 @@ export const ClientOrderTracking: React.FC = () => {
         isOpen={isServiceModalOpen}
         onClose={() => setIsServiceModalOpen(false)}
         orderId={currentOrder.id}
-        tableNo={currentOrder.tableNo}
+        tableNo={currentOrder.table_no}
       />
     </div>
   );

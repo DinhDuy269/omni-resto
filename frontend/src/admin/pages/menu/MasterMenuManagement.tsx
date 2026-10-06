@@ -119,7 +119,7 @@ export const MasterMenuManagement: React.FC = () => {
     const matchesCategory = activeCategory === 'ALL' || item.category === activeCategory;
     const matchesPeriod =
       dishMealPeriodFilter === 'ALL' ||
-      (item.mealPeriods && item.mealPeriods.toUpperCase().includes(dishMealPeriodFilter));
+      (item.meal_periods && item.meal_periods.toUpperCase().includes(dishMealPeriodFilter));
     const matchesStatus =
       dishStatusFilter === 'ALL' ||
       (dishStatusFilter === 'AVAILABLE' && (item.status === 'AVAILABLE' || item.status === 'available')) ||
@@ -130,8 +130,8 @@ export const MasterMenuManagement: React.FC = () => {
   // Filtered Options
   const filteredOptions = categoryOptions.filter((opt) => {
     const matchesSearch = opt.name.toLowerCase().includes(optionSearch.toLowerCase());
-    const matchesCat = optionCategoryFilter === 'ALL' || opt.categoryId === optionCategoryFilter;
-    const matchesType = optionTypeFilter === 'ALL' || opt.optionType === optionTypeFilter;
+    const matchesCat = optionCategoryFilter === 'ALL' || opt.category_id === optionCategoryFilter;
+    const matchesType = optionTypeFilter === 'ALL' || opt.option_type === optionTypeFilter;
     return matchesSearch && matchesCat && matchesType;
   });
 
@@ -157,11 +157,11 @@ export const MasterMenuManagement: React.FC = () => {
       code: dish.code,
       name: dish.name,
       category: dish.category as MenuCategory,
-      basePrice: dish.basePrice,
-      mealPeriods: dish.mealPeriods || 'ALL_DAY',
+      basePrice: dish.base_price,
+      mealPeriods: dish.meal_periods || 'ALL_DAY',
       description: dish.description || '',
       ingredients: dish.ingredients || '',
-      isBestSeller: dish.isBestSeller,
+      isBestSeller: dish.is_best_seller,
       image: dish.image,
     });
   };
@@ -174,12 +174,12 @@ export const MasterMenuManagement: React.FC = () => {
       code: dishFormData.code,
       name: dishFormData.name,
       category: dishFormData.category,
-      basePrice: Number(dishFormData.basePrice),
-      mealPeriods: dishFormData.mealPeriods,
+      base_price: Number(dishFormData.basePrice),
+      meal_periods: dishFormData.mealPeriods,
       description: dishFormData.description,
       ingredients: dishFormData.ingredients.trim() || undefined,
       status: 'AVAILABLE',
-      isBestSeller: dishFormData.isBestSeller,
+      is_best_seller: dishFormData.isBestSeller,
       image: dishFormData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
     });
 
@@ -195,11 +195,11 @@ export const MasterMenuManagement: React.FC = () => {
       code: dishFormData.code,
       name: dishFormData.name,
       category: dishFormData.category,
-      basePrice: Number(dishFormData.basePrice),
-      mealPeriods: dishFormData.mealPeriods,
+      base_price: Number(dishFormData.basePrice),
+      meal_periods: dishFormData.mealPeriods,
       description: dishFormData.description,
       ingredients: dishFormData.ingredients.trim() || undefined,
-      isBestSeller: dishFormData.isBestSeller,
+      is_best_seller: dishFormData.isBestSeller,
       image: dishFormData.image,
     });
 
@@ -227,9 +227,9 @@ export const MasterMenuManagement: React.FC = () => {
   const handleOpenEditOption = (option: CategoryOption) => {
     setEditingOption(option);
     setOptionFormData({
-      categoryId: option.categoryId,
+      categoryId: option.category_id,
       name: option.name,
-      optionType: option.optionType,
+      optionType: option.option_type,
       price: option.price,
       status: option.status,
     });
@@ -240,9 +240,9 @@ export const MasterMenuManagement: React.FC = () => {
     if (!optionFormData.name) return;
 
     addCategoryOption({
-      categoryId: optionFormData.categoryId,
+      category_id: optionFormData.categoryId,
       name: optionFormData.name,
-      optionType: optionFormData.optionType,
+      option_type: optionFormData.optionType,
       price: Number(optionFormData.price),
       status: optionFormData.status,
     });
@@ -256,9 +256,9 @@ export const MasterMenuManagement: React.FC = () => {
 
     updateCategoryOption({
       ...editingOption,
-      categoryId: optionFormData.categoryId,
+      category_id: optionFormData.categoryId,
       name: optionFormData.name,
-      optionType: optionFormData.optionType,
+      option_type: optionFormData.optionType,
       price: Number(optionFormData.price),
       status: optionFormData.status,
     });
@@ -438,7 +438,7 @@ export const MasterMenuManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Món bán chạy</span>
                 <strong style={{ fontSize: '1.35rem', color: '#d97706', lineHeight: 1.2 }}>
-                  {menuItems.filter((m) => m.isBestSeller).length} món
+                  {menuItems.filter((m) => m.is_best_seller).length} món
                 </strong>
               </div>
             </div>
@@ -659,7 +659,7 @@ export const MasterMenuManagement: React.FC = () => {
                     ) : (
                       filteredDishes.map((dish) => {
                         const isAvailable = dish.status === 'AVAILABLE' || dish.status === 'available';
-                        const periodBadge = formatMealPeriodBadge(dish.mealPeriods);
+                        const periodBadge = formatMealPeriodBadge(dish.meal_periods);
                         return (
                           <tr
                             key={dish.id}
@@ -691,7 +691,7 @@ export const MasterMenuManagement: React.FC = () => {
                                         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop';
                                     }}
                                   />
-                                  {dish.isBestSeller && (
+                                  {dish.is_best_seller && (
                                     <div
                                       title="Món bán chạy (Best Seller)"
                                       style={{
@@ -800,7 +800,7 @@ export const MasterMenuManagement: React.FC = () => {
                             {/* Giá bán */}
                             <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                               <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
-                                {dish.basePrice.toLocaleString('vi-VN')} đ
+                                {dish.base_price.toLocaleString('vi-VN')} đ
                               </span>
                             </td>
 
@@ -884,7 +884,7 @@ export const MasterMenuManagement: React.FC = () => {
               ) : (
                 filteredDishes.map((dish) => {
                   const isAvailable = dish.status === 'AVAILABLE' || dish.status === 'available';
-                  const periodBadge = formatMealPeriodBadge(dish.mealPeriods);
+                  const periodBadge = formatMealPeriodBadge(dish.meal_periods);
                   return (
                     <div
                       key={dish.id}
@@ -916,7 +916,7 @@ export const MasterMenuManagement: React.FC = () => {
                               'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop';
                           }}
                         />
-                        {dish.isBestSeller && (
+                        {dish.is_best_seller && (
                           <span
                             style={{
                               position: 'absolute',
@@ -981,7 +981,7 @@ export const MasterMenuManagement: React.FC = () => {
                             {dish.name}
                           </h4>
                           <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)' }}>
-                            {dish.basePrice.toLocaleString('vi-VN')} đ
+                            {dish.base_price.toLocaleString('vi-VN')} đ
                           </span>
                         </div>
 
@@ -1089,7 +1089,7 @@ export const MasterMenuManagement: React.FC = () => {
                 Tất Cả Kiểu Món ({categoryOptions.length})
               </button>
               {DISH_CATEGORIES.map((cat) => {
-                const count = categoryOptions.filter((o) => o.categoryId === cat.id).length;
+                const count = categoryOptions.filter((o) => o.category_id === cat.id).length;
                 return (
                   <button
                     key={cat.id}
@@ -1137,7 +1137,7 @@ export const MasterMenuManagement: React.FC = () => {
                   </tr>
                 ) : (
                   filteredOptions.map((opt) => {
-                    const catObj = DISH_CATEGORIES.find((c) => c.id === opt.categoryId);
+                    const catObj = DISH_CATEGORIES.find((c) => c.id === opt.category_id);
                     const isAvailable = opt.status === 'AVAILABLE';
                     return (
                       <tr key={opt.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -1153,15 +1153,15 @@ export const MasterMenuManagement: React.FC = () => {
                               borderRadius: '12px',
                               fontSize: '0.78rem',
                               fontWeight: 700,
-                              backgroundColor: opt.optionType === 'SIZE' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(232, 93, 38, 0.12)',
-                              color: opt.optionType === 'SIZE' ? '#2563eb' : 'var(--primary)',
+                              backgroundColor: opt.option_type === 'SIZE' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(232, 93, 38, 0.12)',
+                              color: opt.option_type === 'SIZE' ? '#2563eb' : 'var(--primary)',
                             }}
                           >
-                            {opt.optionType === 'SIZE' ? 'Kích Cỡ (Size)' : 'Topping Thêm'}
+                            {opt.option_type === 'SIZE' ? 'Kích Cỡ (Size)' : 'Topping Thêm'}
                           </span>
                         </td>
                         <td style={{ padding: '16px 20px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                          {catObj ? catObj.name : opt.categoryId}
+                          {catObj ? catObj.name : opt.category_id}
                         </td>
                         <td style={{ padding: '16px 20px' }}>
                           <span style={{ fontSize: '1rem', fontWeight: 800, color: opt.price > 0 ? 'var(--primary)' : 'var(--success)' }}>

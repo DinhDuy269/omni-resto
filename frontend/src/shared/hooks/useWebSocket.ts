@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Order } from '../types/admin';
 
 export interface OrderEventMessage {
-  eventType: 'ORDER_CREATED' | 'ORDER_STATUS_CHANGED';
+  event_type: 'ORDER_CREATED' | 'ORDER_STATUS_CHANGED';
   order: Order;
 }
 
