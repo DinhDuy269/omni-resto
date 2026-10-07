@@ -8,7 +8,7 @@ const API_BASE_URL = 'http://localhost:8080/api'; // Đường dẫn chuẩn API
 
 // 1. Lấy danh sách khách hàng cho trang Admin
 export const fetchCustomers = async (): Promise<CustomerResponse[]> => {
-  const res = await fetch(`${API_BASE_URL}/customers`);
+  const res = await fetch(`${API_BASE_URL}/v1/auth/customer/admin/customers`);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.message || 'Không thể tải danh sách khách hàng');
@@ -21,7 +21,7 @@ export const updateCustomerStatus = async (
   id: string,
   status: CustomerStatus | string
 ): Promise<CustomerResponse> => {
-  const res = await fetch(`${API_BASE_URL}/customers/${id}/status?status=${status}`, {
+  const res = await fetch(`${API_BASE_URL}/v1/auth/customer/admin/customers/${id}/status?status=${status}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -35,7 +35,6 @@ export const updateCustomerStatus = async (
 // ─────────────────────────────────────────────────────────────
 // PHẦN CỦA BẠN BẠN LÀM (Khách hàng vãng lai & Đặt món online)
 // ─────────────────────────────────────────────────────────────
-
 export const customerApi = {
   // Gửi OTP
   sendOtp: async (phone: string): Promise<{ success: boolean; message: string }> => {
@@ -46,7 +45,6 @@ export const customerApi = {
     });
     return res.json();
   },
-
   // Xác thực OTP
   verifyOtp: async (phone: string, otp: string): Promise<{ success: boolean; token?: string; message: string }> => {
     const res = await fetch(`${API_BASE_URL}/v1/customer/auth/verify-otp`, {
@@ -56,14 +54,12 @@ export const customerApi = {
     });
     return res.json();
   },
-
   // Lấy danh sách thực đơn
   getMenu: async (): Promise<MenuItem[]> => {
     const res = await fetch(`${API_BASE_URL}/v1/customer/menu`);
     if (!res.ok) throw new Error('Không thể tải thực đơn');
     return res.json();
   },
-
   // Gửi đơn đặt món
   createOrder: async (order: OrderRequest): Promise<{ success: boolean; orderId: string }> => {
     const res = await fetch(`${API_BASE_URL}/v1/customer/orders`, {
@@ -73,7 +69,6 @@ export const customerApi = {
     });
     return res.json();
   },
-
   // Gắn thêm 2 hàm Admin vào object để gọi theo cách nào cũng được
   fetchCustomers,
   updateCustomerStatus,

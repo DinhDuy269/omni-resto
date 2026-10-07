@@ -1,218 +1,140 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { authApi, type OtpPurpose } from '../api/authService';
-import './OtpModal.css';
+import React, { useState, useEffect } from 'react';
 
 interface OtpModalProps {
   isOpen: boolean;
-  email: string;
-  purpose: OtpPurpose;
   onClose: () => void;
-  onSuccess: (otpCode: string) => void;
+  onSuccess: () => void;
+  email?: string;
+  phone?: string;
 }
 
-interface ApiErrorResponse {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-}
-
-// Component con: Tự tạo mới state khi modal bật lên, sạch lỗi render
-const OtpModalDialog: React.FC<Omit<OtpModalProps, 'isOpen'>> = ({
-  email,
-  purpose,
-  onClose,
+export const OtpModal: React.FC<OtpModalProps> = ({
+  isOpen,
   onSuccess,
+  email,
+  phone
 }) => {
-  const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
-  const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [countdown, setCountdown] = useState<number>(60);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const canResend = countdown === 0;
+  // === NGĂN ĐÓNG TRANG ===
+  useEffect(() => {
+    if (isOpen) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = '';
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  }, [isOpen]);
+  // === KẾT THÚC ===
 
   useEffect(() => {
-    if (countdown <= 0) return;
+    if (isOpen) {
+      setOtp(Array(6).fill(''));
+      setError('');
+    }
+  }, [isOpen]);
 
-    const timer = setInterval(() => {
-      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
+  if (!isOpen) return null;
 
-    return () => clearInterval(timer);
-  }, [countdown]);
-
-  const handleChange = (value: string, index: number) => {
-    if (!/^\d*$/.test(value)) return;
-
+  const handleChange = (index: number, value: string) => {
+    if (!/^\d?$/.test(value)) return;
     const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
+    newOtp[index] = value;
     setOtp(newOtp);
-
-    // Tự động focus sang ô tiếp theo
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').trim();
-    if (/^\d{6}$/.test(pasted)) {
-      setOtp(pasted.split(''));
-      inputRefs.current[5]?.focus();
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fullOtp = otp.join('');
-    if (fullOtp.length < 6) {
-      setError('Vui lòng nhập đủ 6 chữ số OTP');
+    const otpValue = otp.join('');
+    if (otpValue.length !== 6) {
+      setError('Vui lòng nhập đủ 6 chữ số mã OTP');
       return;
     }
-
+    setLoading(true);
+    setError('');
     try {
-      setLoading(true);
-      setError('');
-      if (purpose === 'REGISTER_VERIFICATION') {
-        await authApi.verifyRegisterOtp({ email, otpCode: fullOtp });
-      } else {
-        await authApi.verifyResetOtp({ email, otpCode: fullOtp });
-      }
-      onSuccess(fullOtp);
-    } catch (err: unknown) {
-      const apiErr = err as ApiErrorResponse;
-      setError(apiErr.response?.data?.message || 'Mã OTP không chính xác hoặc đã hết hạn');
+      // Gọi API xác minh OTP tại đây
+      onSuccess();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Xác minh thất bại, vui lòng thử lại');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResend = async () => {
-    try {
-      setError('');
-      await authApi.resendOtp(email, purpose);
-      setCountdown(60);
-      setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-    } catch (err: unknown) {
-      const apiErr = err as ApiErrorResponse;
-      setError(apiErr.response?.data?.message || 'Không thể gửi lại mã OTP, vui lòng thử lại');
-    }
-  };
-
   return (
-    <div
-      className="otp-modal-backdrop"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '16px',
-      }}
-    >
-      <div
-        className="otp-modal-card"
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          padding: '32px 24px',
-          width: '100%',
-          maxWidth: '430px',
-          textAlign: 'center',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        }}
-      >
-        <h3 className="otp-modal-title">Xác Nhận Mã OTP</h3>
-        <p className="otp-modal-desc">
-          Mã xác thực gồm 6 chữ số đã được gửi đến email:
-          <br />
-          <span className="otp-modal-email">{email}</span>
+    <div style={{ background: 'rgba(0,0,0,0.5)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
+      <div style={{ background: 'white', borderRadius: '16px', maxWidth: '430px', width: '100%', padding: '32px 24px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <h3 style={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center', marginBottom: '8px', color: '#1f2937' }}>
+          Xác Nhận Mã OTP
+        </h3>
+        <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '24px' }}>
+          Mã xác thực gồm 6 chữ số đã được gửi đến:<br />
+          <span style={{ fontWeight: 600, color: '#1f2937' }}>{email || phone}</span>
         </p>
 
-        {error && <div className="otp-modal-error">{error}</div>}
+        {error && (
+          <div style={{ background: '#fef2f2', color: '#dc2626', padding: '12px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center' }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
-          {/* Hàng 6 ô vuông bắt buộc nằm ngang */}
-          <div
-            className="otp-inputs-row"
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: '8px',
-              marginBottom: '24px',
-            }}
-          >
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
             {otp.map((digit, index) => (
               <input
                 key={index}
-                ref={(el) => {
-                  inputRefs.current[index] = el;
-                }}
                 type="text"
                 inputMode="numeric"
                 maxLength={1}
                 value={digit}
-                onChange={(e) => handleChange(e.target.value, index)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                onPaste={handlePaste}
-                className="otp-box-input"
+                onChange={(e) => handleChange(index, e.target.value)}
                 style={{
-                  width: '46px',
+                  width: '48px',
                   height: '52px',
-                  fontSize: '1.4rem',
-                  fontWeight: 800,
                   textAlign: 'center',
-                  border: '1.5px solid #cbd5e1',
-                  borderRadius: '10px',
-                  backgroundColor: '#f8fafc',
-                  outline: 'none',
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  outline: 'none'
                 }}
               />
             ))}
           </div>
 
-          <div>
-            <button type="submit" disabled={loading} className="otp-btn-confirm">
-              {loading ? 'Đang xác minh...' : 'Xác Nhận'}
-            </button>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#f97316',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              opacity: loading ? 0.5 : 1
+            }}
+          >
+            {loading ? 'Đang xác minh...' : 'Xác Nhận'}
+          </button>
 
-            <button type="button" onClick={onClose} className="otp-btn-cancel">
-              Hủy bỏ
-            </button>
-          </div>
+          {/* === NÚT HỦY BỎ ĐÃ XÓA === */}
         </form>
 
-        <div className="otp-resend-text">
-          {canResend ? (
-            <button onClick={handleResend} className="otp-resend-link">
-              Gửi lại mã OTP
-            </button>
-          ) : (
-            <span>
-              Gửi lại mã sau: <strong style={{ color: '#ea580c' }}>{countdown}s</strong>
-            </span>
-          )}
-        </div>
+        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '14px', color: '#6b7280' }}>
+          Gửi lại mã sau: <span style={{ color: '#f97316', fontWeight: 600 }}>60s</span>
+        </p>
       </div>
     </div>
   );
 };
 
-export const OtpModal: React.FC<OtpModalProps> = (props) => {
-  if (!props.isOpen) return null;
-  return <OtpModalDialog {...props} />;
-};
+export default OtpModal;

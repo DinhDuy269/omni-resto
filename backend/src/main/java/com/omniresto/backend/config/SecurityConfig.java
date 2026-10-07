@@ -70,17 +70,13 @@ public class SecurityConfig {
 
     private void configureAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
         authorizeRequests
-                // Cho phép xác thực người dùng (Đăng ký, Đăng nhập, OTP)
                 .requestMatchers(authApiPatterns()).permitAll()
-                // Cho phép khách hàng thao tác
                 .requestMatchers(customerApiPatterns()).permitAll()
-                // Cho phép các endpoint nghiệp vụ F&B
                 .requestMatchers(branchApiPatterns()).permitAll()
                 .requestMatchers(menuApiPatterns()).permitAll()
                 .requestMatchers(orderApiPatterns()).permitAll()
                 .requestMatchers(userApiPatterns()).permitAll()
                 .requestMatchers(tableApiPatterns()).permitAll()
-                // Cho phép endpoint lỗi mặc định để thấy lỗi chi tiết
                 .requestMatchers(new AntPathRequestMatcher("/error")).permitAll()
                 .anyRequest().authenticated();
     }
@@ -89,7 +85,9 @@ public class SecurityConfig {
     private static RequestMatcher[] authApiPatterns() {
         return new RequestMatcher[]{
                 new AntPathRequestMatcher("/api/auth"),
-                new AntPathRequestMatcher("/api/auth/**")
+                new AntPathRequestMatcher("/api/auth/**"),
+                new AntPathRequestMatcher("/api/v1/auth/customer"),
+                new AntPathRequestMatcher("/api/v1/auth/customer/**")
         };
     }
     // endregion

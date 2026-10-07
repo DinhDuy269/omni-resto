@@ -1,8 +1,10 @@
 package com.omniresto.backend.controller;
 
 import com.omniresto.backend.domain.CustomerEntity;
+import com.omniresto.backend.domain.enums.CustomerStatus;
 import com.omniresto.backend.model.request.*;
 import com.omniresto.backend.model.response.AuthResponse;
+import com.omniresto.backend.model.user.response.CustomerResponse;
 import com.omniresto.backend.service.CustomerAuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,4 +55,11 @@ public class CustomerAuthController {
         List<CustomerEntity> customers = customerAuthService.getAllCustomersForAdmin();
         return ResponseEntity.ok(customers);
     }
+    // 6. Khóa / mở khóa tài khoản (Admin)
+    @PatchMapping("/admin/customers/{id}/status")
+    public ResponseEntity<CustomerResponse> updateCustomerStatus(
+            @PathVariable String id, @RequestParam CustomerStatus status) {
+        return ResponseEntity.ok(customerAuthService.updateStatus(id, status));
+    }
+
 }

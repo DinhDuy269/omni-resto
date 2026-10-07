@@ -24,7 +24,6 @@ export const OtpAuthModal: React.FC<OtpAuthModalProps> = ({ isOpen, onClose, onS
     }
     setLoading(true);
     setError('');
-
     try {
       await customerApi.sendOtp(phone);
       setStep('OTP');
@@ -43,7 +42,6 @@ export const OtpAuthModal: React.FC<OtpAuthModalProps> = ({ isOpen, onClose, onS
     }
     setLoading(true);
     setError('');
-
     try {
       const res = await customerApi.verifyOtp(phone, otp);
       if (res.success) {
@@ -68,7 +66,6 @@ export const OtpAuthModal: React.FC<OtpAuthModalProps> = ({ isOpen, onClose, onS
         >
           ✕
         </button>
-
         <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">
           {step === 'PHONE' ? 'Đăng nhập / Đặt món' : 'Xác thực OTP'}
         </h2>
@@ -104,7 +101,7 @@ export const OtpAuthModal: React.FC<OtpAuthModalProps> = ({ isOpen, onClose, onS
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <p className="text-sm text-gray-600 text-center">
-              Mã OTP đã được gửi tới số <span className="font-semibold text-gray-800">{phone}</span>
+              Mã OTP đã được gửi tới số {phone}
             </p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -18,6 +18,19 @@ export interface CustomerResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
+// PHẦN ĐĂNG KÝ KHÁCH HÀNG (thêm vào đây)
+// ─────────────────────────────────────────────────────────────
+
+export interface CustomerRegisterPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  dateOfBirth?: string;
+  // thêm field nào bạn cần nữa thì bổ sung
+}
+
+// ─────────────────────────────────────────────────────────────
 // PHẦN CHO BẠN BẠN (FoodCard, Đặt món & API Customer)
 // ─────────────────────────────────────────────────────────────
 
