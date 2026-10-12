@@ -48,8 +48,28 @@ function extractErrorMessage(err: unknown): string {
   return 'Đặt bàn không thành công!';
 }
 
+// Kiểm tra khung giờ đóng cửa hoặc nghỉ bếp ngay tại client
+function checkOperatingHoursClient(timeStr: string): string | null {
+  const [hStr, mStr] = timeStr.split(':');
+  const totalMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+
+  const morningOpen = 6 * 60;       // 06:00
+  const breakStart = 14 * 60 + 30;  // 14:30
+  const breakEnd = 16 * 60 + 30;    // 16:30
+  const eveningClose = 22 * 60;     // 22:00
+
+  if (totalMinutes >= breakStart && totalMinutes < breakEnd) {
+    return 'Giờ này nhà hàng đang trong Giờ Nghỉ Bếp (14:30 - 16:30), bạn hãy đặt vào giờ khác!';
+  }
+
+  if (totalMinutes < morningOpen || totalMinutes >= eveningClose) {
+    return 'Giờ này nhà hàng đang Đóng Cửa (22:00 - 06:00), bạn hãy đặt vào giờ khác (06:00 - 14:30 hoặc 16:30 - 22:00)!';
+  }
+
+  return null;
+}
+
 export default function ReservationPage(): React.ReactElement {
-  // 'tables' (Trang 1: Chọn bàn) | 'form' (Trang 2: Điền thông tin) | 'tracking' (Tra cứu mã)
   const [currentView, setCurrentView] = useState<'tables' | 'form' | 'tracking'>('tables');
   
   const [tablesLoading, setTablesLoading] = useState<boolean>(true);
@@ -74,7 +94,6 @@ export default function ReservationPage(): React.ReactElement {
   const [trackResult, setTrackResult] = useState<ReservationDetail | null>(null);
   const [trackError, setTrackError] = useState<string>('');
 
-  // Tải danh sách bàn
   useEffect(() => {
     let isCancelled = false;
     const fetchTables = async () => {
@@ -94,7 +113,6 @@ export default function ReservationPage(): React.ReactElement {
     return () => { isCancelled = true; };
   }, []);
 
-  // 1. Khi khách bấm chọn 1 bàn trống -> Chuyển sang màn hình Form
   const handleSelectTable = (table: TableItem) => {
     if (table.status?.toLowerCase() !== 'available') return;
     setSelectedTable(table);
@@ -103,31 +121,55 @@ export default function ReservationPage(): React.ReactElement {
       partySize: Math.min(prev.partySize || 2, table.capacity),
     }));
     setErrorMsg('');
-    setCurrentView('form'); // Chuyển sang trang form
+    setCurrentView('form');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Cảnh báo ngay nếu khách chọn giờ đóng cửa/nghỉ bếp
+    if (name === 'reservationTime') {
+      const closedReason = checkOperatingHoursClient(value);
+      if (closedReason) {
+        setErrorMsg(closedReason);
+      } else {
+        setErrorMsg('');
+      }
+    }
   };
 
-  // 2. Gửi form đặt bàn
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTable) return;
+    if (!selectedTable || loading) return;
+
+    setErrorMsg('');
+
+    // Kiểm tra giờ mở cửa
+    const closedReason = checkOperatingHoursClient(formData.reservationTime);
+    if (closedReason) {
+      setErrorMsg(closedReason);
+      return;
+    }
+
+    const cleanPhone = formData.customerPhone.trim().replace(/[\s.-]+/g, '');
+    const vnPhoneRegex = /^(0|\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    if (!vnPhoneRegex.test(cleanPhone)) {
+      setErrorMsg('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động hợp lệ tại Việt Nam (10 chữ số)!');
+      return;
+    }
 
     setLoading(true);
-    setErrorMsg('');
 
     try {
       const fullDateTime = `${formData.reservationDate}T${formData.reservationTime}:00`;
       const tableNote = `[Khách chọn: Bàn ${selectedTable.tableNo} (${selectedTable.capacity} chỗ)]`;
-      const combinedNotes = formData.specialNotes ? `${tableNote} - ${formData.specialNotes}` : tableNote;
+      const combinedNotes = formData.specialNotes ? `${tableNote} - ${formData.specialNotes.trim()}` : tableNote;
 
       const payload = {
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        customerEmail: formData.customerEmail || null,
+        customerName: formData.customerName.trim(),
+        customerPhone: cleanPhone,
+        customerEmail: formData.customerEmail ? formData.customerEmail.trim() : null,
         partySize: Number(formData.partySize),
         reservationTime: fullDateTime,
         specialNotes: combinedNotes,
@@ -135,6 +177,14 @@ export default function ReservationPage(): React.ReactElement {
 
       const res = await reservationApi.createOnline(payload);
       setSuccessBooking(res.data);
+
+      try {
+        const channel = new BroadcastChannel('omni_reservation_channel');
+        channel.postMessage({ type: 'NEW_RESERVATION', data: res.data });
+        channel.close();
+      } catch (e) {
+        console.warn('BroadcastChannel error:', e);
+      }
     } catch (err: unknown) {
       setErrorMsg(extractErrorMessage(err));
     } finally {
@@ -142,10 +192,9 @@ export default function ReservationPage(): React.ReactElement {
     }
   };
 
-  // 3. Tra cứu mã đặt bàn
   const handleTrackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!trackCode.trim()) return;
+    if (!trackCode.trim() || loading) return;
     setLoading(true);
     setTrackError('');
     setTrackResult(null);
@@ -164,12 +213,10 @@ export default function ReservationPage(): React.ReactElement {
 
   return (
     <div className="res-container">
-      {/* ── HEADER ── */}
       <div className="res-top-header">
         <h1 className="res-main-title">Đặt Bàn Trực Tuyến</h1>
         <p className="res-main-subtitle">Thưởng thức ẩm thực trọn vẹn trong không gian ấm cúng tại OmniResto</p>
 
-        {/* Thanh chuyển đổi màn hình */}
         <div className="res-tab-bar">
           <button
             type="button"
@@ -188,9 +235,6 @@ export default function ReservationPage(): React.ReactElement {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════
-          MÀN HÌNH 1: SƠ ĐỒ CHỌN BÀN
-          ══════════════════════════════════════════════════════════════ */}
       {currentView === 'tables' && (
         <div className="res-box">
           <div className="table-selection-header">
@@ -244,9 +288,6 @@ export default function ReservationPage(): React.ReactElement {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════
-          MÀN HÌNH 2: FORM ĐIỀN THÔNG TIN ĐẶT BÀN
-          ══════════════════════════════════════════════════════════════ */}
       {currentView === 'form' && selectedTable && (
         <div className="res-box res-form-card">
           {successBooking ? (
@@ -266,23 +307,9 @@ export default function ReservationPage(): React.ReactElement {
               <p className="success-note-text">
                 Nhân viên nhà hàng sẽ kiểm tra và liên hệ xác nhận bàn cho bạn trong thời gian sớm nhất.
               </p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSuccessBooking(null);
-                  setSelectedTable(null);
-                  setCurrentView('tables');
-                }}
-                className="res-btn-submit"
-                style={{ maxWidth: '280px', margin: '24px auto 0' }}
-              >
-                Đặt Thêm Bàn Khác
-              </button>
             </div>
           ) : (
             <>
-              {/* Thanh điều hướng quay lại & Thông tin bàn đã chọn */}
               <div className="form-card-topbar">
                 <button
                   type="button"
@@ -305,8 +332,18 @@ export default function ReservationPage(): React.ReactElement {
 
               {errorMsg && (
                 <div className="res-error-banner">
-                  <AlertCircle size={18} />
-                  <span>{errorMsg}</span>
+                  <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span>{errorMsg}</span>
+                    {errorMsg.includes('đang có đơn đặt bàn') && (
+                      <span 
+                        onClick={() => setCurrentView('tracking')}
+                        style={{ textDecoration: 'underline', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        Bấm vào đây để chuyển sang tra cứu đơn hiện tại →
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -389,7 +426,7 @@ export default function ReservationPage(): React.ReactElement {
 
                   <div className="res-field-group">
                     <label className="res-field-label">
-                      <Clock size={15} /> Giờ đến *
+                      <Clock size={15} /> Giờ đến (Mở: 06:00-14:30 & 16:30-22:00) *
                     </label>
                     <input
                       type="time"
@@ -421,7 +458,7 @@ export default function ReservationPage(): React.ReactElement {
                   disabled={loading}
                   className="res-btn-submit"
                 >
-                  {loading ? 'Đang gửi yêu cầu...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
+                  {loading ? 'Đang kiểm tra & xử lý...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
                 </button>
               </form>
             </>
@@ -429,9 +466,6 @@ export default function ReservationPage(): React.ReactElement {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════
-          MÀN HÌNH 3: TRA CỨU MÃ ĐẶT BÀN
-          ══════════════════════════════════════════════════════════════ */}
       {currentView === 'tracking' && (
         <div className="res-box res-form-card">
           <h2 className="box-heading text-center">Tra Cứu Tiến Độ Đặt Bàn</h2>
@@ -447,7 +481,7 @@ export default function ReservationPage(): React.ReactElement {
               className="res-field-input track-input-field"
             />
             <button type="submit" disabled={loading} className="res-btn-track">
-              <Search size={16} /> Tra Cứu
+              <Search size={16} /> {loading ? 'Đang tìm...' : 'Tra Cứu'}
             </button>
           </form>
 

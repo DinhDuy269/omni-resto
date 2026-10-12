@@ -2,6 +2,7 @@ package com.omniresto.backend.service;
 
 import com.omniresto.backend.domain.ReservationEntity;
 import com.omniresto.backend.domain.TableEntity;
+import com.omniresto.backend.domain.enums.OperatingShift;
 import com.omniresto.backend.domain.enums.TableStatus;
 import com.omniresto.backend.model.reservation.request.AssignTableRequest;
 import com.omniresto.backend.model.reservation.request.OfflineReservationRequest;
@@ -14,8 +15,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -23,29 +28,59 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final TableRepository tableRepository;
+    private final ReservationSseService sseService;
 
-    // 1. Khách đặt bàn trực tuyến (Lưu PENDING, chưa xếp bàn)
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
+    private static final Map<String, Object> PHONE_LOCKS = new ConcurrentHashMap<>();
+
+    // 1. Khách đặt bàn trực tuyến
     @Transactional
     public ReservationResponse createOnlineReservation(OnlineReservationRequest request) {
-        String code = generateReservationCode("ONL");
+        String cleanPhone = normalizePhoneNumber(request.getCustomerPhone());
+        Object lock = PHONE_LOCKS.computeIfAbsent(cleanPhone, k -> new Object());
 
-        ReservationEntity reservation = ReservationEntity.builder()
-                .reservationCode(code)
-                .customerName(request.getCustomerName().trim())
-                .customerPhone(request.getCustomerPhone().trim())
-                .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
-                .partySize(request.getPartySize())
-                .reservationTime(request.getReservationTime())
-                .status("PENDING")
-                .specialNotes(request.getSpecialNotes())
-                .build();
+        synchronized (lock) {
+            try {
+                // [Kiểm tra 1] Khung giờ nhà hàng hoạt động
+                validateOperatingHours(request.getReservationTime());
 
-        return mapToResponse(reservationRepository.save(reservation));
+                // [Kiểm tra 2] Chặn spam số điện thoại đang có đơn hiệu lực
+                checkDuplicateActiveReservation(cleanPhone);
+
+                String code = generateReservationCode("ONL");
+
+                ReservationEntity reservation = ReservationEntity.builder()
+                        .reservationCode(code)
+                        .customerName(request.getCustomerName().trim())
+                        .customerPhone(cleanPhone)
+                        .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
+                        .partySize(request.getPartySize())
+                        .reservationTime(request.getReservationTime())
+                        .status("PENDING")
+                        .specialNotes(request.getSpecialNotes())
+                        .build();
+
+                ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+                sseService.broadcastNewReservation(response);
+
+                return response;
+            } finally {
+                PHONE_LOCKS.remove(cleanPhone);
+            }
+        }
     }
 
-    // 2. Nhân viên tạo đặt bàn Offline (Khách gọi điện hoặc khách vãng lai tới quán)
+    // 2. Nhân viên tạo đặt bàn Offline
     @Transactional
     public ReservationResponse createOfflineReservation(OfflineReservationRequest request) {
+        String cleanPhone = normalizePhoneNumber(request.getCustomerPhone());
+
+        // Nếu không phải khách vào ăn ngay, kiểm tra giờ hoạt động và chống trùng số điện thoại
+        if (!request.isSeatedImmediately()) {
+            validateOperatingHours(request.getReservationTime());
+            checkDuplicateActiveReservation(cleanPhone);
+        }
+
         String code = generateReservationCode("OFF");
         TableEntity table = null;
         String status = "PENDING";
@@ -63,7 +98,7 @@ public class ReservationService {
         ReservationEntity reservation = ReservationEntity.builder()
                 .reservationCode(code)
                 .customerName(request.getCustomerName().trim())
-                .customerPhone(request.getCustomerPhone().trim())
+                .customerPhone(cleanPhone)
                 .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
                 .partySize(request.getPartySize())
                 .reservationTime(request.getReservationTime())
@@ -72,10 +107,44 @@ public class ReservationService {
                 .specialNotes(request.getSpecialNotes())
                 .build();
 
-        return mapToResponse(reservationRepository.save(reservation));
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastNewReservation(response);
+
+        return response;
     }
 
-    // 3. Nhân viên xếp bàn cho đơn PENDING (Chuyển thành CONFIRMED)
+    // Kiểm tra giờ đặt bàn có thuộc khung giờ mở cửa hay không
+    private void validateOperatingHours(LocalDateTime reservationDateTime) {
+        LocalTime time = reservationDateTime.toLocalTime();
+        OperatingShift shift = OperatingShift.fromTime(time);
+
+        if (shift == OperatingShift.BREAK) {
+            throw new RuntimeException("Thời gian bạn chọn (" + time + ") nằm trong Giờ Nghỉ Bếp (14:30 - 16:30). " +
+                    "Nhà hàng đang đóng cửa nghỉ ngơi, bạn hãy đặt vào giờ khác!");
+        }
+
+        if (shift == OperatingShift.CLOSED) {
+            throw new RuntimeException("Thời gian bạn chọn (" + time + ") nhà hàng đang đóng cửa (22:00 - 06:00). " +
+                    "Bạn hãy đặt vào giờ khác (06:00 - 14:30 hoặc 16:30 - 22:00)!");
+        }
+    }
+
+    private void checkDuplicateActiveReservation(String phone) {
+        List<ReservationEntity> activeReservations = reservationRepository.findActiveReservationsByPhone(phone);
+        if (!activeReservations.isEmpty()) {
+            ReservationEntity existing = activeReservations.get(0);
+            String formattedTime = existing.getReservationTime().format(TIME_FORMATTER);
+            throw new RuntimeException("Số điện thoại " + phone + " hiện đang có đơn đặt bàn ("
+                    + existing.getReservationCode() + ") vào lúc " + formattedTime
+                    + " chưa hoàn thành. Quý khách vui lòng không đặt nhiều bàn cùng lúc!");
+        }
+    }
+
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null) return "";
+        return phone.trim().replaceAll("[\\s.-]+", "");
+    }
+
     @Transactional
     public ReservationResponse assignTable(String reservationId, AssignTableRequest request) {
         ReservationEntity reservation = reservationRepository.findById(reservationId)
@@ -95,10 +164,12 @@ public class ReservationService {
         reservation.setTable(table);
         reservation.setStatus("CONFIRMED");
 
-        return mapToResponse(reservationRepository.save(reservation));
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastReservationUpdated(response);
+
+        return response;
     }
 
-    // 4. Khách đến quán nhận bàn (Check-in -> SEATED)
     @Transactional
     public ReservationResponse checkIn(String reservationId) {
         ReservationEntity reservation = reservationRepository.findById(reservationId)
@@ -113,10 +184,12 @@ public class ReservationService {
         table.setStatus(TableStatus.occupied);
         tableRepository.save(table);
 
-        return mapToResponse(reservationRepository.save(reservation));
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastReservationUpdated(response);
+
+        return response;
     }
 
-    // 5. Hủy đơn đặt bàn
     @Transactional
     public ReservationResponse cancelReservation(String reservationId, String reason) {
         ReservationEntity reservation = reservationRepository.findById(reservationId)
@@ -128,23 +201,23 @@ public class ReservationService {
             reservation.setSpecialNotes(currentNotes + "Lý do hủy: " + reason);
         }
 
-        return mapToResponse(reservationRepository.save(reservation));
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastReservationUpdated(response);
+
+        return response;
     }
 
-
-// 6. Lấy danh sách đặt bàn (tự động quét hủy đơn trễ trước khi trả về danh sách)
+    // 👉 Lấy danh sách đặt bàn: Luôn đưa đơn mới tạo nhất lên đầu tiên (CreatedAt DESC)
     @Transactional
     public List<ReservationResponse> getAll(String status) {
-        // Tự động quét và hủy đơn quá 30 phút ngay khi load dữ liệu
         autoCancelExpiredReservations();
 
         List<ReservationEntity> list = (status != null && !status.isBlank())
-                ? reservationRepository.findByStatusOrderByReservationTimeAsc(status)
-                : reservationRepository.findAll();
+                ? reservationRepository.findByStatusOrderByCreatedAtDesc(status)
+                : reservationRepository.findAllByOrderByCreatedAtDesc();
         return list.stream().map(this::mapToResponse).toList();
     }
 
-    // 7. Tra cứu thông tin đặt bàn theo mã code
     @Transactional(readOnly = true)
     public ReservationResponse getByCode(String code) {
         return reservationRepository.findByReservationCode(code)
@@ -152,7 +225,6 @@ public class ReservationService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy mã đặt bàn: " + code));
     }
 
-    // Helper: Kiểm tra bàn có đủ chỗ và có bị trùng cữ ăn trong vòng 2 tiếng không
     private TableEntity validateAndGetAvailableTable(String tableId, int partySize, LocalDateTime reservationTime, String excludeResId) {
         TableEntity table = tableRepository.findById(tableId)
                 .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
@@ -201,16 +273,13 @@ public class ReservationService {
                 .build();
     }
 
-    // Lấy toàn bộ danh sách bàn phục vụ đặt bàn và xếp chỗ
     @Transactional(readOnly = true)
     public List<TableEntity> getAllTables() {
         return tableRepository.findAll();
     }
 
-    // Tự động hủy các đơn trễ hẹn quá 30 phút
     @Transactional
     public int autoCancelExpiredReservations() {
-        // Mốc thời gian: Thời điểm hiện tại trừ đi 30 phút
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(30);
 
         List<ReservationEntity> expiredList = reservationRepository.findExpiredReservations(threshold);

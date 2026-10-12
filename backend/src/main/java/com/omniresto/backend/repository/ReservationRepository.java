@@ -15,7 +15,17 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 
     Optional<ReservationEntity> findByReservationCode(String reservationCode);
 
-    List<ReservationEntity> findByStatusOrderByReservationTimeAsc(String status);
+    // 👉 1. Lấy toàn bộ đơn sắp xếp theo thời gian tạo mới nhất lên đầu tiên (F5 không bị trôi)
+    List<ReservationEntity> findAllByOrderByCreatedAtDesc();
+
+    // 👉 2. Lấy đơn theo trạng thái (PENDING, CONFIRMED, ...) sắp xếp mới nhất lên đầu tiên
+    List<ReservationEntity> findByStatusOrderByCreatedAtDesc(String status);
+
+    // [Chống Spam] Tìm các đơn đặt bàn đang còn hiệu lực (PENDING hoặc CONFIRMED) theo số điện thoại
+    @Query("SELECT r FROM ReservationEntity r " +
+            "WHERE r.customerPhone = :phone " +
+            "AND r.status IN ('PENDING', 'CONFIRMED')")
+    List<ReservationEntity> findActiveReservationsByPhone(@Param("phone") String phone);
 
     // Kiểm tra bàn có bị trùng lịch trong khoảng thời gian [startTime, endTime] hay không
     @Query("SELECT r FROM ReservationEntity r WHERE r.table.id = :tableId " +
@@ -30,10 +40,8 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
     );
 
     // Tìm các đơn đặt bàn chưa nhận bàn (PENDING hoặc CONFIRMED) đã quá giờ hẹn
-    @org.springframework.data.jpa.repository.Query(
-            "SELECT r FROM ReservationEntity r " +
-                    "WHERE r.status IN ('PENDING', 'CONFIRMED') " +
-                    "AND r.reservationTime < :threshold"
-    )
-    List<ReservationEntity> findExpiredReservations(@org.springframework.data.repository.query.Param("threshold") java.time.LocalDateTime threshold);
+    @Query("SELECT r FROM ReservationEntity r " +
+            "WHERE r.status IN ('PENDING', 'CONFIRMED') " +
+            "AND r.reservationTime < :threshold")
+    List<ReservationEntity> findExpiredReservations(@Param("threshold") LocalDateTime threshold);
 }

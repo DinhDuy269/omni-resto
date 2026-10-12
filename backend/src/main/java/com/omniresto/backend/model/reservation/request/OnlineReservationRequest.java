@@ -11,9 +11,14 @@ import java.time.LocalDateTime;
 public class OnlineReservationRequest {
 
     @NotBlank(message = "Tên khách hàng không được để trống")
+    @Size(max = 100, message = "Tên khách hàng không vượt quá 100 ký tự")
     private String customerName;
 
     @NotBlank(message = "Số điện thoại không được để trống")
+    @Pattern(
+            regexp = "^(0|\\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$",
+            message = "Số điện thoại không đúng định dạng nhà mạng Việt Nam"
+    )
     private String customerPhone;
 
     @Email(message = "Email không đúng định dạng")
@@ -21,6 +26,7 @@ public class OnlineReservationRequest {
 
     @NotNull(message = "Số lượng khách không được để trống")
     @Min(value = 1, message = "Số lượng khách tối thiểu là 1 người")
+    @Max(value = 50, message = "Đoàn trên 50 người vui lòng liên hệ hotline trực tiếp")
     private Integer partySize;
 
     @NotNull(message = "Thời gian đặt bàn không được để trống")

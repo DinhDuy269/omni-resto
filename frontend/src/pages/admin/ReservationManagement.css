@@ -8,6 +8,7 @@
   gap: 20px;
   font-family: inherit;
   color: #1f2937;
+  position: relative;
 }
 
 .adm-res-header {
@@ -18,11 +19,40 @@
   gap: 16px;
 }
 
+.adm-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .adm-res-title {
   font-size: 1.6rem;
   font-weight: 800;
   color: #111827;
   margin: 0;
+}
+
+.adm-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.adm-live-badge.active {
+  color: #059669;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.adm-live-badge.standby {
+  color: #d97706;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
 }
 
 .adm-res-subtitle {
@@ -38,7 +68,7 @@
   flex-wrap: wrap;
 }
 
-/* ── Toggle Switcher (Sơ đồ <-> Danh sách) ── */
+/* ── Toggle Switcher ── */
 .adm-view-toggle {
   display: inline-flex;
   background: #f3f4f6;
@@ -80,9 +110,17 @@
   transition: background 0.2s;
 }
 
-.adm-refresh-btn:hover { background: #f9fafb; }
-.spinning { animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.adm-refresh-btn:hover { 
+  background: #f9fafb; 
+}
+
+.spinning { 
+  animation: spin 0.8s linear infinite; 
+}
+
+@keyframes spin { 
+  to { transform: rotate(360deg); } 
+}
 
 .adm-btn-create {
   display: inline-flex;
@@ -99,9 +137,12 @@
   box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
   transition: background 0.2s;
 }
-.adm-btn-create:hover { background-color: #047857; }
 
-/* ── Thống kê tóm tắt ── */
+.adm-btn-create:hover { 
+  background-color: #047857; 
+}
+
+/* ── Thống kê ── */
 .adm-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -109,7 +150,9 @@
 }
 
 @media (max-width: 768px) {
-  .adm-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .adm-stats-grid { 
+    grid-template-columns: repeat(2, 1fr); 
+  }
 }
 
 .adm-stat-card {
@@ -138,7 +181,6 @@
 .stat-busy .stat-value { color: #dc2626; }
 .stat-pending .stat-value { color: #d97706; }
 
-/* ── Wrapper chung của Khung Nội Dung ── */
 .adm-card-wrapper {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -147,7 +189,7 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
-/* ── Sơ đồ bàn (Floor Map) ── */
+/* ── Sơ đồ bàn ── */
 .map-toolbar {
   display: flex;
   justify-content: space-between;
@@ -210,6 +252,7 @@
   border-color: #bbf7d0;
   cursor: pointer;
 }
+
 .table-state--free:hover {
   border-color: #10b981;
   transform: translateY(-4px);
@@ -304,7 +347,9 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.btn-quick-checkin:hover { background-color: #047857; }
+.btn-quick-checkin:hover { 
+  background-color: #047857; 
+}
 
 .click-to-book-hint {
   font-size: 0.75rem;
@@ -313,7 +358,7 @@
   margin-top: 6px;
 }
 
-/* ── Bảng danh sách (List View) ── */
+/* ── Bảng danh sách ── */
 .list-toolbar {
   display: flex;
   justify-content: space-between;
@@ -350,7 +395,9 @@
   position: relative;
   width: 280px;
 }
-@media (max-width: 640px) { .search-field-box { width: 100%; } }
+@media (max-width: 640px) { 
+  .search-field-box { width: 100%; } 
+}
 
 .search-icon-inside {
   position: absolute;
@@ -368,7 +415,9 @@
   outline: none;
   box-sizing: border-box;
 }
-.search-input-field:focus { border-color: #059669; }
+.search-input-field:focus { 
+  border-color: #059669; 
+}
 
 .table-responsive {
   overflow-x: auto;
@@ -396,7 +445,9 @@
   border-bottom: 1px solid #f3f4f6;
 }
 
-.adm-data-table tr:hover { background-color: #f9fafb; }
+.adm-data-table tr:hover { 
+  background-color: #f9fafb; 
+}
 
 .code-font {
   font-family: monospace;
@@ -461,7 +512,7 @@
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 
-/* ── Modal Styles ── */
+/* ── Modal ── */
 .adm-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -526,7 +577,6 @@
 }
 
 .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
 .modal-checkbox-row {
   display: flex;
@@ -570,4 +620,92 @@
   font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* ── Toast Notification góc trên bên phải ── */
+.adm-toast-card {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  background-color: #111827;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 380px;
+  border-left: 5px solid #10b981;
+  animation: slideInToast 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.adm-toast-icon-wrap {
+  background-color: #059669;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.adm-toast-body {
+  flex: 1;
+}
+
+.adm-toast-badge {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #10b981;
+  letter-spacing: 0.5px;
+}
+
+.adm-toast-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-top: 3px;
+  color: #ffffff;
+}
+
+.adm-toast-time {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.adm-toast-note {
+  font-size: 0.78rem;
+  color: #fbbf24;
+  margin-top: 5px;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.adm-toast-close-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.adm-toast-close-btn:hover {
+  color: #ffffff;
+}
+
+@keyframes slideInToast {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
