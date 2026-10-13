@@ -8,8 +8,13 @@ export interface StaffUser {
   phone: string;
   role: RoleType;
   status: UserStatus;
+<<<<<<< HEAD
   avatar: string;
   created_at: string;
+=======
+  avatar?: string;
+  created_at?: string;
+>>>>>>> main
 }
 
 export interface UserRequest {

@@ -14,23 +14,24 @@ const ROLE_MAP: Record<string, { label: string; bg: string; color: string; isMas
 };
 
 export const StaffManagement: React.FC = () => {
-  const { staffList, addStaff, toggleStaffStatus } = useAdminStore();
+  const { staff_list, addStaff, toggleStaffStatus } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: '',
+    full_name: '',
     email: '',
     phone: '',
     role: 'store_manager' as RoleType,
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
   });
 
-  const filteredStaff = staffList.filter((usr) => {
+  const filteredStaff = staff_list.filter((usr) => {
+    const name = usr.full_name;
     const matchesSearch =
-      usr.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       usr.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       usr.phone.includes(searchQuery);
     const matchesRole = roleFilter === 'ALL' || usr.role === roleFilter;
@@ -40,10 +41,10 @@ export const StaffManagement: React.FC = () => {
 
   const handleSubmitNewStaff = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.email) return;
+    if (!formData.full_name || !formData.email) return;
 
     addStaff({
-      fullName: formData.fullName,
+      full_name: formData.full_name,
       email: formData.email,
       phone: formData.phone,
       role: formData.role,
@@ -53,7 +54,7 @@ export const StaffManagement: React.FC = () => {
 
     setIsModalOpen(false);
     setFormData({
-      fullName: '',
+      full_name: '',
       email: '',
       phone: '',
       role: 'store_manager',
@@ -67,7 +68,7 @@ export const StaffManagement: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)' }}>
-            Quản Lý Nhân Sự & Phân Quyền Vị Trí ({staffList.length})
+            Quản Lý Nhân Sự & Phân Quyền Vị Trí ({staff_list.length})
           </h2>
           <p style={{ fontSize: '0.925rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             Phân quyền gán trực tiếp theo từng tài khoản vị trí công việc. Tài khoản đăng nhập chỉ được truy cập các tính năng thuộc quyền hạn của mình.
@@ -125,19 +126,20 @@ export const StaffManagement: React.FC = () => {
           </thead>
           <tbody>
             {filteredStaff.map((usr) => {
-              const roleInfo = ROLE_MAP[usr.role] || { label: usr.role, bg: '#eee', color: '#333' };
+              const roleInfo = ROLE_MAP[usr.role] || { label: usr.role, bg: '#eee', color: '#333', isMaster: false };
+              const displayName = usr.full_name || 'Nhân viên';
               return (
                 <tr key={usr.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.15s' }}>
                   <td style={{ padding: '18px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                       <img
                         src={usr.avatar}
-                        alt={usr.fullName}
+                        alt={displayName}
                         style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' }}
                       />
                       <div>
                         <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>
-                          {usr.fullName}
+                          {displayName}
                         </strong>
                         <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                           ID: {usr.id}
@@ -202,8 +204,8 @@ export const StaffManagement: React.FC = () => {
               className="form-input"
               placeholder="VD: Nguyễn Văn Anh"
               required
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
             />
           </div>
 

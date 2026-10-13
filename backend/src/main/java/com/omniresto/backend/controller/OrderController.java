@@ -7,7 +7,9 @@ import com.omniresto.backend.model.order.response.OrderResponse;
 import com.omniresto.backend.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,11 +21,28 @@ public class OrderController {
 
     private final OrderService orderService;
 
+    @Value("${omniresto.security.staff-key:STAFF_SECRET_KEY}")
+    private String configuredStaffKey;
+
+    private void checkStaffAccess(String staffKey) {
+        if (staffKey == null || staffKey.isBlank() || !staffKey.trim().equals(configuredStaffKey.trim())) {
+            throw new AccessDeniedException("Truy cập bị từ chối: Thao tác này chỉ dành cho nhân viên có thẩm quyền!");
+        }
+    }
+
     @GetMapping
     public List<OrderResponse> getAllOrders(
             @RequestParam(required = false) OrderStatus status,
-            @RequestParam(required = false) String branchId
+            @RequestHeader(value = "X-Table-Session", required = false) String sessionToken,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
+        // Nếu là khách tại bàn: chỉ cho phép xem đơn của bàn mình
+        if (sessionToken != null && !sessionToken.isBlank()) {
+            return orderService.getOrdersBySession(sessionToken);
+        }
+
+        // Nếu muốn xem toàn bộ đơn nhà hàng: bắt buộc phải có khóa nhân viên
+        checkStaffAccess(staffKey);
         return orderService.getAllOrders(status);
     }
 
@@ -36,16 +55,19 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(
             @Valid @RequestBody OrderRequest request,
-            @RequestHeader(value = "X-Table-Session", required = false) String sessionToken
+            @RequestHeader(value = "X-Table-Session", required = false) String sessionToken,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
     ) {
-        return orderService.createOrder(request, sessionToken);
+        return orderService.createOrder(request, sessionToken, idempotencyKey);
     }
 
     @PatchMapping("/{id}/status")
     public OrderResponse updateOrderStatus(
             @PathVariable String id,
-            @RequestParam OrderStatus status
+            @RequestParam OrderStatus status,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
+        checkStaffAccess(staffKey);
         return orderService.updateOrderStatus(id, status);
     }
 
@@ -53,8 +75,10 @@ public class OrderController {
     public OrderResponse updateOrderItemStatus(
             @PathVariable String orderId,
             @PathVariable String itemId,
-            @RequestParam OrderItemStatus status
+            @RequestParam OrderItemStatus status,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
+        checkStaffAccess(staffKey);
         return orderService.updateOrderItemStatus(itemId, status);
     }
 
@@ -63,8 +87,10 @@ public class OrderController {
             @PathVariable String orderId,
             @PathVariable String itemId,
             @RequestParam(required = false, defaultValue = "Khách yêu cầu hủy món") String reason,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey,
             @RequestHeader(value = "X-Staff-Id", required = false) String staffId
     ) {
+        checkStaffAccess(staffKey);
         return orderService.cancelOrderItem(orderId, itemId, reason, staffId);
     }
 }

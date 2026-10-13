@@ -9,5 +9,10 @@ public class TableSessionCheckInRequest {
     @NotBlank(message = "Mã bí mật của QR bàn không được để trống")
     private String qrSecretToken;
 
+<<<<<<< HEAD
+=======
+    private String deviceToken;
+
+>>>>>>> main
     private TableSessionMode mode = TableSessionMode.pay_after;
 }

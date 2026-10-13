@@ -280,18 +280,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               </strong>
             </div>
 
-            {/* Checkout CTA — Fitts's Law: full-width, 52px tall */}
+            {/* Checkout CTA */}
             <button
               id="cart-checkout-btn"
               className="c-btn c-btn-primary c-btn-lg c-btn-block"
               onClick={handleCheckout}
             >
-              Đặt hàng ngay
+              Xem giỏ hàng & Đặt món
               <ArrowRight size={18} strokeWidth={2.2} />
             </button>
-            <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--c-text-muted)', marginTop: 10 }}>
-              Chưa bao gồm phí giao hàng
-            </p>
           </div>
         )}
       </aside>

@@ -7,6 +7,8 @@ import com.omniresto.backend.model.session.TableSessionResponse;
 import com.omniresto.backend.service.TableSessionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -19,11 +21,20 @@ public class TableSessionController {
 
     private final TableSessionService tableSessionService;
 
+    @Value("${omniresto.security.staff-key:STAFF_SECRET_KEY}")
+    private String configuredStaffKey;
+
+    private void checkStaffAccess(String staffKey) {
+        if (staffKey == null || staffKey.isBlank() || !staffKey.trim().equals(configuredStaffKey.trim())) {
+            throw new AccessDeniedException("Truy cập bị từ chối: Thao tác này chỉ dành cho nhân viên có thẩm quyền!");
+        }
+    }
+
     @PostMapping("/check-in")
     public TableSessionResponse checkIn(
             @Valid @RequestBody TableSessionCheckInRequest request
     ) {
-        return tableSessionService.checkInOrJoin(request.getQrSecretToken(), request.getMode());
+        return tableSessionService.checkInOrJoin(request.getQrSecretToken(), request.getDeviceToken(), request.getMode());
     }
 
     @GetMapping("/current")
@@ -53,8 +64,10 @@ public class TableSessionController {
     @PostMapping("/verify")
     public TableSessionResponse verifySession(
             @RequestParam String sessionToken,
-            @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId
+            @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
+        checkStaffAccess(staffKey);
         return tableSessionService.verifySession(sessionToken, staffId);
     }
 
@@ -63,16 +76,21 @@ public class TableSessionController {
             @RequestParam String sessionToken,
             @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId,
             @RequestParam(required = false) PaymentMethod method,
-            @RequestParam(required = false) BigDecimal amountReceived
+            @RequestParam(required = false) BigDecimal amountReceived,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
+        // Bảo vệ nghiêm ngặt: Tuyệt đối không cho phép khách hàng tự xác nhận thanh toán
+        checkStaffAccess(staffKey);
         return tableSessionService.confirmPayment(sessionToken, staffId, method, amountReceived);
     }
 
     @PostMapping("/close")
     public Map<String, String> closeSession(
             @RequestParam String tableId,
-            @RequestParam(defaultValue = "MANUAL_CLOSE") String reason
+            @RequestParam(defaultValue = "MANUAL_CLOSE") String reason,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
+        checkStaffAccess(staffKey);
         tableSessionService.closeSessionsForTable(tableId, reason);
         return Map.of("message", "Đã đóng toàn bộ phiên cho bàn " + tableId);
     }

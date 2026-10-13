@@ -80,7 +80,6 @@ public class SecurityConfig {
             .requestMatchers(orderApiPatterns()).permitAll()
             .requestMatchers(userApiPatterns()).permitAll()
             .requestMatchers(tableApiPatterns()).permitAll()
-            .requestMatchers(reservationApiPatterns()).permitAll()
             .requestMatchers(eventApiPatterns()).permitAll()
             .requestMatchers(newsletterApiPatterns()).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/ws/**")).permitAll()
@@ -124,19 +123,13 @@ public class SecurityConfig {
     private static RequestMatcher[] tableApiPatterns() {
         return new RequestMatcher[]{
             new AntPathRequestMatcher("/api/tables"),
-            new AntPathRequestMatcher("/api/tables/**")
+            new AntPathRequestMatcher("/api/tables/**"),
+            new AntPathRequestMatcher("/api/table-sessions"),
+            new AntPathRequestMatcher("/api/table-sessions/**")
         };
     }
     // endregion
 
-    // region reservation
-    private static RequestMatcher[] reservationApiPatterns() {
-        return new RequestMatcher[]{
-            new AntPathRequestMatcher("/api/reservations"),
-            new AntPathRequestMatcher("/api/reservations/**")
-        };
-    }
-    // endregion
 
     // region event
     private static RequestMatcher[] eventApiPatterns() {

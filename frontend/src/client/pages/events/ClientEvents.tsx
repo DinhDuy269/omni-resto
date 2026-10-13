@@ -8,17 +8,17 @@ interface Event {
   id: string;
   title: string;
   description: string;
-  shortDescription: string;
-  eventDate: string;
-  startTime?: string;
-  endTime?: string;
+  short_description: string;
+  event_date: string;
+  start_time?: string;
+  end_time?: string;
   location?: string;
-  imageUrl?: string;
+  image_url?: string;
   price: number;
-  maxCapacity?: number;
-  registeredCount?: number;
+  max_capacity?: number;
+  registered_count?: number;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  isFeatured: boolean;
+  is_featured: boolean;
   tags?: string;
 }
 
@@ -29,78 +29,10 @@ const STATUS_MAP = {
   cancelled:{ label: 'Đã hủy',       color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
 };
 
-// Mock events for offline mode
-const MOCK_EVENTS: Event[] = [
-  {
-    id: 'evt-001',
-    title: 'Tiệc Ẩm Thực Cuối Tuần — Đặc Sản Hà Nội Xưa',
-    shortDescription: 'Trải nghiệm bữa tiệc với 12 món ăn truyền thống Hà Nội được chắt lọc từ thập niên 60-70.',
-    description: "Chúng tôi trân trọng kính mời Quý Khách tham dự Tiệc Ẩm Thực Cuối Tuần với chủ đề 'Đặc Sản Hà Nội Xưa'. Sự kiện quy tụ 12 món ăn tinh hoa được phục dựng từ công thức gia truyền, phục vụ trong không gian hoài cổ đặc trưng.",
-    eventDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
-    startTime: '18:30',
-    endTime: '21:30',
-    location: 'OmniResto - Hoàn Kiếm, 42 Tràng Tiền',
-    imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&auto=format&fit=crop',
-    price: 450000,
-    maxCapacity: 60,
-    registeredCount: 34,
-    isFeatured: true,
-    tags: 'ẩm thực,hà nội,cuối tuần',
-    status: 'upcoming',
-  },
-  {
-    id: 'evt-002',
-    title: 'Đêm Nhạc Jazz & Fine Dining',
-    shortDescription: 'Tận hưởng âm nhạc Jazz sống cùng thực đơn 5 món tinh tế tại không gian sang trọng.',
-    description: 'Một tối thứ Sáu đặc biệt với ban nhạc Jazz trực tiếp từ Hà Nội và thực đơn 5 món do Head Chef OmniResto thiết kế riêng cho sự kiện.',
-    eventDate: new Date(Date.now() + 12 * 86400000).toISOString().split('T')[0],
-    startTime: '19:00',
-    endTime: '22:30',
-    location: 'OmniResto - Quận 1, 88 Nguyễn Huệ',
-    imageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&auto=format&fit=crop',
-    price: 850000,
-    maxCapacity: 40,
-    registeredCount: 28,
-    isFeatured: true,
-    tags: 'nhạc jazz,fine dining,thứ sáu',
-    status: 'upcoming',
-  },
-  {
-    id: 'evt-003',
-    title: 'Workshop Học Nấu Phở Truyền Thống',
-    shortDescription: 'Học bí quyết nấu phở từ đầu bếp OmniResto — từ hầm xương đến hoàn thiện tô phở chuẩn.',
-    description: 'Buổi workshop thực hành 3 tiếng với quy mô nhỏ (tối đa 20 người) giúp bạn nắm vững kỹ thuật nấu nước dùng phở truyền thống Hà Nội.',
-    eventDate: new Date(Date.now() + 18 * 86400000).toISOString().split('T')[0],
-    startTime: '09:00',
-    endTime: '12:00',
-    location: 'OmniResto - Hoàn Kiếm — Bếp trình diễn tầng 2',
-    imageUrl: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=800&auto=format&fit=crop',
-    price: 350000,
-    maxCapacity: 20,
-    registeredCount: 15,
-    isFeatured: false,
-    tags: 'workshop,nấu ăn,phở',
-    status: 'upcoming',
-  },
-  {
-    id: 'evt-004',
-    title: 'Khuyến Mãi Sinh Nhật — Tháng ' + (new Date().getMonth() + 1),
-    shortDescription: 'Sinh nhật trong tháng được tặng miễn phí 1 món tráng miệng đặc biệt và bánh sinh nhật mini.',
-    description: 'Áp dụng toàn chuỗi OmniResto trong suốt tháng này. Chỉ cần xuất trình CCCD để nhận ưu đãi.',
-    eventDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    location: 'Tất cả chi nhánh OmniResto',
-    imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&auto=format&fit=crop',
-    price: 0,
-    isFeatured: false,
-    tags: 'khuyến mãi,sinh nhật,toàn chuỗi',
-    status: 'ongoing',
-  },
-];
-
 function normalizeEvent(raw: Record<string, unknown>): Event {
   const eventDate = Array.isArray(raw.eventDate)
     ? (raw.eventDate as number[]).map((n, i) => i === 0 ? String(n) : String(n).padStart(2, '0')).join('-')
-    : String(raw.eventDate ?? '');
+    : String(raw.eventDate ?? raw.event_date ?? '');
 
   const toTimeStr = (t: unknown) => {
     if (!t) return undefined;
@@ -112,17 +44,17 @@ function normalizeEvent(raw: Record<string, unknown>): Event {
     id: String(raw.id),
     title: String(raw.title),
     description: String(raw.description ?? ''),
-    shortDescription: String(raw.shortDescription ?? ''),
-    eventDate,
-    startTime: toTimeStr(raw.startTime),
-    endTime: toTimeStr(raw.endTime),
-    location: raw.location ? String(raw.location) : undefined,
-    imageUrl: raw.imageUrl ? String(raw.imageUrl) : undefined,
+    short_description: String(raw.shortDescription ?? raw.short_description ?? ''),
+    event_date: eventDate,
+    start_time: toTimeStr(raw.startTime ?? raw.start_time),
+    end_time: toTimeStr(raw.endTime ?? raw.end_time),
+    location: (raw.location) ? String(raw.location) : undefined,
+    image_url: (raw.imageUrl ?? raw.image_url) ? String(raw.imageUrl ?? raw.image_url) : undefined,
     price: Number(raw.price ?? 0),
-    maxCapacity: raw.maxCapacity ? Number(raw.maxCapacity) : undefined,
-    registeredCount: raw.registeredCount ? Number(raw.registeredCount) : undefined,
-    status: raw.status as Event['status'],
-    isFeatured: Boolean(raw.isFeatured),
+    max_capacity: (raw.maxCapacity ?? raw.max_capacity) ? Number(raw.maxCapacity ?? raw.max_capacity) : undefined,
+    registered_count: (raw.registeredCount ?? raw.registered_count) ? Number(raw.registeredCount ?? raw.registered_count) : undefined,
+    status: (raw.status as Event['status']) || 'upcoming',
+    is_featured: Boolean(raw.isFeatured ?? raw.is_featured),
     tags: raw.tags ? String(raw.tags) : undefined,
   };
 }
@@ -142,7 +74,7 @@ const ClientEvents: React.FC = () => {
         const { data } = await apiClient.get<unknown[]>('/events');
         setEvents((data as Record<string, unknown>[]).map(normalizeEvent));
       } catch {
-        setEvents(MOCK_EVENTS);
+        setEvents([]);
       } finally {
         setLoading(false);
       }
@@ -166,8 +98,8 @@ const ClientEvents: React.FC = () => {
   // ─── Event Detail Modal ─────────────────────────────────────────────────────
   if (selectedEvent) {
     const sc = STATUS_MAP[selectedEvent.status] ?? STATUS_MAP.upcoming;
-    const availability = selectedEvent.maxCapacity && selectedEvent.registeredCount !== undefined
-      ? Math.max(0, selectedEvent.maxCapacity - selectedEvent.registeredCount)
+    const availability = selectedEvent.max_capacity && selectedEvent.registered_count !== undefined
+      ? Math.max(0, selectedEvent.max_capacity - selectedEvent.registered_count)
       : null;
 
     return (
@@ -184,10 +116,10 @@ const ClientEvents: React.FC = () => {
 
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 64px' }}>
           {/* Cover image */}
-          {selectedEvent.imageUrl && (
+          {selectedEvent.image_url && (
             <div style={{ borderRadius: 'var(--c-r-xl)', overflow: 'hidden', marginBottom: 28, height: 320, position: 'relative' }}>
               <img
-                src={selectedEvent.imageUrl}
+                src={selectedEvent.image_url}
                 alt={selectedEvent.title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -209,7 +141,7 @@ const ClientEvents: React.FC = () => {
               <h1 style={{ fontSize: 'clamp(1.375rem, 3vw, 1.75rem)', fontWeight: 900, color: 'var(--c-text-main)', margin: '0 0 12px', lineHeight: 1.3 }}>
                 {selectedEvent.title}
               </h1>
-              {selectedEvent.isFeatured && (
+              {selectedEvent.is_featured && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 12px', borderRadius: 'var(--c-r-full)', background: 'rgba(251,191,36,0.15)', color: '#d97706', fontSize: '0.8125rem', fontWeight: 700 }}>
                   <Flame size={13} /> Sự kiện nổi bật
                 </span>
@@ -219,10 +151,10 @@ const ClientEvents: React.FC = () => {
             {/* Info grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
               {[
-                { icon: <Calendar size={16} color="var(--c-primary)" />, label: 'Ngày', value: formatDate(selectedEvent.eventDate) },
-                selectedEvent.startTime ? { icon: <Clock size={16} color="var(--c-primary)" />, label: 'Giờ', value: `${selectedEvent.startTime}${selectedEvent.endTime ? ' – ' + selectedEvent.endTime : ''}` } : null,
+                { icon: <Calendar size={16} color="var(--c-primary)" />, label: 'Ngày', value: formatDate(selectedEvent.event_date) },
+                selectedEvent.start_time ? { icon: <Clock size={16} color="var(--c-primary)" />, label: 'Giờ', value: `${selectedEvent.start_time}${selectedEvent.end_time ? ' – ' + selectedEvent.end_time : ''}` } : null,
                 selectedEvent.location ? { icon: <MapPin size={16} color="var(--c-primary)" />, label: 'Địa điểm', value: selectedEvent.location } : null,
-                availability !== null ? { icon: <Users size={16} color="var(--c-primary)" />, label: 'Còn chỗ', value: `${availability}/${selectedEvent.maxCapacity} chỗ` } : null,
+                availability !== null ? { icon: <Users size={16} color="var(--c-primary)" />, label: 'Còn chỗ', value: `${availability}/${selectedEvent.max_capacity} chỗ` } : null,
               ].filter(Boolean).map((item, i) => item && (
                 <div key={i} style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: 'var(--c-r-lg)', padding: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -238,7 +170,7 @@ const ClientEvents: React.FC = () => {
             <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: 'var(--c-r-lg)', padding: '24px' }}>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--c-text-main)', margin: '0 0 12px' }}>Mô tả sự kiện</h2>
               <p style={{ color: 'var(--c-text-muted)', lineHeight: 1.75, fontSize: '0.9375rem', margin: 0 }}>
-                {selectedEvent.description || selectedEvent.shortDescription}
+                {selectedEvent.description || selectedEvent.short_description}
               </p>
             </div>
 
@@ -273,10 +205,10 @@ const ClientEvents: React.FC = () => {
               </div>
               <button
                 className="c-btn c-btn-primary c-btn-lg"
-                onClick={() => navigate('/client/reservation')}
+                onClick={() => navigate('/client/menu')}
                 style={{ display: 'flex', alignItems: 'center', gap: 8 }}
               >
-                Đặt bàn tham dự
+                Khám phá thực đơn
                 <ChevronRight size={18} />
               </button>
             </div>
@@ -356,8 +288,8 @@ const ClientEvents: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
             {filtered.map((event) => {
               const sc = STATUS_MAP[event.status] ?? STATUS_MAP.upcoming;
-              const availability = event.maxCapacity && event.registeredCount !== undefined
-                ? Math.max(0, event.maxCapacity - event.registeredCount)
+              const availability = event.max_capacity && event.registered_count !== undefined
+                ? Math.max(0, event.max_capacity - event.registered_count)
                 : null;
 
               return (
@@ -382,7 +314,7 @@ const ClientEvents: React.FC = () => {
                   {/* Image */}
                   <div style={{ height: 200, position: 'relative', overflow: 'hidden' }}>
                     <img
-                      src={event.imageUrl ?? 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&auto=format&fit=crop'}
+                      src={event.image_url ?? 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&auto=format&fit=crop'}
                       alt={event.title}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s' }}
                     />
@@ -393,7 +325,7 @@ const ClientEvents: React.FC = () => {
                       }}>
                         {sc.label}
                       </span>
-                      {event.isFeatured && (
+                      {event.is_featured && (
                         <span style={{
                           padding: '4px 10px', borderRadius: 'var(--c-r-full)',
                           fontSize: '0.75rem', fontWeight: 700, color: '#d97706', background: 'rgba(255,255,255,0.9)',
@@ -411,15 +343,15 @@ const ClientEvents: React.FC = () => {
                       {event.title}
                     </h3>
                     <p style={{ fontSize: '0.875rem', color: 'var(--c-text-muted)', margin: '0 0 16px', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {event.shortDescription}
+                      {event.short_description}
                     </p>
 
                     {/* Meta */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--c-text-muted)' }}>
                         <Calendar size={13} color="var(--c-primary)" />
-                        {new Date(event.eventDate + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' })}
-                        {event.startTime && <span>· {event.startTime}</span>}
+                        {new Date(event.event_date + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' })}
+                        {event.start_time && <span>· {event.start_time}</span>}
                       </div>
                       {event.location && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--c-text-muted)' }}>
@@ -437,7 +369,7 @@ const ClientEvents: React.FC = () => {
                         </div>
                         {availability !== null && (
                           <div style={{ fontSize: '0.75rem', color: availability < 5 ? '#dc2626' : 'var(--c-text-muted)', marginTop: 2 }}>
-                            {availability < 5 ? `⚠️ Còn ${availability} chỗ` : `${event.registeredCount}/${event.maxCapacity} đã đăng ký`}
+                            {availability < 5 ? `⚠️ Còn ${availability} chỗ` : `${event.registered_count}/${event.max_capacity} đã đăng ký`}
                           </div>
                         )}
                       </div>

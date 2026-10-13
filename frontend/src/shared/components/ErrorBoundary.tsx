@@ -3,6 +3,10 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 interface Props {
   children: ReactNode;
   fallback_title?: string;
+<<<<<<< HEAD
+=======
+  fallbackTitle?: string;
+>>>>>>> main
 }
 
 interface State {

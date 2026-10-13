@@ -17,7 +17,7 @@ export const MenuItemCard: React.FC<Props> = ({ item, onToggleStatus }) => {
           alt={item.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
-        {item.isBestSeller && (
+        {item.is_best_seller && (
           <div
             style={{
               position: 'absolute',
@@ -54,7 +54,7 @@ export const MenuItemCard: React.FC<Props> = ({ item, onToggleStatus }) => {
 
         <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--primary)' }}>
-            {item.basePrice.toLocaleString('vi-VN')} đ
+            {item.base_price.toLocaleString('vi-VN')} đ
           </span>
 
           <button

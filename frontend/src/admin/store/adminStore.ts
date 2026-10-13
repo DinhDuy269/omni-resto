@@ -1,5 +1,13 @@
 import { create } from 'zustand';
+<<<<<<< HEAD
 import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, VoucherInfo } from '../../shared/types/admin';
+=======
+import { menuApi } from '../pages/menu/menuApi';
+import { tableApi } from '../../shared/api/tableApi';
+import { orderApi } from '../../shared/api/orderApi';
+import { staffApi } from '../../shared/api/staffApi';
+import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, OrderStatus } from '../../shared/types/admin';
+>>>>>>> main
 
 export const DISH_CATEGORIES = [
   { id: 'cat-pho', name: 'Phở & Bún Nước' },
@@ -11,14 +19,15 @@ export const DISH_CATEGORIES = [
 
 export interface ServiceRequestItem {
   id: string;
-  tableNo: string;
-  orderId?: string;
-  requestText: string;
+  table_no: string;
+  order_id?: string;
+  request_text: string;
   timestamp: string;
   status: 'OPEN' | 'RESOLVED';
 }
 
 interface AdminState {
+<<<<<<< HEAD
   // Data Collections
   menuItems: MenuItem[];
   categoryOptions: CategoryOption[];
@@ -27,8 +36,21 @@ interface AdminState {
   tables: TableInfo[];
   vouchers: VoucherInfo[]; // <-- Thêm Vouchers
   serviceRequests: ServiceRequestItem[];
+=======
+  isLoading: boolean;
+  loadError: string | null;
+  fetchInitialData: () => Promise<void>;
+>>>>>>> main
 
-  // Bulk Setters
+  // Data collections
+  menu_items: MenuItem[];
+  category_options: CategoryOption[];
+  orders: Order[];
+  staff_list: StaffUser[];
+  tables: TableInfo[];
+  service_requests: ServiceRequestItem[];
+
+  // Bulk setters
   setMenuItems: (items: MenuItem[]) => void;
   setCategoryOptions: (options: CategoryOption[]) => void;
   setOrders: (orders: Order[]) => void;
@@ -36,20 +58,20 @@ interface AdminState {
   setTables: (tables: TableInfo[]) => void;
   setVouchers: (vouchers: VoucherInfo[]) => void; // <-- Thêm Setter cho Vouchers
 
-  // Actions - Menu
+  // Menu
   addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
   updateMenuItem: (item: MenuItem) => void;
   deleteMenuItem: (id: string) => void;
   toggleMenuItemStatus: (id: string, status: MenuItem['status']) => void;
 
-  // Actions - Category Options (Sizes & Toppings)
+  // Category options (size, topping)
   addCategoryOption: (option: Omit<CategoryOption, 'id'>) => void;
   updateCategoryOption: (option: CategoryOption) => void;
   toggleCategoryOptionStatus: (id: string, status: string) => void;
   deleteCategoryOption: (id: string) => void;
 
-  // Actions - Tables
-  updateTableStatus: (tableId: string, status: TableInfo['status']) => void;
+  // Tables
+  updateTableStatus: (tableId: string, status: TableInfo['status']) => Promise<void>;
   addTable: (table: Omit<TableInfo, 'id'>) => void;
   updateTable: (table: TableInfo) => void;
   deleteTable: (tableId: string) => void;
@@ -58,105 +80,109 @@ interface AdminState {
   setTablePaymentRequested: (tableNo: string, requested: boolean) => void;
   confirmTablePayment: (tableNo: string) => void;
 
-  // Actions - Orders
-  updateOrderStatus: (id: string, status: Order['status']) => void;
+  // Orders
+  updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
   addOrderFromClient: (order: Order) => void;
   handleWebSocketOrderEvent: (event: { eventType: string; order: Order }) => void;
 
-  // Actions - Staff
-  addStaff: (staff: Omit<StaffUser, 'id' | 'createdAt'>) => void;
+  // Staff
+  addStaff: (staff: Omit<StaffUser, 'id' | 'created_at'>) => void;
   toggleStaffStatus: (id: string, status: StaffUser['status']) => void;
 
+<<<<<<< HEAD
   // Actions - Vouchers
   toggleVoucherStatus: (id: string, status: VoucherInfo['status']) => void; // <-- Thêm Action cho Vouchers
   // Actions - Service Requests (Gọi phục vụ tại bàn)
   addServiceRequest: (req: { tableNo: string; orderId?: string; requestText: string }) => void;
+=======
+  // Service requests (gọi phục vụ tại bàn)
+  addServiceRequest: (req: { table_no: string; order_id?: string; request_text: string }) => void;
+>>>>>>> main
   resolveServiceRequest: (id: string) => void;
-  resolveServiceRequestsByTable: (tableNo: string) => void;
+  resolveServiceRequestsByTable: (table_no: string) => void;
   clearAllServiceRequests: () => void;
 }
 
-const INITIAL_MENU: MenuItem[] = [
-  // ── SÁNG (06:00 - 10:30) ──
-  {
-    id: 'm-01',
-    code: 'XOI-01',
-    name: 'Xôi Xéo Gà Xé Nấm Hương',
-    category: 'Bánh Mì & Điểm Tâm',
-    basePrice: 45000,
-    description: 'Xôi xéo dẻo thơm hạt nếp cái hoa vàng, gà xé đậm đà, hành phi giòn tan và rưới mỡ gà béo ngậy.',
-    ingredients: 'Gạo nếp cái hoa vàng, Đậu xanh đồ mịn, Thịt đùi gà xé sợi, Nấm hương Sa Pa, Hành khô phi giòn, Mỡ gà ta',
-    mealPeriods: 'MORNING',
-    status: 'AVAILABLE',
-    isBestSeller: true,
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'm-02',
-    code: 'BM-01',
-    name: 'Bánh Mì Chảo Đặc Biệt Pate Trứng',
-    category: 'Bánh Mì & Điểm Tâm',
-    basePrice: 55000,
-    description: 'Chảo gang nóng hổi gồm trứng ốp la lòng đào, pate Cột Đèn béo ngậy, xúc xích tiêu đen và sốt cà chua bí truyền.',
-    ingredients: 'Bánh mì giòn vỏ, Pate gan heo Cột Đèn, 2 trứng gà ta ốp la, Xúc xích tiêu, Xíu mại thịt băm, Sốt vang cà chua',
-    mealPeriods: 'MORNING',
-    status: 'AVAILABLE',
-    isBestSeller: true,
-    image: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'm-03',
-    code: 'BM-02',
-    name: 'Bánh Mì Heo Quay Giòn Bì Dưa Chua',
-    category: 'Bánh Mì & Điểm Tâm',
-    basePrice: 38000,
-    description: 'Bánh mì nướng giòn rụm kẹp thịt ba chỉ heo quay nổ cốm giòn tan, dưa leo và sốt ớt cay ngọt.',
-    ingredients: 'Bánh mì nóng giòn, Heo quay nổ cốm da giòn, Dưa leo, Ngò rí, Đồ chua, Nước sốt heo quay thảo quả',
-    mealPeriods: 'MORNING',
-    status: 'AVAILABLE',
-    isBestSeller: false,
-    image: 'https://images.unsplash.com/photo-1525059696034-4967a8e1dca2?w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'm-04',
-    code: 'XOI-02',
-    name: 'Xôi Khúc Hoàng Mai Chả Lụa Nóng',
-    category: 'Bánh Mì & Điểm Tâm',
-    basePrice: 35000,
-    description: 'Hạt xôi mềm dẻo bọc nhân rau khúc tươi thơm nức, đậu xanh tiêu sọ, thịt ba chỉ và kèm 2 lát chả lụa.',
-    ingredients: 'Nếp nương dẻo, Lá khúc tươi, Đậu xanh đồ nhuyễn, Thịt ba chỉ rim tiêu sọ, Chả lụa Ước Lễ',
-    mealPeriods: 'MORNING',
-    status: 'AVAILABLE',
-    isBestSeller: false,
-    image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'm-05',
-    code: 'BC-01',
-    name: 'Bánh Cuốn Nóng Thanh Trì Chả Quế',
-    category: 'Bánh Mì & Điểm Tâm',
-    basePrice: 40000,
-    description: 'Bánh tráng tay mỏng mướt trắng ngần rắc mộc nhĩ thịt băm, chấm nước mắm ấm nóng và chả quế giòn sần sật.',
-    ingredients: 'Bột gạo tẻ tráng mỏng, Mộc nhĩ thịt nạc vai băm, Hành phi thơm lừng, Chả quế nướng vàng, Nước mắm chua ngọt',
-    mealPeriods: 'MORNING',
-    status: 'AVAILABLE',
-    isBestSeller: false,
-    image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'm-06',
-    code: 'CHE-01',
-    name: 'Chè Hạt Sen Bọc Nhãn Lồng Bột Sắn',
-    category: 'Đồ Uống & Tráng Miệng',
-    basePrice: 35000,
-    description: 'Món tráng miệng thanh tao giải nhiệt, hạt sen bùi ngậy lồng trong cùi nhãn ngọt giòn, nước đường phèn hoa bưởi.',
-    ingredients: 'Hạt sen Huế tươi ninh mềm, Cùi nhãn lồng Hưng Yên, Bột sắn dây hoa bưởi, Đường phèn Quảng Ngãi',
-    mealPeriods: 'MORNING',
-    status: 'OUT_OF_STOCK',
-    isBestSeller: false,
-    image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&auto=format&fit=crop',
+/**
+ * Các action bên dưới được đánh dấu TODO chưa nối backend.
+ * Cố ý để chúng báo lỗi rõ ràng thay vì sửa dữ liệu cục bộ rồi giả vờ thành công,
+ * vì dữ liệu chỉ nằm trên giao diện sẽ lệch với database.
+ * Khi nối xong từng cái, thay `notWired(...)` bằng lời gọi API tương ứng.
+ */
+const notWired = (name: string): never => {
+  throw new Error(`${name}: chưa được nối với API backend`);
+};
+
+function upsertById<T extends { id: string }>(list: T[], item: T): T[] {
+  const exists = list.some((x) => x.id === item.id);
+  return exists ? list.map((x) => (x.id === item.id ? item : x)) : [item, ...list];
+}
+
+export const useAdminStore = create<AdminState>((set, get) => ({
+  // ---------- State ----------
+  menu_items: [],
+  category_options: [],
+  orders: [],
+  staff_list: [],
+  tables: [],
+  service_requests: [],
+  isLoading: false,
+  loadError: null,
+
+  // ---------- Tải dữ liệu từ backend ----------
+  fetchInitialData: async () => {
+    set({ isLoading: true, loadError: null });
+
+    const [menu, tables, orders, staff] = await Promise.allSettled([
+      menuApi.getMenuItems(),
+      tableApi.getAll(),
+      orderApi.getAll(),
+      staffApi.getAll(),
+    ]);
+
+    const failed: string[] = [];
+    const patch: Partial<AdminState> = {};
+
+    if (menu.status === 'fulfilled') {
+      patch.menu_items = menu.value;
+      const allOpts: CategoryOption[] = [];
+      const seen = new Set<string>();
+      menu.value.forEach((m) => {
+        (m.options || []).forEach((opt) => {
+          if (!seen.has(opt.id)) {
+            seen.add(opt.id);
+            allOpts.push(opt);
+          }
+        });
+      });
+      if (allOpts.length > 0) {
+        patch.category_options = allOpts;
+      }
+    }
+    else failed.push('thực đơn');
+
+    if (tables.status === 'fulfilled') patch.tables = tables.value;
+    else failed.push('bàn');
+
+    if (orders.status === 'fulfilled') patch.orders = orders.value;
+    else failed.push('đơn hàng');
+
+    if (staff.status === 'fulfilled') patch.staff_list = staff.value;
+    else failed.push('nhân sự');
+
+    if (failed.length > 0) {
+      console.error('Không tải được từ backend:', failed.join(', '));
+    }
+
+    // Nguồn nào lỗi thì giữ nguyên dữ liệu cũ, không ghi đè bằng mảng rỗng
+    set({
+      ...patch,
+      isLoading: false,
+      loadError: failed.length > 0 ? `Không tải được: ${failed.join(', ')}` : null,
+    });
   },
 
+<<<<<<< HEAD
   // ── TRƯA (10:30 - 14:30) ──
   {
     id: 'm-07',
@@ -726,32 +752,49 @@ export const useAdminStore = create<AdminState>((set) => ({
 
   setMenuItems: (menuItems) => set({ menuItems }),
   setCategoryOptions: (categoryOptions) => set({ categoryOptions }),
+=======
+  // ---------- Bulk setters ----------
+  setMenuItems: (items) => set({ menu_items: items }),
+  setCategoryOptions: (options) => set({ category_options: options }),
+>>>>>>> main
   setOrders: (orders) => set({ orders }),
-  setStaffList: (staffList) => set({ staffList }),
+  setStaffList: (staff) => set({ staff_list: staff }),
   setTables: (tables) => set({ tables }),
   setVouchers: (vouchers) => set({ vouchers }), // <-- Thêm Setter cho Vouchers
 
-  addMenuItem: (newItemData) =>
-    set((state) => ({
-      menuItems: [
-        ...state.menuItems,
-        {
-          ...newItemData,
-          id: `m-${Date.now()}`,
-        },
-      ],
-    })),
+  // ---------- Menu (TODO: nối menuApi) ----------
+  addMenuItem: () => notWired('addMenuItem'),
+  updateMenuItem: () => notWired('updateMenuItem'),
+  deleteMenuItem: () => notWired('deleteMenuItem'),
+  toggleMenuItemStatus: () => notWired('toggleMenuItemStatus'),
 
-  updateMenuItem: (updatedItem) =>
-    set((state) => ({
-      menuItems: state.menuItems.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
-    })),
+  // ---------- Category options (TODO: nối API) ----------
+  addCategoryOption: () => notWired('addCategoryOption'),
+  updateCategoryOption: () => notWired('updateCategoryOption'),
+  toggleCategoryOptionStatus: () => notWired('toggleCategoryOptionStatus'),
+  deleteCategoryOption: () => notWired('deleteCategoryOption'),
 
-  deleteMenuItem: (id) =>
-    set((state) => ({
-      menuItems: state.menuItems.filter((item) => item.id !== id),
-    })),
+  // ---------- Tables ----------
+  updateTableStatus: async (tableId, status) => {
+    const prev = get().tables;
+    // Cập nhật lạc quan: đổi giao diện trước, hoàn tác nếu server từ chối
+    set({ tables: prev.map((t) => (t.id === tableId ? { ...t, status } : t)) });
+    try {
+      await tableApi.updateStatus(tableId, status);
+    } catch (err) {
+      set({ tables: prev });
+      throw err; // để nơi gọi hiện thông báo cho nhân viên
+    }
+  },
+  addTable: () => notWired('addTable'),
+  updateTable: () => notWired('updateTable'),
+  deleteTable: () => notWired('deleteTable'),
+  regenerateTableQrToken: () => notWired('regenerateTableQrToken'),
+  verifyTableSession: () => notWired('verifyTableSession'),
+  setTablePaymentRequested: () => notWired('setTablePaymentRequested'),
+  confirmTablePayment: () => notWired('confirmTablePayment'),
 
+<<<<<<< HEAD
   toggleMenuItemStatus: (id, status) =>
     set((state) => ({
       menuItems: state.menuItems.map((item) => (item.id === id ? { ...item, status } : item)),
@@ -830,13 +873,50 @@ export const useAdminStore = create<AdminState>((set) => ({
         t.id === tableId ? { ...t, qrSecretToken: newToken } : t
       ),
     }));
+=======
+  // ---------- Orders ----------
+  updateOrderStatus: async (id, status) => {
+    const prev = get().orders;
+    set({ orders: prev.map((o) => (o.id === id ? { ...o, status } : o)) });
+    try {
+      await orderApi.updateStatus(id, status);
+    } catch (err) {
+      set({ orders: prev });
+      throw err;
+    }
+  },
+  addOrderFromClient: (order) => set((s) => ({ orders: upsertById(s.orders, order) })),
+  handleWebSocketOrderEvent: ({ order }) => {
+    if (!order) return;
+    const normalized: Order = {
+      id: order.id,
+      order_number: (order as any).orderNumber || order.order_number || '',
+      table_no: (order as any).tableNo || order.table_no,
+      customer_name: (order as any).customerName || order.customer_name || 'Khách vãng lai',
+      order_type: (order as any).orderType || order.order_type || 'DINE_IN',
+      status: ((order.status || 'PENDING').toUpperCase()) as OrderStatus,
+      payment_status: (order as any).paymentStatus || order.payment_status || 'UNPAID',
+      payment_method: (order as any).paymentMethod || order.payment_method || 'CASH',
+      total_amount: Number((order as any).totalAmount || order.total_amount || 0),
+      items: ((order.items || []) as any[]).map((it) => ({
+        id: it.id,
+        name: it.name,
+        quantity: it.quantity,
+        price: Number(it.price || 0),
+        notes: it.notes,
+        status: it.status?.toUpperCase() || 'PENDING',
+      })),
+      created_at: (order as any).createdAt || order.created_at,
+    };
+    set((s) => ({ orders: upsertById(s.orders, normalized) }));
+>>>>>>> main
   },
 
-  updateOrderStatus: (id, status) =>
-    set((state) => {
-      const targetOrder = state.orders.find((o) => o.id === id);
-      const updatedOrders = state.orders.map((o) => (o.id === id ? { ...o, status } : o));
+  // ---------- Staff (TODO: nối staffApi) ----------
+  addStaff: () => notWired('addStaff'),
+  toggleStaffStatus: () => notWired('toggleStaffStatus'),
 
+<<<<<<< HEAD
       let updatedTables = state.tables;
       if (targetOrder && targetOrder.tableNo) {
         if (status === 'COMPLETED') {
@@ -974,13 +1054,24 @@ export const useAdminStore = create<AdminState>((set) => ({
     set((state) => ({
       staffList: [
         ...state.staffList,
+=======
+  // ---------- Service requests (tạm lưu cục bộ, sau này lấy từ backend) ----------
+  addServiceRequest: ({ table_no, order_id, request_text }) =>
+    set((s) => ({
+      service_requests: [
+>>>>>>> main
         {
-          ...newStaffData,
-          id: `usr-${Date.now()}`,
-          createdAt: new Date().toISOString().split('T')[0],
+          id: `sr-${Date.now()}-${s.service_requests.length}`,
+          table_no,
+          order_id,
+          request_text,
+          timestamp: new Date().toISOString(),
+          status: 'OPEN',
         },
+        ...s.service_requests,
       ],
     })),
+<<<<<<< HEAD
 
   toggleStaffStatus: (id, status) =>
     set((state) => ({
@@ -1006,40 +1097,48 @@ export const useAdminStore = create<AdminState>((set) => ({
       return { serviceRequests: [newReq, ...state.serviceRequests] };
     }),
 
+=======
+>>>>>>> main
   resolveServiceRequest: (id) =>
-    set((state) => ({
-      serviceRequests: state.serviceRequests.map((sr) =>
-        sr.id === id ? { ...sr, status: 'RESOLVED' } : sr
-      ),
+    set((s) => ({
+      service_requests: s.service_requests.map((r) => (r.id === id ? { ...r, status: 'RESOLVED' } : r)),
     })),
-
-  resolveServiceRequestsByTable: (tableNo) =>
-    set((state) => ({
-      serviceRequests: state.serviceRequests.map((sr) =>
-        sr.tableNo.toLowerCase() === tableNo.toLowerCase() ? { ...sr, status: 'RESOLVED' } : sr
-      ),
+  resolveServiceRequestsByTable: (table_no) =>
+    set((s) => ({
+      service_requests: s.service_requests.map((r) => (r.table_no === table_no ? { ...r, status: 'RESOLVED' } : r)),
     })),
-
-  clearAllServiceRequests: () =>
-    set((state) => ({
-      serviceRequests: state.serviceRequests.map((sr) => ({ ...sr, status: 'RESOLVED' })),
-    })),
+<<<<<<< HEAD
 }))
+=======
+  clearAllServiceRequests: () => set({ service_requests: [] }),
+}));
+>>>>>>> main
 
-// Listen to Client events across the window/tab
-if (typeof window !== 'undefined') {
-  window.addEventListener('omniresto:service_request', ((e: CustomEvent<{ tableNo: string; orderId?: string; requestText: string }>) => {
-    if (e.detail?.tableNo && e.detail?.requestText) {
-      useAdminStore.getState().addServiceRequest(e.detail);
+/**
+ * Cầu nối sự kiện trong CÙNG MỘT trình duyệt (chỉ dùng khi phát triển, thử nhiều tab).
+ * Khi khách và nhân viên dùng thiết bị khác nhau, dữ liệu phải đến từ backend (WebSocket).
+ * Gọi hàm này trong useEffect của layout admin, hàm trả về cách gỡ listener,
+ * nhờ đó không bị đăng ký lặp lại mỗi lần Vite tải lại nóng:
+ *
+ *   useEffect(() => registerLocalEventBridge(), []);
+ *
+ * Hai sự kiện payment_requested và payment_request_cancelled tạm chưa được xử lý
+ * vì setTablePaymentRequested chưa nối backend.
+ */
+export function registerLocalEventBridge(): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+
+  const onServiceRequest = (e: Event) => {
+    const detail = (e as CustomEvent<any>).detail;
+    const table_no = detail?.table_no || detail?.tableNo;
+    const request_text = detail?.request_text || detail?.requestText;
+    const order_id = detail?.order_id || detail?.orderId;
+    if (table_no && request_text) {
+      useAdminStore.getState().addServiceRequest({ table_no, order_id, request_text });
     }
-  }) as EventListener);
+  };
 
-  window.addEventListener('omniresto:payment_requested', ((e: CustomEvent<{ tableNo: string }>) => {
-    if (e.detail?.tableNo) {
-      useAdminStore.getState().setTablePaymentRequested(e.detail.tableNo, true);
-    }
-  }) as EventListener);
-
+<<<<<<< HEAD
   window.addEventListener('omniresto:payment_request_cancelled', ((e: CustomEvent<{ tableNo: string }>) => {
     if (e.detail?.tableNo) {
       useAdminStore.getState().setTablePaymentRequested(e.detail.tableNo, false);
@@ -1047,3 +1146,8 @@ if (typeof window !== 'undefined') {
   }) as EventListener);
 }
 
+=======
+  window.addEventListener('omniresto:service_request', onServiceRequest);
+  return () => window.removeEventListener('omniresto:service_request', onServiceRequest);
+}
+>>>>>>> main

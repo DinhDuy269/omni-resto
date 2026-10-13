@@ -184,11 +184,11 @@ export const KitchenDisplaySystem: React.FC = () => {
                           letterSpacing: '0.5px',
                         }}
                       >
-                        {order.orderNumber}
+                        {order.order_number}
                       </span>
                       <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '2px' }}>
-                        {order.orderType === 'DINE_IN' ? `📍 ${order.tableNo || 'Bàn Ăn'}` : order.orderType === 'TAKEAWAY' ? '🛍️ Mang Về' : '🛵 Giao Hàng'}
-                        {order.customerName && ` • ${order.customerName}`}
+                        {order.order_type === 'DINE_IN' ? `📍 ${order.table_no || 'Bàn Ăn'}` : order.order_type === 'TAKEAWAY' ? '🛍️ Mang Về' : '🛵 Giao Hàng'}
+                        {order.customer_name && ` • ${order.customer_name}`}
                       </div>
                     </div>
 
@@ -211,7 +211,7 @@ export const KitchenDisplaySystem: React.FC = () => {
                   </div>
 
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
-                    <Clock size={14} /> {order.createdAt || 'Mới nhận'}
+                    <Clock size={14} /> {order.created_at || 'Mới nhận'}
                   </div>
 
                   {/* Divider */}

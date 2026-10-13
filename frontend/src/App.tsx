@@ -4,7 +4,7 @@ import { BackendConnectionGate } from './shared/components/BackendConnectionGate
 
 function App() {
   return (
-    <ErrorBoundary fallback_title="Không thể khởi tạo ứng dụng">
+    <ErrorBoundary fallbackTitle="Không thể khởi tạo ứng dụng">
       <BackendConnectionGate>
         <AppRouter />
       </BackendConnectionGate>

@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
 import { Modal } from '../../shared/components/Modal';
+import { useAdminStore } from '../store/adminStore';
+import { useWebSocket } from '../../shared/hooks/useWebSocket';
 import './AdminLayout.css';
 
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const [isQuickActionModalOpen, setIsQuickActionModalOpen] = useState(false);
+  const fetchInitialData = useAdminStore((s) => s.fetchInitialData);
+  const handleWebSocketOrderEvent = useAdminStore((s) => s.handleWebSocketOrderEvent);
+
+  // Lắng nghe cập nhật đơn hàng toàn chuỗi theo thời gian thực từ Server
+  useWebSocket(handleWebSocketOrderEvent);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   return (
     <div className="admin-layout">

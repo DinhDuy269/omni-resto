@@ -11,20 +11,14 @@ import {
   Flame,
   Ticket, // <-- Đã thêm icon Ticket
   ChefHat,
-  CalendarCheck,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
-import { useReservationStore } from '../store/reservationStore';
 import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
   const { orders } = useAdminStore();
-  const { reservations } = useReservationStore();
   const pendingOrdersCount = orders.filter(
     (o) => o.status?.toUpperCase() === 'PENDING'
-  ).length;
-  const pendingReservationsCount = reservations.filter(
-    (r) => r.status?.toUpperCase() === 'PENDING'
   ).length;
 
   const navItems = [
@@ -40,9 +34,6 @@ export const Sidebar: React.FC = () => {
         { label: 'Voucher', path: '/admin/vouchers', icon: Ticket }, // <-- Đã thêm menu Voucher
         { label: 'Màn Hình Bếp (KDS)', path: '/admin/kds', icon: ChefHat },
         { label: 'Sơ Đồ Bàn', path: '/admin/tables', icon: Grid2x2 },
-        { label: 'Quản Lý Đặt Bàn', path: '/admin/reservations', icon: CalendarCheck,
-          badge: pendingReservationsCount > 0 ? pendingReservationsCount : undefined,
-        },
       ],
     },
     {

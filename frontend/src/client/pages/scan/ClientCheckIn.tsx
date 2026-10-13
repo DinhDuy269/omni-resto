@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, ShieldCheck, Utensils, AlertTriangle, ArrowRight, ArrowLeftRight, QrCode, ShoppingCart, RotateCcw } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Utensils, AlertTriangle, ArrowRight, ArrowLeftRight, QrCode, ShoppingCart, RotateCcw, Lock } from 'lucide-react';
 import { useClientStore } from '../../store/clientStore';
 import type { TableSession } from '../../../shared/types/client';
 
@@ -333,62 +333,140 @@ export const ClientCheckIn: React.FC = () => {
             </button>
           </div>
         ) : (
-          /* TRƯỜNG HỢP: CHƯA CÓ BÀN NÀO & CHƯA CHECK-IN */
+          /* TRƯỜNG HỢP: CHƯA CÓ BÀN NÀO HOẶC BÀN ĐÃ BỊ KHÓA BỞI THIẾT BỊ KHÁC */
           <div>
-            <div style={{
-              width: 72, height: 72, borderRadius: '50%',
-              background: '#fef2f2', color: '#ef4444',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 20px',
-            }}>
-              <AlertTriangle size={40} />
-            </div>
+            {(() => {
+              const isLocked = Boolean(
+                error && (error.includes('khóa') || error.includes('thiết bị khác') || error.includes('1 thiết bị'))
+              );
 
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111', margin: '0 0 8px' }}>
-              Chưa nhận diện được mã bàn
-            </h2>
-            <p style={{ fontSize: '0.875rem', color: '#666', margin: '0 0 20px' }}>
-              {error || 'Quý khách vui lòng quét mã QR được dán trực tiếp trên mặt bàn ăn để kích hoạt phiên gọi món an toàn.'}
-            </p>
+              return (
+                <>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: isLocked ? '#fff7ed' : '#fef2f2',
+                    color: isLocked ? '#ea580c' : '#ef4444',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 20px',
+                  }}>
+                    {isLocked ? <Lock size={38} /> : <AlertTriangle size={40} />}
+                  </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (manualToken.trim()) executeCheckIn(manualToken.trim());
-              }}
-              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-            >
-              <input
-                type="text"
-                value={manualToken}
-                onChange={(e) => setManualToken(e.target.value)}
-                placeholder="Nhập mã QR bàn (hoặc thử qr-token-tbl-05-e5f6g7h8i9j0)..."
-                style={{
-                  padding: '12px 14px', borderRadius: 10, border: '1px solid #ccc',
-                  fontSize: '0.875rem', textAlign: 'center',
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  padding: '12px 20px', borderRadius: 10,
-                  background: '#111', color: '#fff', border: 'none',
-                  fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                }}
-              >
-                Kích hoạt phiên bàn
-              </button>
-            </form>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111', margin: '0 0 8px' }}>
+                    {isLocked ? 'Bàn đang được bảo vệ bởi thiết bị khác' : 'Chưa nhận diện được mã bàn'}
+                  </h2>
 
-            <button
-              onClick={() => navigate('/client/menu')}
-              style={{
-                marginTop: 16, background: 'none', border: 'none',
-                color: '#666', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline',
-              }}
-            >
-              Bỏ qua và xem thực đơn mang về/giao tận nơi
-            </button>
+                  <div style={{
+                    background: isLocked ? '#fffbeb' : '#fef2f2',
+                    border: `1px solid ${isLocked ? '#fde68a' : '#fecaca'}`,
+                    borderRadius: 12, padding: '14px 16px',
+                    fontSize: '0.85rem', color: isLocked ? '#92400e' : '#dc2626',
+                    textAlign: 'left', lineHeight: 1.5, marginBottom: 20,
+                  }}>
+                    {error || 'Quý khách vui lòng quét mã QR được dán trực tiếp trên mặt bàn ăn để kích hoạt phiên gọi món an toàn.'}
+                  </div>
+
+                  {isLocked ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <button
+                        onClick={() => navigate('/client/menu')}
+                        style={{
+                          width: '100%', padding: '13px 20px', borderRadius: 12,
+                          background: '#ea580c', color: '#fff', border: 'none',
+                          fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        }}
+                      >
+                        <Utensils size={16} />
+                        <span>Xem Thực Đơn (Chế độ xem món)</span>
+                      </button>
+
+                      <div style={{
+                        fontSize: '0.78rem', color: '#64748b', padding: '8px',
+                        background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0',
+                      }}>
+                        💡 Bạn đi cùng nhóm hoặc cần đổi điện thoại? Vui lòng báo nhân viên phục vụ để được bấm "Mở khóa bàn" trên quầy thu ngân.
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (manualToken.trim()) executeCheckIn(manualToken.trim());
+                        }}
+                        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                      >
+                        <input
+                          type="text"
+                          value={manualToken}
+                          onChange={(e) => setManualToken(e.target.value)}
+                          placeholder="Nhập mã QR bàn (hoặc thử qr-token-tbl-05-e5f6g7h8i9j0)..."
+                          style={{
+                            padding: '12px 14px', borderRadius: 10, border: '1px solid #ccc',
+                            fontSize: '0.875rem', textAlign: 'center',
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          style={{
+                            padding: '12px 20px', borderRadius: 10,
+                            background: '#ea580c', color: '#fff', border: 'none',
+                            fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                          }}
+                        >
+                          Kích hoạt phiên bàn
+                        </button>
+                      </form>
+
+                      {/* Quick Test Chips for Desktop/Testing */}
+                      <div style={{
+                        marginTop: 16, background: '#f8fafc', borderRadius: 12, padding: '12px',
+                        textAlign: 'left', border: '1px solid #e2e8f0',
+                      }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>
+                          ⚡ Test nhanh (Bấm để vào bàn ngay):
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {[
+                            { name: 'Bàn 01', token: 'qr-sec-tbl01-a1b2c3d4e5f6' },
+                            { name: 'Bàn 03', token: 'qr-sec-tbl03-c3d4e5f6g7h8' },
+                            { name: 'Bàn 04', token: 'qr-sec-tbl04-d4e5f6g7h8i9' },
+                            { name: 'Bàn 07', token: 'qr-sec-tbl07-g7h8i9j0k1l2' },
+                          ].map((demo) => (
+                            <button
+                              key={demo.token}
+                              type="button"
+                              onClick={() => {
+                                setManualToken(demo.token);
+                                executeCheckIn(demo.token);
+                              }}
+                              style={{
+                                background: '#fff', border: '1px solid #cbd5e1',
+                                borderRadius: 6, padding: '5px 10px', fontSize: '0.8rem',
+                                fontWeight: 700, color: '#ea580c', cursor: 'pointer',
+                              }}
+                            >
+                              Vào {demo.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => navigate('/client/menu')}
+                        style={{
+                          marginTop: 16, background: 'none', border: 'none',
+                          color: '#666', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline',
+                        }}
+                      >
+                        Bỏ qua và xem thực đơn mang về/giao tận nơi
+                      </button>
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

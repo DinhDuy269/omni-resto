@@ -115,9 +115,9 @@ const ClientGacha: React.FC = () => {
     const handleOrder = () => {
         if (winner) {
             addToCart({
-                menuItemId: winner.id,
+                menu_item_id: winner.id,
                 name: winner.name,
-                price: winner.basePrice,
+                price: winner.base_price,
                 image: winner.image || '',
                 category: winner.category
             }, 1);
@@ -218,7 +218,7 @@ const ClientGacha: React.FC = () => {
                         </h3>
                         
                         <p style={{ fontSize: '1.5rem', color: 'var(--c-primary)', fontWeight: '900', marginBottom: '28px' }}>
-                            {winner.basePrice.toLocaleString('vi-VN')}đ
+                            {winner.base_price.toLocaleString('vi-VN')}đ
                         </p>
                         
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>

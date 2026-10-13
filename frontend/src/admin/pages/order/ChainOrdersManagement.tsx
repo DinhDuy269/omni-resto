@@ -11,8 +11,8 @@ export const ChainOrdersManagement: React.FC = () => {
   const filteredOrders = orders.filter((ord) => {
     const matchesStatus = statusTab === 'ALL' || ord.status === statusTab;
     const matchesSearch =
-      ord.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (ord.customerName && ord.customerName.toLowerCase().includes(searchQuery.toLowerCase()));
+      ord.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (ord.customer_name && ord.customer_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return matchesStatus && matchesSearch;
   });
@@ -123,7 +123,7 @@ export const ChainOrdersManagement: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>
-                        {ord.orderNumber}
+                        {ord.order_number}
                       </strong>
                       <span
                         style={{
@@ -132,29 +132,29 @@ export const ChainOrdersManagement: React.FC = () => {
                           padding: '2px 8px',
                           borderRadius: 'var(--radius-full)',
                           backgroundColor:
-                            ord.orderType === 'DINE_IN'
+                            ord.order_type === 'DINE_IN'
                               ? 'var(--info-bg)'
-                              : ord.orderType === 'DELIVERY'
+                              : ord.order_type === 'DELIVERY'
                               ? 'var(--purple-bg)'
                               : 'var(--warning-bg)',
                           color:
-                            ord.orderType === 'DINE_IN'
+                            ord.order_type === 'DINE_IN'
                               ? 'var(--info)'
-                              : ord.orderType === 'DELIVERY'
+                              : ord.order_type === 'DELIVERY'
                               ? 'var(--purple)'
                               : 'var(--warning)',
                         }}
                       >
-                        {ord.orderType === 'DINE_IN'
-                          ? `Ăn Tại Bàn (${ord.tableNo || 'Chưa xếp'})`
-                          : ord.orderType === 'DELIVERY'
+                        {ord.order_type === 'DINE_IN'
+                          ? `Ăn Tại Bàn (${ord.table_no || 'Chưa xếp'})`
+                          : ord.order_type === 'DELIVERY'
                           ? 'Giao Hàng (Online)'
                           : 'Mang Về (Takeaway)'}
                       </span>
                     </div>
 
                     <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      Tạo lúc: <strong>{ord.createdAt}</strong> {ord.customerName ? `• Khách: ${ord.customerName}` : ''}
+                      Tạo lúc: <strong>{ord.created_at}</strong> {ord.customer_name ? `• Khách: ${ord.customer_name}` : ''}
                     </div>
                   </div>
                 </div>
@@ -163,7 +163,7 @@ export const ChainOrdersManagement: React.FC = () => {
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>TỔNG TIỀN</div>
                     <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary)' }}>
-                      {ord.totalAmount.toLocaleString('vi-VN')} đ
+                      {ord.total_amount.toLocaleString('vi-VN')} đ
                     </div>
                   </div>
                   <StatusBadge status={ord.status} />
@@ -212,7 +212,7 @@ export const ChainOrdersManagement: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                   <CreditCard size={15} />
-                  <span>Thanh toán: <strong>{ord.paymentMethod}</strong></span>
+                  <span>Thanh toán: <strong>{ord.payment_method}</strong></span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>

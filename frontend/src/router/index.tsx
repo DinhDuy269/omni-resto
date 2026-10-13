@@ -9,7 +9,6 @@ import { ChainOrdersManagement } from '../admin/pages/order/ChainOrdersManagemen
 import { StaffManagement } from '../admin/pages/auth/StaffManagement';
 import { TableManagement } from '../admin/pages/table/TableManagement';
 import { KitchenDisplaySystem } from '../admin/pages/kds/KitchenDisplaySystem';
-import { ReservationManagement } from '../admin/pages/reservation/ReservationManagement';
 
 // ── Client imports ────────────────────────────────────────────────────────────
 import { ClientLayout } from '../client/layouts/ClientLayout';
@@ -20,10 +19,10 @@ import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
 import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
 import ClientGacha from '../client/pages/gacha/ClientGacha';
 import ClientOrdersPage from '../client/pages/order/ClientOrdersPage';
-import ClientReservation from '../client/pages/reservation/ClientReservation';
 import ClientEvents from '../client/pages/events/ClientEvents';
 import ClientAbout from '../client/pages/about/ClientAbout';
 import ClientCheckIn from '../client/pages/scan/ClientCheckIn';
+import { VnPayReturn } from '../client/pages/payment/VnPayReturn';
 
 /** Normalizes uppercase or mixed-case paths (e.g. /Client -> /client) seamlessly */
 const PathCaseNormalizer: React.FC = () => {
@@ -54,7 +53,6 @@ export const AppRouter: React.FC = () => {
           <Route path="tables" element={<TableManagement />} />
           <Route path="vouchers" element={<VoucherManagement />} />
           <Route path="kds" element={<KitchenDisplaySystem />} />
-          <Route path="reservations" element={<ReservationManagement />} />
           <Route
             path="reports"
             element={
@@ -89,11 +87,11 @@ export const AppRouter: React.FC = () => {
           <Route path="gacha" element={<ClientGacha />} /> {/* <--- Thêm dòng này */}
           <Route path="orders" element={<ClientOrdersPage />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
-          <Route path="reservation" element={<ClientReservation />} />
           <Route path="events" element={<ClientEvents />} />
           <Route path="about" element={<ClientAbout />} />
           <Route path="scan" element={<ClientCheckIn />} />
           <Route path="table/:token" element={<ClientCheckIn />} />
+          <Route path="payment/vnpay-return" element={<VnPayReturn />} />
           <Route path="*" element={<Navigate to="/client" replace />} />
         </Route>
 

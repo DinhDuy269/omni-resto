@@ -20,6 +20,8 @@ public class TableSessionResponse {
     private String tableId;
     private String tableNo;
     private String sessionToken;
+    private String deviceToken;
+    private Boolean isDeviceMaster;
     private TableSessionStatus status;
     private TableSessionMode mode;
     private LocalDateTime verifiedAt;

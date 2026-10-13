@@ -37,8 +37,8 @@ const MEAL_PERIOD_OPTIONS = [
 
 export const MasterMenuManagement: React.FC = () => {
   const {
-    menuItems,
-    categoryOptions,
+    menu_items,
+    category_options,
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
@@ -73,11 +73,11 @@ export const MasterMenuManagement: React.FC = () => {
     code: '',
     name: '',
     category: 'Phở & Bún Nước' as MenuCategory,
-    basePrice: 79000,
-    mealPeriods: 'ALL_DAY',
+    base_price: 79000,
+    meal_periods: 'ALL_DAY',
     description: '',
     ingredients: '',
-    isBestSeller: false,
+    is_best_seller: false,
     image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
   });
 
@@ -86,23 +86,27 @@ export const MasterMenuManagement: React.FC = () => {
   const [editingOption, setEditingOption] = useState<CategoryOption | null>(null);
 
   const [optionFormData, setOptionFormData] = useState({
-    categoryId: 'cat-pho',
+    category_id: 'cat-pho',
     name: '',
-    optionType: 'TOPPING' as 'SIZE' | 'TOPPING',
+    option_type: 'TOPPING' as 'SIZE' | 'TOPPING',
     price: 10000,
     status: 'AVAILABLE',
   });
 
   // Helper format ca phục vụ
   const formatMealPeriodBadge = (periods?: string) => {
-    if (!periods || periods.toUpperCase().includes('ALL_DAY') || periods.toUpperCase().includes('ALLDAY')) {
+    if (!periods) {
       return { label: 'Cả ngày (06h - 22h)', color: '#0d9488', bg: 'rgba(13, 148, 136, 0.1)' };
     }
     const p = periods.toUpperCase();
+    if (p.includes('ALL_DAY') || p.includes('ALLDAY') || (p.includes('MORNING') && p.includes('NOON') && p.includes('EVENING'))) {
+      return { label: 'Cả ngày (06h - 22h)', color: '#0d9488', bg: 'rgba(13, 148, 136, 0.1)' };
+    }
     const labels: string[] = [];
     if (p.includes('MORNING')) labels.push('Sáng');
     if (p.includes('NOON')) labels.push('Trưa');
     if (p.includes('EVENING')) labels.push('Tối');
+    if (p.includes('LATE_NIGHT') || p.includes('NIGHT')) labels.push('Khuya');
     return {
       label: labels.length > 0 ? labels.join(' & ') : periods,
       color: '#ea580c',
@@ -111,7 +115,7 @@ export const MasterMenuManagement: React.FC = () => {
   };
 
   // Filtered Dishes
-  const filteredDishes = menuItems.filter((item) => {
+  const filteredDishes = menu_items.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(dishSearch.toLowerCase()) ||
       item.code.toLowerCase().includes(dishSearch.toLowerCase()) ||
@@ -128,7 +132,7 @@ export const MasterMenuManagement: React.FC = () => {
   });
 
   // Filtered Options
-  const filteredOptions = categoryOptions.filter((opt) => {
+  const filteredOptions = category_options.filter((opt) => {
     const matchesSearch = opt.name.toLowerCase().includes(optionSearch.toLowerCase());
     const matchesCat = optionCategoryFilter === 'ALL' || opt.category_id === optionCategoryFilter;
     const matchesType = optionTypeFilter === 'ALL' || opt.option_type === optionTypeFilter;
@@ -141,11 +145,11 @@ export const MasterMenuManagement: React.FC = () => {
       code: `M-${Math.floor(100 + Math.random() * 900)}`,
       name: '',
       category: 'Phở & Bún Nước',
-      basePrice: 65000,
-      mealPeriods: 'ALL_DAY',
+      base_price: 65000,
+      meal_periods: 'ALL_DAY',
       description: '',
       ingredients: '',
-      isBestSeller: false,
+      is_best_seller: false,
       image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
     });
     setIsAddDishModalOpen(true);
@@ -157,11 +161,19 @@ export const MasterMenuManagement: React.FC = () => {
       code: dish.code,
       name: dish.name,
       category: dish.category as MenuCategory,
+<<<<<<< HEAD
       basePrice: dish.base_price,
       mealPeriods: dish.meal_periods || 'ALL_DAY',
       description: dish.description || '',
       ingredients: dish.ingredients || '',
       isBestSeller: dish.is_best_seller,
+=======
+      base_price: dish.base_price,
+      meal_periods: dish.meal_periods || 'ALL_DAY',
+      description: dish.description || '',
+      ingredients: dish.ingredients || '',
+      is_best_seller: Boolean(dish.is_best_seller),
+>>>>>>> main
       image: dish.image,
     });
   };
@@ -174,12 +186,21 @@ export const MasterMenuManagement: React.FC = () => {
       code: dishFormData.code,
       name: dishFormData.name,
       category: dishFormData.category,
+<<<<<<< HEAD
       base_price: Number(dishFormData.basePrice),
       meal_periods: dishFormData.mealPeriods,
       description: dishFormData.description,
       ingredients: dishFormData.ingredients.trim() || undefined,
       status: 'AVAILABLE',
       is_best_seller: dishFormData.isBestSeller,
+=======
+      base_price: Number(dishFormData.base_price),
+      meal_periods: dishFormData.meal_periods,
+      description: dishFormData.description,
+      ingredients: dishFormData.ingredients.trim() || undefined,
+      status: 'AVAILABLE',
+      is_best_seller: dishFormData.is_best_seller,
+>>>>>>> main
       image: dishFormData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
     });
 
@@ -195,11 +216,19 @@ export const MasterMenuManagement: React.FC = () => {
       code: dishFormData.code,
       name: dishFormData.name,
       category: dishFormData.category,
+<<<<<<< HEAD
       base_price: Number(dishFormData.basePrice),
       meal_periods: dishFormData.mealPeriods,
       description: dishFormData.description,
       ingredients: dishFormData.ingredients.trim() || undefined,
       is_best_seller: dishFormData.isBestSeller,
+=======
+      base_price: Number(dishFormData.base_price),
+      meal_periods: dishFormData.meal_periods,
+      description: dishFormData.description,
+      ingredients: dishFormData.ingredients.trim() || undefined,
+      is_best_seller: dishFormData.is_best_seller,
+>>>>>>> main
       image: dishFormData.image,
     });
 
@@ -215,9 +244,9 @@ export const MasterMenuManagement: React.FC = () => {
   // Handlers for Category Options
   const handleOpenAddOption = () => {
     setOptionFormData({
-      categoryId: optionCategoryFilter !== 'ALL' ? optionCategoryFilter : 'cat-pho',
+      category_id: optionCategoryFilter !== 'ALL' ? optionCategoryFilter : 'cat-pho',
       name: '',
-      optionType: 'TOPPING',
+      option_type: 'TOPPING',
       price: 10000,
       status: 'AVAILABLE',
     });
@@ -227,9 +256,15 @@ export const MasterMenuManagement: React.FC = () => {
   const handleOpenEditOption = (option: CategoryOption) => {
     setEditingOption(option);
     setOptionFormData({
+<<<<<<< HEAD
       categoryId: option.category_id,
       name: option.name,
       optionType: option.option_type,
+=======
+      category_id: option.category_id || 'cat-pho',
+      name: option.name,
+      option_type: option.option_type || 'TOPPING',
+>>>>>>> main
       price: option.price,
       status: option.status,
     });
@@ -240,9 +275,15 @@ export const MasterMenuManagement: React.FC = () => {
     if (!optionFormData.name) return;
 
     addCategoryOption({
+<<<<<<< HEAD
       category_id: optionFormData.categoryId,
       name: optionFormData.name,
       option_type: optionFormData.optionType,
+=======
+      category_id: optionFormData.category_id,
+      name: optionFormData.name,
+      option_type: optionFormData.option_type,
+>>>>>>> main
       price: Number(optionFormData.price),
       status: optionFormData.status,
     });
@@ -256,9 +297,15 @@ export const MasterMenuManagement: React.FC = () => {
 
     updateCategoryOption({
       ...editingOption,
+<<<<<<< HEAD
       category_id: optionFormData.categoryId,
       name: optionFormData.name,
       option_type: optionFormData.optionType,
+=======
+      category_id: optionFormData.category_id,
+      name: optionFormData.name,
+      option_type: optionFormData.option_type,
+>>>>>>> main
       price: Number(optionFormData.price),
       status: optionFormData.status,
     });
@@ -303,7 +350,7 @@ export const MasterMenuManagement: React.FC = () => {
               onClick={() => setActiveTab('DISHES')}
             >
               <Utensils size={16} />
-              <span>Danh Mục Món Ăn ({menuItems.length})</span>
+              <span>Danh Mục Món Ăn ({menu_items.length})</span>
             </button>
             <button
               className={`btn btn-sm ${activeTab === 'OPTIONS' ? 'btn-primary' : 'btn-secondary'}`}
@@ -311,7 +358,7 @@ export const MasterMenuManagement: React.FC = () => {
               onClick={() => setActiveTab('OPTIONS')}
             >
               <Layers size={16} />
-              <span>Kích Cỡ & Topping ({categoryOptions.length})</span>
+              <span>Kích Cỡ & Topping ({category_options.length})</span>
             </button>
           </div>
 
@@ -370,7 +417,7 @@ export const MasterMenuManagement: React.FC = () => {
               </div>
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Tổng thực đơn</span>
-                <strong style={{ fontSize: '1.35rem', color: 'var(--text-main)', lineHeight: 1.2 }}>{menuItems.length} món</strong>
+                <strong style={{ fontSize: '1.35rem', color: 'var(--text-main)', lineHeight: 1.2 }}>{menu_items.length} món</strong>
               </div>
             </div>
 
@@ -392,7 +439,7 @@ export const MasterMenuManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Đang mở bán</span>
                 <strong style={{ fontSize: '1.35rem', color: '#16a34a', lineHeight: 1.2 }}>
-                  {menuItems.filter((m) => m.status === 'AVAILABLE' || m.status === 'available').length} món
+                  {menu_items.filter((m) => m.status === 'AVAILABLE' || m.status === 'available').length} món
                 </strong>
               </div>
             </div>
@@ -415,7 +462,7 @@ export const MasterMenuManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Tạm hết món</span>
                 <strong style={{ fontSize: '1.35rem', color: '#dc2626', lineHeight: 1.2 }}>
-                  {menuItems.filter((m) => m.status === 'OUT_OF_STOCK' || m.status === 'out_of_stock').length} món
+                  {menu_items.filter((m) => m.status === 'OUT_OF_STOCK' || m.status === 'out_of_stock').length} món
                 </strong>
               </div>
             </div>
@@ -438,7 +485,11 @@ export const MasterMenuManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Món bán chạy</span>
                 <strong style={{ fontSize: '1.35rem', color: '#d97706', lineHeight: 1.2 }}>
+<<<<<<< HEAD
                   {menuItems.filter((m) => m.is_best_seller).length} món
+=======
+                  {menu_items.filter((m) => m.is_best_seller).length} món
+>>>>>>> main
                 </strong>
               </div>
             </div>
@@ -589,10 +640,10 @@ export const MasterMenuManagement: React.FC = () => {
                 style={{ borderRadius: 'var(--radius-full)', padding: '5px 14px', fontSize: '0.82rem' }}
                 onClick={() => setActiveCategory('ALL')}
               >
-                Tất Cả Danh Mục ({menuItems.length})
+                Tất Cả Danh Mục ({menu_items.length})
               </button>
               {CATEGORIES.map((cat) => {
-                const count = menuItems.filter((m) => m.category === cat).length;
+                const count = menu_items.filter((m) => m.category === cat).length;
                 return (
                   <button
                     key={cat}
@@ -610,7 +661,7 @@ export const MasterMenuManagement: React.FC = () => {
           {/* Results Summary Bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
             <span>
-              Tìm thấy <strong style={{ color: 'var(--text-main)' }}>{filteredDishes.length}</strong> / {menuItems.length} món ăn
+              Tìm thấy <strong style={{ color: 'var(--text-main)' }}>{filteredDishes.length}</strong> / {menu_items.length} món ăn
               {activeCategory !== 'ALL' && ` · Thuộc "${activeCategory}"`}
               {dishMealPeriodFilter !== 'ALL' && ` · Lọc theo ca`}
               {dishStatusFilter !== 'ALL' && ` · ${dishStatusFilter === 'AVAILABLE' ? 'Đang mở bán' : 'Tạm hết món'}`}
@@ -800,7 +851,11 @@ export const MasterMenuManagement: React.FC = () => {
                             {/* Giá bán */}
                             <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                               <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+<<<<<<< HEAD
                                 {dish.base_price.toLocaleString('vi-VN')} đ
+=======
+                                {(dish.base_price || 0).toLocaleString('vi-VN')} đ
+>>>>>>> main
                               </span>
                             </td>
 
@@ -981,7 +1036,11 @@ export const MasterMenuManagement: React.FC = () => {
                             {dish.name}
                           </h4>
                           <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)' }}>
+<<<<<<< HEAD
                             {dish.base_price.toLocaleString('vi-VN')} đ
+=======
+                            {(dish.base_price || 0).toLocaleString('vi-VN')} đ
+>>>>>>> main
                           </span>
                         </div>
 
@@ -1086,10 +1145,14 @@ export const MasterMenuManagement: React.FC = () => {
                 className={`btn btn-sm ${optionCategoryFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setOptionCategoryFilter('ALL')}
               >
-                Tất Cả Kiểu Món ({categoryOptions.length})
+                Tất Cả Kiểu Món ({category_options.length})
               </button>
               {DISH_CATEGORIES.map((cat) => {
+<<<<<<< HEAD
                 const count = categoryOptions.filter((o) => o.category_id === cat.id).length;
+=======
+                const count = category_options.filter((o) => o.category_id === cat.id).length;
+>>>>>>> main
                 return (
                   <button
                     key={cat.id}
@@ -1273,8 +1336,8 @@ export const MasterMenuManagement: React.FC = () => {
                 className="form-input"
                 step={1000}
                 required
-                value={dishFormData.basePrice}
-                onChange={(e) => setDishFormData({ ...dishFormData, basePrice: Number(e.target.value) })}
+                value={dishFormData.base_price}
+                onChange={(e) => setDishFormData({ ...dishFormData, base_price: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -1283,8 +1346,8 @@ export const MasterMenuManagement: React.FC = () => {
             <label className="form-label">Khung Giờ / Ca Bán Phục Vụ*</label>
             <select
               className="form-select"
-              value={dishFormData.mealPeriods}
-              onChange={(e) => setDishFormData({ ...dishFormData, mealPeriods: e.target.value })}
+              value={dishFormData.meal_periods}
+              onChange={(e) => setDishFormData({ ...dishFormData, meal_periods: e.target.value })}
             >
               {MEAL_PERIOD_OPTIONS.map((period) => (
                 <option key={period.value} value={period.value}>
@@ -1330,8 +1393,8 @@ export const MasterMenuManagement: React.FC = () => {
             <input
               type="checkbox"
               id="newDishBestSeller"
-              checked={dishFormData.isBestSeller}
-              onChange={(e) => setDishFormData({ ...dishFormData, isBestSeller: e.target.checked })}
+              checked={dishFormData.is_best_seller}
+              onChange={(e) => setDishFormData({ ...dishFormData, is_best_seller: e.target.checked })}
               style={{ width: '18px', height: '18px' }}
             />
             <label htmlFor="newDishBestSeller" style={{ fontSize: '0.925rem', fontWeight: 700, cursor: 'pointer' }}>
@@ -1400,8 +1463,8 @@ export const MasterMenuManagement: React.FC = () => {
                 className="form-input"
                 step={1000}
                 required
-                value={dishFormData.basePrice}
-                onChange={(e) => setDishFormData({ ...dishFormData, basePrice: Number(e.target.value) })}
+                value={dishFormData.base_price}
+                onChange={(e) => setDishFormData({ ...dishFormData, base_price: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -1410,8 +1473,8 @@ export const MasterMenuManagement: React.FC = () => {
             <label className="form-label">Khung Giờ / Ca Bán Phục Vụ*</label>
             <select
               className="form-select"
-              value={dishFormData.mealPeriods}
-              onChange={(e) => setDishFormData({ ...dishFormData, mealPeriods: e.target.value })}
+              value={dishFormData.meal_periods}
+              onChange={(e) => setDishFormData({ ...dishFormData, meal_periods: e.target.value })}
             >
               {MEAL_PERIOD_OPTIONS.map((period) => (
                 <option key={period.value} value={period.value}>
@@ -1455,8 +1518,8 @@ export const MasterMenuManagement: React.FC = () => {
             <input
               type="checkbox"
               id="editDishBestSeller"
-              checked={dishFormData.isBestSeller}
-              onChange={(e) => setDishFormData({ ...dishFormData, isBestSeller: e.target.checked })}
+              checked={dishFormData.is_best_seller}
+              onChange={(e) => setDishFormData({ ...dishFormData, is_best_seller: e.target.checked })}
               style={{ width: '18px', height: '18px' }}
             />
             <label htmlFor="editDishBestSeller" style={{ fontSize: '0.925rem', fontWeight: 700, cursor: 'pointer' }}>
@@ -1484,8 +1547,8 @@ export const MasterMenuManagement: React.FC = () => {
             <label className="form-label">Áp Dụng Cho Nhóm Món*</label>
             <select
               className="form-select"
-              value={optionFormData.categoryId}
-              onChange={(e) => setOptionFormData({ ...optionFormData, categoryId: e.target.value })}
+              value={optionFormData.category_id}
+              onChange={(e) => setOptionFormData({ ...optionFormData, category_id: e.target.value })}
             >
               {DISH_CATEGORIES.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -1500,8 +1563,8 @@ export const MasterMenuManagement: React.FC = () => {
               <label className="form-label">Loại Tùy Chọn*</label>
               <select
                 className="form-select"
-                value={optionFormData.optionType}
-                onChange={(e) => setOptionFormData({ ...optionFormData, optionType: e.target.value as 'SIZE' | 'TOPPING' })}
+                value={optionFormData.option_type}
+                onChange={(e) => setOptionFormData({ ...optionFormData, option_type: e.target.value as 'SIZE' | 'TOPPING' })}
               >
                 <option value="SIZE">Kích Cỡ / Size (Khách chọn 1)</option>
                 <option value="TOPPING">Topping / Món Thêm (Khách chọn nhiều)</option>
@@ -1553,8 +1616,8 @@ export const MasterMenuManagement: React.FC = () => {
             <label className="form-label">Áp Dụng Cho Nhóm Món*</label>
             <select
               className="form-select"
-              value={optionFormData.categoryId}
-              onChange={(e) => setOptionFormData({ ...optionFormData, categoryId: e.target.value })}
+              value={optionFormData.category_id}
+              onChange={(e) => setOptionFormData({ ...optionFormData, category_id: e.target.value })}
             >
               {DISH_CATEGORIES.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -1569,8 +1632,8 @@ export const MasterMenuManagement: React.FC = () => {
               <label className="form-label">Loại Tùy Chọn*</label>
               <select
                 className="form-select"
-                value={optionFormData.optionType}
-                onChange={(e) => setOptionFormData({ ...optionFormData, optionType: e.target.value as 'SIZE' | 'TOPPING' })}
+                value={optionFormData.option_type}
+                onChange={(e) => setOptionFormData({ ...optionFormData, option_type: e.target.value as 'SIZE' | 'TOPPING' })}
               >
                 <option value="SIZE">Kích Cỡ / Size (Khách chọn 1)</option>
                 <option value="TOPPING">Topping / Món Thêm (Khách chọn nhiều)</option>

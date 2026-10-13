@@ -16,7 +16,7 @@ export const TableManagement: React.FC = () => {
     verifyTableSession,
     setTablePaymentRequested,
     confirmTablePayment,
-    serviceRequests,
+    service_requests,
     resolveServiceRequestsByTable,
   } = useAdminStore();
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -29,14 +29,14 @@ export const TableManagement: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   const [tableForm, setTableForm] = useState({
-    tableNo: '',
+    table_no: '',
     capacity: 4,
     status: 'AVAILABLE' as TableStatus,
   });
 
   const filteredTables = tables.filter((t) => {
     const matchesFilter = filterStatus === 'ALL' || t.status === filterStatus;
-    const matchesSearch = t.tableNo.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = t.table_no.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -48,7 +48,7 @@ export const TableManagement: React.FC = () => {
   const handleOpenAddModal = () => {
     const nextTableNum = tables.length + 1;
     setTableForm({
-      tableNo: `Bàn ${nextTableNum < 10 ? '0' + nextTableNum : nextTableNum}`,
+      table_no: `Bàn ${nextTableNum < 10 ? '0' + nextTableNum : nextTableNum}`,
       capacity: 4,
       status: 'AVAILABLE',
     });
@@ -59,7 +59,7 @@ export const TableManagement: React.FC = () => {
     e.stopPropagation();
     setEditingTable(tbl);
     setTableForm({
-      tableNo: tbl.tableNo,
+      table_no: tbl.table_no,
       capacity: tbl.capacity,
       status: tbl.status,
     });
@@ -67,10 +67,10 @@ export const TableManagement: React.FC = () => {
 
   const handleSubmitAddTable = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tableForm.tableNo) return;
+    if (!tableForm.table_no) return;
 
     addTable({
-      tableNo: tableForm.tableNo,
+      table_no: tableForm.table_no,
       capacity: Number(tableForm.capacity),
       status: tableForm.status,
     });
@@ -79,20 +79,20 @@ export const TableManagement: React.FC = () => {
 
   const handleSubmitEditTable = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTable || !tableForm.tableNo) return;
+    if (!editingTable || !tableForm.table_no) return;
 
     updateTable({
       ...editingTable,
-      tableNo: tableForm.tableNo,
+      table_no: tableForm.table_no,
       capacity: Number(tableForm.capacity),
       status: tableForm.status,
     });
     setEditingTable(null);
   };
 
-  const handleDeleteTable = (id: string, tableNo: string, e: React.MouseEvent) => {
+  const handleDeleteTable = (id: string, table_no: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(`Bạn có chắc chắn muốn xóa "${tableNo}"?`)) {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa "${table_no}"?`)) {
       deleteTable(id);
     }
   };
@@ -173,11 +173,11 @@ export const TableManagement: React.FC = () => {
           </div>
         ) : (
           filteredTables.map((tbl) => {
-            const activeTableCalls = serviceRequests.filter(
-              (sr) => sr.tableNo.toLowerCase() === tbl.tableNo.toLowerCase() && sr.status === 'OPEN'
+            const activeTableCalls = service_requests.filter(
+              (sr) => sr.table_no.toLowerCase() === tbl.table_no.toLowerCase() && sr.status === 'OPEN'
             );
-            const isFrozenForPayment = tbl.paymentRequested;
-            const isAwaitingVerification = tbl.status === 'OCCUPIED' && tbl.isVerified === false;
+            const isFrozenForPayment = tbl.payment_requested;
+            const isAwaitingVerification = tbl.status === 'OCCUPIED' && tbl.is_verified === false;
 
             return (
               <div
@@ -224,11 +224,11 @@ export const TableManagement: React.FC = () => {
                         color: 'var(--text-main)',
                       }}
                     >
-                      {tbl.tableNo.replace('Bàn ', '')}
+                      {tbl.table_no.replace('Bàn ', '')}
                     </div>
                     <div>
                       <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>
-                        {tbl.tableNo}
+                        {tbl.table_no}
                       </strong>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Users size={12} /> {tbl.capacity} ghế ngồi
@@ -262,7 +262,7 @@ export const TableManagement: React.FC = () => {
                       className="btn btn-secondary btn-sm btn-icon"
                       title="Xóa bàn"
                       style={{ padding: '4px', color: 'var(--danger)' }}
-                      onClick={(e) => handleDeleteTable(tbl.id, tbl.tableNo, e)}
+                      onClick={(e) => handleDeleteTable(tbl.id, tbl.table_no, e)}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -285,14 +285,14 @@ export const TableManagement: React.FC = () => {
                   >
                     <div style={{ fontSize: '0.78rem', color: '#be123c', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Bell size={13} />
-                      <span>{activeTableCalls[activeTableCalls.length - 1].requestText}</span>
+                      <span>{activeTableCalls[activeTableCalls.length - 1].request_text}</span>
                     </div>
                     <button
                       className="btn btn-sm"
                       style={{ padding: '2px 8px', fontSize: '0.7rem', background: '#be123c', color: '#ffffff', border: 'none' }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        resolveServiceRequestsByTable(tbl.tableNo);
+                        resolveServiceRequestsByTable(tbl.table_no);
                       }}
                     >
                       Đã phục vụ
@@ -322,7 +322,7 @@ export const TableManagement: React.FC = () => {
                       style={{ padding: '3px 8px', fontSize: '0.72rem', background: '#d97706', color: '#ffffff', border: 'none', fontWeight: 800 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        verifyTableSession(tbl.tableNo);
+                        verifyTableSession(tbl.table_no);
                       }}
                     >
                       🛡️ Xác nhận bàn
@@ -353,7 +353,7 @@ export const TableManagement: React.FC = () => {
                       style={{ padding: '2px 6px', fontSize: '0.7rem', background: '#ffffff', color: '#1e40af', border: '1px solid #bfdbfe' }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setTablePaymentRequested(tbl.tableNo, false);
+                        setTablePaymentRequested(tbl.table_no, false);
                       }}
                       title="Mở lại cho khách gọi thêm"
                     >
@@ -381,13 +381,13 @@ export const TableManagement: React.FC = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Tạm tính:</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {tbl.isPaid && (
+                          {tbl.is_paid && (
                             <span style={{ fontSize: '0.72rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
                               ✓ Đã thu
                             </span>
                           )}
-                          <strong style={{ color: tbl.isPaid ? 'var(--success)' : 'var(--danger)', fontWeight: 800, fontSize: '1rem' }}>
-                            {(tbl.currentOrderAmount || 0).toLocaleString('vi-VN')} đ
+                          <strong style={{ color: tbl.is_paid ? 'var(--success)' : 'var(--danger)', fontWeight: 800, fontSize: '1rem' }}>
+                            {(tbl.current_order_amount || 0).toLocaleString('vi-VN')} đ
                           </strong>
                         </div>
                       </div>
@@ -395,7 +395,7 @@ export const TableManagement: React.FC = () => {
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Clock size={12} /> Thời gian:
                         </span>
-                        <span>{tbl.occupiedSince || 'Đang dùng bữa'}</span>
+                        <span>{tbl.occupied_since || 'Đang dùng bữa'}</span>
                       </div>
                     </>
                   ) : tbl.status === 'RESERVED' ? (
@@ -426,7 +426,7 @@ export const TableManagement: React.FC = () => {
                   )}
                   {tbl.status === 'OCCUPIED' && (
                     <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
-                      {!tbl.isPaid ? (
+                      {!tbl.is_paid ? (
                         <>
                           <button
                             className="btn btn-primary btn-sm"
@@ -440,8 +440,8 @@ export const TableManagement: React.FC = () => {
                             }}
                             title="Xác nhận khách đã thanh toán hóa đơn"
                             onClick={() => {
-                              if (window.confirm(`Xác nhận đã nhận đủ ${(tbl.currentOrderAmount || 0).toLocaleString('vi-VN')} đ cho ${tbl.tableNo}?`)) {
-                                confirmTablePayment(tbl.tableNo);
+                              if (window.confirm(`Xác nhận đã nhận đủ ${(tbl.current_order_amount || 0).toLocaleString('vi-VN')} đ cho ${tbl.table_no}?`)) {
+                                confirmTablePayment(tbl.table_no);
                               }
                             }}
                           >
@@ -453,15 +453,30 @@ export const TableManagement: React.FC = () => {
                             style={{ flex: 0.8, fontSize: '0.75rem' }}
                             title="Đóng phiên bàn và dọn dẹp"
                             onClick={() => {
-                              if (window.confirm(`Chuyển ${tbl.tableNo} sang trạng thái dọn bàn? Phiên của khách sẽ đóng.`)) {
+                              if (window.confirm(`Chuyển ${tbl.table_no} sang trạng thái dọn bàn? Phiên của khách sẽ đóng.`)) {
                                 updateTableStatus(tbl.id, 'CLEANING');
-                                setTablePaymentRequested(tbl.tableNo, false);
+                                setTablePaymentRequested(tbl.table_no, false);
                                 fetch(`/api/table-sessions/close?tableId=${tbl.id}`, { method: 'POST' }).catch(() => {});
                                 window.dispatchEvent(new CustomEvent('omniresto:table_session_closed', { detail: { tableId: tbl.id, reason: 'ADMIN_CHECKOUT' } }));
                               }
                             }}
                           >
                             🧹 Trả Bàn
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ flex: 1, fontSize: '0.72rem', background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}
+                            title="Mở khóa bàn cho thiết bị mới quét nếu khách hết pin hoặc gặp sự cố"
+                            onClick={() => {
+                              if (window.confirm(`Mở khóa phiên cho ${tbl.table_no}? Khóa thiết bị cũ sẽ bị hủy để thiết bị mới có thể quét mã QR.`)) {
+                                fetch(`/api/table-sessions/close?tableId=${tbl.id}&reason=STAFF_DEVICE_UNLOCK`, { method: 'POST' }).catch(() => {});
+                                updateTableStatus(tbl.id, 'AVAILABLE');
+                                setTablePaymentRequested(tbl.table_no, false);
+                                window.dispatchEvent(new CustomEvent('omniresto:table_session_closed', { detail: { tableId: tbl.id, reason: 'STAFF_DEVICE_UNLOCK' } }));
+                              }
+                            }}
+                          >
+                            🔓 Mở Khóa Bàn
                           </button>
                         </>
                       ) : (
@@ -479,7 +494,7 @@ export const TableManagement: React.FC = () => {
                             gap: '4px',
                           }}
                           onClick={() => {
-                            if (window.confirm(`Khách ${tbl.tableNo} đã rời bàn. Chuyển sang Cần Dọn Dẹp?`)) {
+                            if (window.confirm(`Khách ${tbl.table_no} đã rời bàn. Chuyển sang Cần Dọn Dẹp?`)) {
                               updateTableStatus(tbl.id, 'CLEANING');
                               fetch(`/api/table-sessions/close?tableId=${tbl.id}`, { method: 'POST' }).catch(() => {});
                               window.dispatchEvent(new CustomEvent('omniresto:table_session_closed', { detail: { tableId: tbl.id, reason: 'ADMIN_CHECKOUT' } }));
@@ -531,8 +546,8 @@ export const TableManagement: React.FC = () => {
               className="form-input"
               placeholder="VD: Bàn 13, Bàn VIP 01..."
               required
-              value={tableForm.tableNo}
-              onChange={(e) => setTableForm({ ...tableForm, tableNo: e.target.value })}
+              value={tableForm.table_no}
+              onChange={(e) => setTableForm({ ...tableForm, table_no: e.target.value })}
             />
           </div>
 
@@ -585,8 +600,8 @@ export const TableManagement: React.FC = () => {
               type="text"
               className="form-input"
               required
-              value={tableForm.tableNo}
-              onChange={(e) => setTableForm({ ...tableForm, tableNo: e.target.value })}
+              value={tableForm.table_no}
+              onChange={(e) => setTableForm({ ...tableForm, table_no: e.target.value })}
             />
           </div>
 
@@ -635,10 +650,10 @@ export const TableManagement: React.FC = () => {
         <Modal
           isOpen={!!qrModalTable}
           onClose={() => setQrModalTable(null)}
-          title={`Mã QR Gọi Món Tại Bàn — ${qrModalTable.tableNo}`}
+          title={`Mã QR Gọi Món Tại Bàn — ${qrModalTable.table_no}`}
         >
           {(() => {
-            const token = qrModalTable.qrSecretToken || `qr-token-${qrModalTable.id}-default`;
+            const token = qrModalTable.qr_secret_token || `qr-token-${qrModalTable.id}-default`;
             const checkInUrl = `${window.location.origin}/client/scan?token=${token}`;
             const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(checkInUrl)}`;
 
@@ -661,11 +676,11 @@ export const TableManagement: React.FC = () => {
                 }}>
                   <img
                     src={qrImageUrl}
-                    alt={`QR ${qrModalTable.tableNo}`}
+                    alt={`QR ${qrModalTable.table_no}`}
                     style={{ width: 220, height: 220, display: 'block', margin: '0 auto' }}
                   />
                   <div style={{ marginTop: 12, fontWeight: 900, fontSize: '1.1rem', color: 'var(--text-main)' }}>
-                    {qrModalTable.tableNo}
+                    {qrModalTable.table_no}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     Quét để kích hoạt phiên gọi món
@@ -729,7 +744,7 @@ export const TableManagement: React.FC = () => {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                   onClick={() => {
-                    if (window.confirm(`Đổi mã QR mới cho ${qrModalTable.tableNo}? Mã QR cũ đã in sẽ lập tức bị vô hiệu hóa để bảo vệ bàn ăn.`)) {
+                    if (window.confirm(`Đổi mã QR mới cho ${qrModalTable.table_no}? Mã QR cũ đã in sẽ lập tức bị vô hiệu hóa để bảo vệ bàn ăn.`)) {
                       regenerateTableQrToken(qrModalTable.id);
                       const updated = tables.find((t) => t.id === qrModalTable.id);
                       if (updated) setQrModalTable(updated);

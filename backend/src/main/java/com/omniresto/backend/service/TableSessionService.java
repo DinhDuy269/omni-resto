@@ -58,7 +58,7 @@ public class TableSessionService {
     public static final int SESSION_TIMEOUT_HOURS = 3;
 
     @Transactional
-    public TableSessionResponse checkInOrJoin(String qrSecretToken, TableSessionMode mode) {
+    public TableSessionResponse checkInOrJoin(String qrSecretToken, String deviceToken, TableSessionMode mode) {
         if (qrSecretToken == null || qrSecretToken.trim().isEmpty()) {
             throw new BadRequestException("Mã QR bàn không được để trống!");
         }
@@ -68,8 +68,13 @@ public class TableSessionService {
                     // Fallback: match by table ID if token includes tbl-XX or ban-XX
                     java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:tbl|ban)[_-]?0?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(qrSecretToken.trim());
                     if (m.find()) {
-                        String tblId = "tbl-" + Integer.parseInt(m.group(1));
-                        Optional<TableEntity> opt = tableRepository.findById(tblId);
+                        int num = Integer.parseInt(m.group(1));
+                        String id1 = "tbl-" + num;
+                        String id2 = String.format("tbl-%02d", num);
+                        Optional<TableEntity> opt = tableRepository.findById(id1)
+                                .or(() -> tableRepository.findById(id2))
+                                .or(() -> tableRepository.findByTableNo(String.format("Bàn %02d", num)))
+                                .or(() -> tableRepository.findByTableNo(String.format("Bàn %d", num)));
                         opt.ifPresent(t -> {
                             t.setQrSecretToken(qrSecretToken.trim());
                             tableRepository.save(t);
@@ -80,37 +85,55 @@ public class TableSessionService {
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("Mã QR không hợp lệ hoặc bàn không tồn tại trong hệ thống!"));
 
-        // Check if table already has an ACTIVE session
-        Optional<TableSessionEntity> activeSessionOpt = tableSessionRepository
-                .findFirstByTableIdAndStatus(table.getId(), TableSessionStatus.active);
+        // Check if table already has an ACTIVE session (active, payment_requested, payment_pending)
+        List<TableSessionStatus> activeStatuses = List.of(
+                TableSessionStatus.active,
+                TableSessionStatus.payment_requested,
+                TableSessionStatus.payment_pending
+        );
+        List<TableSessionEntity> activeSessions = tableSessionRepository.findByTableIdAndStatusIn(table.getId(), activeStatuses);
 
-        if (activeSessionOpt.isPresent()) {
-            TableSessionEntity existing = activeSessionOpt.get();
+        if (!activeSessions.isEmpty()) {
+            TableSessionEntity existing = activeSessions.get(0);
             // Check if expired
             if (existing.getExpiresAt().isBefore(LocalDateTime.now())) {
                 existing.setStatus(TableSessionStatus.expired);
+                existing.setClosedAt(LocalDateTime.now());
                 tableSessionRepository.save(existing);
                 log.info("Old session {} for table {} expired. Creating fresh session.", existing.getId(), table.getTableNo());
             } else {
-                // Group join: Keep existing session token
+                // CHÍNH SÁCH BÀN ĂN LINH HOẠT & CHỐNG DoS:
+                // Nếu bàn đã có phiên đang mở, thiết bị cùng bàn được phép tham gia (Join) vào phiên chung
+                String cleanReqDeviceToken = (deviceToken != null) ? deviceToken.trim() : "";
+                String existingDevToken = (existing.getDeviceToken() != null) ? existing.getDeviceToken().trim() : "";
+                boolean isSameDevice = !cleanReqDeviceToken.isEmpty() && cleanReqDeviceToken.equals(existingDevToken);
+
                 existing.setLastActivityAt(LocalDateTime.now());
                 existing.setExpiresAt(LocalDateTime.now().plusHours(SESSION_TIMEOUT_HOURS));
-                tableSessionRepository.save(existing);
-                log.info("Client joined existing active session {} for table {}", existing.getId(), table.getTableNo());
-                TableSessionResponse res = mapToResponse(existing);
-                res.setMessage("Quý khách đã tham gia vào phiên gọi món đang diễn ra tại " + table.getTableNo());
+                TableSessionEntity saved = tableSessionRepository.save(existing);
+                log.info("Device ({}) joined active table session {} for table {}", cleanReqDeviceToken, saved.getId(), table.getTableNo());
+
+                TableSessionResponse res = mapToResponse(saved);
+                res.setIsDeviceMaster(isSameDevice);
+                res.setMessage(isSameDevice
+                        ? "Chào mừng bạn quay lại " + table.getTableNo() + "! Phiên đặt món của bạn đang hoạt động."
+                        : "Chào mừng bạn đến " + table.getTableNo() + "! Bạn đã tham gia vào phiên gọi món của bàn.");
                 return res;
             }
         }
 
-        // Create brand new TableSession
-        String sessionId = "sess-" + UUID.randomUUID().toString().substring(0, 8);
+        // Tạo phiên bàn mới an toàn cho bàn (đảm bảo độ dài <= 36 ký tự cho cột varchar(36))
+        String sessionId = "sess-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
         String sessionToken = "tok_" + UUID.randomUUID().toString().replace("-", "");
+        String assignedDeviceToken = (deviceToken != null && !deviceToken.isBlank())
+                ? deviceToken.trim()
+                : "dev_" + UUID.randomUUID().toString().replace("-", "");
 
         TableSessionEntity newSession = TableSessionEntity.builder()
                 .tableId(table.getId())
                 .tableNo(table.getTableNo())
                 .sessionToken(sessionToken)
+                .deviceToken(assignedDeviceToken)
                 .status(TableSessionStatus.active)
                 .mode(mode != null ? mode : TableSessionMode.pay_after)
                 .lastActivityAt(LocalDateTime.now())
@@ -120,16 +143,15 @@ public class TableSessionService {
 
         TableSessionEntity saved = tableSessionRepository.save(newSession);
 
-        // Update table status to occupied if it was available or reserved
-        if (table.getStatus() == TableStatus.available || table.getStatus() == TableStatus.reserved) {
-            table.setStatus(TableStatus.occupied);
-            tableRepository.save(table);
-            notifyTableStatusChanged(table.getId(), TableStatus.occupied);
-        }
+        // Update table status to occupied
+        table.setStatus(TableStatus.occupied);
+        tableRepository.save(table);
+        notifyTableStatusChanged(table.getId(), TableStatus.occupied);
 
-        log.info("Created new table session {} for table {} with token {}", sessionId, table.getTableNo(), sessionToken);
+        log.info("Created new table session {} for table {} with deviceToken {}", sessionId, table.getTableNo(), assignedDeviceToken);
 
         TableSessionResponse response = mapToResponse(saved);
+        response.setIsDeviceMaster(true);
         response.setMessage("Xác thực QR thành công! Phiên đặt món tại " + table.getTableNo() + " đã được kích hoạt.");
         return response;
     }
@@ -240,7 +262,7 @@ public class TableSessionService {
         Optional<OrderEntity> activeOrderOpt = orderRepository
                 .findFirstByTableSessionIdAndStatusInOrderByCreatedAtDesc(
                         session.getId(),
-                        List.of(OrderStatus.pending, OrderStatus.confirmed, OrderStatus.preparing, OrderStatus.ready)
+                        List.of(OrderStatus.pending, OrderStatus.confirmed, OrderStatus.preparing, OrderStatus.ready, OrderStatus.completed)
                 );
 
         if (activeOrderOpt.isEmpty() || activeOrderOpt.get().getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -282,7 +304,7 @@ public class TableSessionService {
         Optional<OrderEntity> activeOrderOpt = orderRepository
                 .findFirstByTableSessionIdAndStatusInOrderByCreatedAtDesc(
                         session.getId(),
-                        List.of(OrderStatus.pending, OrderStatus.confirmed, OrderStatus.preparing, OrderStatus.ready)
+                        List.of(OrderStatus.pending, OrderStatus.confirmed, OrderStatus.preparing, OrderStatus.ready, OrderStatus.completed)
                 );
 
         if (activeOrderOpt.isPresent()) {
@@ -307,11 +329,23 @@ public class TableSessionService {
             orderRepository.save(order);
         }
 
-        session.setStatus(TableSessionStatus.paid);
+        LocalDateTime now = LocalDateTime.now();
+        session.setStatus(TableSessionStatus.closed);
+        session.setClosedAt(now);
         TableSessionEntity saved = tableSessionRepository.save(session);
-        log.info("✅ Table session {} for table {} confirmed PAID", saved.getId(), saved.getTableNo());
+        log.info("✅ Table session {} for table {} confirmed PAID and CLOSED", saved.getId(), saved.getTableNo());
 
-        return mapToResponse(saved);
+        // Giải phóng bàn về AVAILABLE để khách tiếp theo có thể quét QR
+        Optional<TableEntity> tableOpt = tableRepository.findById(session.getTableId());
+        tableOpt.ifPresent(t -> {
+            t.setStatus(TableStatus.available);
+            tableRepository.save(t);
+            notifyTableStatusChanged(t.getId(), TableStatus.available);
+        });
+
+        TableSessionResponse response = mapToResponse(saved);
+        response.setMessage("Thanh toán thành công! Phiên bàn đã được đóng và giải phóng.");
+        return response;
     }
 
     @Transactional
@@ -353,6 +387,8 @@ public class TableSessionService {
                 .tableId(entity.getTableId())
                 .tableNo(entity.getTableNo())
                 .sessionToken(entity.getSessionToken())
+                .deviceToken(entity.getDeviceToken())
+                .isDeviceMaster(true)
                 .status(entity.getStatus())
                 .mode(entity.getMode())
                 .verifiedAt(entity.getVerifiedAt())
@@ -366,7 +402,7 @@ public class TableSessionService {
         Optional<OrderEntity> activeOrderOpt = orderRepository
                 .findFirstByTableSessionIdAndStatusInOrderByCreatedAtDesc(
                         entity.getId(),
-                        List.of(OrderStatus.pending, OrderStatus.preparing, OrderStatus.ready, OrderStatus.completed)
+                        List.of(OrderStatus.pending, OrderStatus.confirmed, OrderStatus.preparing, OrderStatus.ready, OrderStatus.completed)
                 );
 
         if (activeOrderOpt.isPresent()) {

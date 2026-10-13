@@ -1,5 +1,8 @@
 package com.omniresto.backend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.omniresto.backend.config.OrderWebSocketHandler;
+import com.omniresto.backend.domain.CategoryOptionEntity;
 import com.omniresto.backend.domain.MenuItemEntity;
 import com.omniresto.backend.domain.OrderEntity;
 import com.omniresto.backend.domain.OrderItemEntity;
@@ -11,6 +14,7 @@ import com.omniresto.backend.exception.BadRequestException;
 import com.omniresto.backend.model.order.request.OrderItemRequest;
 import com.omniresto.backend.model.order.request.OrderRequest;
 import com.omniresto.backend.model.order.response.OrderResponse;
+import com.omniresto.backend.repository.CategoryOptionRepository;
 import com.omniresto.backend.repository.MenuItemRepository;
 import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
@@ -21,7 +25,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -47,7 +50,19 @@ class OrderServiceTest {
     private MenuItemRepository menuItemRepository;
 
     @Mock
+<<<<<<< HEAD
+=======
+    private CategoryOptionRepository categoryOptionRepository;
+
+    @Mock
+>>>>>>> main
     private TableSessionService tableSessionService;
+
+    @Mock
+    private OrderWebSocketHandler orderWebSocketHandler;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private OrderService orderService;
@@ -72,14 +87,12 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("Should successfully create order and trigger WebSocket notification")
+    @DisplayName("Should successfully create order with session token and calculate options price")
     void createOrder_Success() {
         // Arrange
         OrderRequest request = new OrderRequest();
         request.setOrderType(OrderType.dine_in);
         request.setTableNo("Bàn 01");
-        request.setSessionToken("tok-test-123");
-        request.setTotalAmount(BigDecimal.valueOf(150000));
         request.setCustomerName("Nguyễn Văn A");
 
         TableSessionEntity mockSession = TableSessionEntity.builder()
@@ -99,34 +112,82 @@ class OrderServiceTest {
         mockMenuItem.setId("m-01");
         when(menuItemRepository.findById("m-01")).thenReturn(Optional.of(mockMenuItem));
 
+        CategoryOptionEntity mockOption = CategoryOptionEntity.builder()
+                .name("Thêm Bò Viên")
+                .price(BigDecimal.valueOf(15000))
+                .build();
+        when(categoryOptionRepository.findAllById(List.of("opt-01"))).thenReturn(List.of(mockOption));
+
         OrderItemRequest itemReq = new OrderItemRequest();
         itemReq.setMenuItemId("m-01");
         itemReq.setName("Phở Bò");
         itemReq.setQuantity(2);
-        itemReq.setPrice(BigDecimal.valueOf(75000));
+        itemReq.setOptionIds(List.of("opt-01"));
         request.setItems(List.of(itemReq));
 
         when(orderRepository.save(any(OrderEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(orderItemRepository.save(any(OrderItemEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Act
-        OrderResponse response = orderService.createOrder(request);
+        // Act (75000 + 15000) * 2 = 180000
+        OrderResponse response = orderService.createOrder(request, "tok-test-123", "idemp-key-1");
 
         // Assert
         assertNotNull(response);
         assertNotNull(response.getOrderNumber());
         assertEquals("Bàn 01", response.getTableNo());
+<<<<<<< HEAD
+=======
+        assertEquals(BigDecimal.valueOf(180000), response.getTotalAmount());
+
+        // Idempotency test: calling with same key returns cached response
+        OrderResponse cachedResponse = orderService.createOrder(request, "tok-test-123", "idemp-key-1");
+        assertSame(response, cachedResponse);
+    }
+
+    @Test
+    @DisplayName("Should create takeaway order in PENDING status without bypassing to confirmed")
+    void createTakeawayOrder_StartsInPendingStatus() {
+        OrderRequest request = new OrderRequest();
+        request.setOrderType(OrderType.takeaway);
+        request.setCustomerName("Khách mang về");
+
+        MenuItemEntity mockMenuItem = MenuItemEntity.builder()
+                .name("Cơm Tấm")
+                .basePrice(BigDecimal.valueOf(50000))
+                .mealPeriods("ALL_DAY")
+                .build();
+        mockMenuItem.setId("m-02");
+        when(menuItemRepository.findById("m-02")).thenReturn(Optional.of(mockMenuItem));
+
+        OrderItemRequest itemReq = new OrderItemRequest();
+        itemReq.setMenuItemId("m-02");
+        itemReq.setQuantity(1);
+        request.setItems(List.of(itemReq));
+
+        when(orderRepository.save(any(OrderEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(orderItemRepository.save(any(OrderItemEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.createOrder(request, null, null);
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.pending, response.getStatus());
+        assertEquals(OrderType.takeaway, response.getOrderType());
+>>>>>>> main
     }
 
     @Test
     @DisplayName("Should throw BadRequestException when ordering during restaurant closed hours")
     void createOrder_RestaurantClosed_ThrowsBadRequest() {
+        orderService.setEnforceBusinessHours(true);
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
         Clock closedClock = Clock.fixed(LocalDateTime.of(2026, 10, 3, 23, 0).atZone(zone).toInstant(), zone);
         orderService.setClock(closedClock);
 
         OrderRequest request = new OrderRequest();
-        assertThrows(BadRequestException.class, () -> orderService.createOrder(request));
+        request.setOrderType(OrderType.dine_in);
+        request.setItems(List.of(new OrderItemRequest()));
+
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(request, "tok-123"));
     }
 
     @Test

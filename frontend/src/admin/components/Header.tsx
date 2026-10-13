@@ -9,12 +9,12 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = () => {
-  const { serviceRequests, resolveServiceRequest, clearAllServiceRequests, orders } = useAdminStore();
+  const { service_requests, resolveServiceRequest, clearAllServiceRequests, orders } = useAdminStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const openRequests = serviceRequests.filter((r) => r.status === 'OPEN');
+  const openRequests = service_requests.filter((r) => r.status === 'OPEN');
   const recentOrders = orders.slice(0, 3);
 
   const todayStr = new Date().toLocaleDateString('vi-VN', {
@@ -176,11 +176,11 @@ export const Header: React.FC<HeaderProps> = () => {
                                 borderRadius: '4px',
                               }}
                             >
-                              {req.tableNo}
+                              {req.table_no}
                             </span>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{req.timestamp}</span>
                           </div>
-                          <div style={{ fontWeight: 600, color: '#991b1b' }}>{req.requestText}</div>
+                          <div style={{ fontWeight: 600, color: '#991b1b' }}>{req.request_text}</div>
                         </div>
 
                         <button
