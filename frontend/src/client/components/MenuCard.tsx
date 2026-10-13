@@ -29,7 +29,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
   const cartItem = cart.find((c) => c.menuItemId === item.id);
   const qty = cartItem?.quantity ?? 0;
   const isStatusAvailable = item.status === 'AVAILABLE' || item.status === 'available';
-  const isTimeAvailable = item.isAvailableNow !== false;
+  const isTimeAvailable = item.is_available_now !== false;
   const isAvailable = isStatusAvailable && isTimeAvailable;
 
   const openModal = (e: React.MouseEvent) => {
@@ -67,14 +67,14 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
             <div className="menu-card__oos-overlay" style={{ background: !isTimeAvailable && isStatusAvailable ? 'rgba(30, 20, 10, 0.72)' : undefined }}>
               <span style={{ fontSize: '0.75rem', padding: '4px 10px', textAlign: 'center' }}>
                 {!isTimeAvailable && isStatusAvailable
-                  ? (item.mealPeriodNote ? `Chỉ bán ${item.mealPeriodNote}` : 'Hết giờ phục vụ')
+                  ? (item.meal_period_note ? `Chỉ bán ${item.meal_period_note}` : 'Hết giờ phục vụ')
                   : 'Tạm hết món'}
               </span>
             </div>
           )}
 
           {/* Social proof badge — Serial Position: shown on image for max visibility */}
-          {item.isBestSeller && (
+          {item.is_best_seller && (
             <div className="menu-card__badge-bestseller">
               <Flame size={11} strokeWidth={2.5} />
               Bán chạy
@@ -105,7 +105,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
           <div className="menu-card__footer">
             <div className="menu-card__price">
               <span className="menu-card__price-value">
-                {item.basePrice.toLocaleString('vi-VN')}
+                {item.base_price.toLocaleString('vi-VN')}
               </span>
               <span className="menu-card__price-unit">đ</span>
             </div>

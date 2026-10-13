@@ -8,7 +8,7 @@ interface Props {
 export const TableCard: React.FC<Props> = ({ table }) => {
   return (
     <div className="card">
-      <h4>Bàn {table.tableNo}</h4>
+      <h4>Bàn {table.table_no}</h4>
       <p>Sức chứa: {table.capacity} người</p>
     </div>
   );

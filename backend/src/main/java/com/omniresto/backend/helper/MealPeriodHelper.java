@@ -3,10 +3,13 @@ package com.omniresto.backend.helper;
 import com.omniresto.backend.domain.enums.MealPeriod;
 
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 
 public final class MealPeriodHelper {
+
+    public static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private MealPeriodHelper() {
         // Utility class
@@ -14,7 +17,7 @@ public final class MealPeriodHelper {
 
     public static MealPeriod getCurrentPeriod(LocalTime time) {
         if (time == null) {
-            time = LocalTime.now();
+            time = LocalTime.now(DEFAULT_ZONE);
         }
 
         if (!time.isBefore(LocalTime.of(6, 0)) && time.isBefore(LocalTime.of(10, 30))) {
@@ -65,17 +68,17 @@ public final class MealPeriodHelper {
             return true;
         }
 
-        if (current == MealPeriod.break_time) {
-            return false;
-        }
-
         List<String> allowed = Arrays.asList(upper.split(","));
         for (String a : allowed) {
             String item = a.trim();
             if (item.equalsIgnoreCase(current.name())
-                    || (current == MealPeriod.break_time && item.equalsIgnoreCase("BREAK"))) {
+                    || (current == MealPeriod.break_time && (item.equalsIgnoreCase("BREAK") || item.equalsIgnoreCase("BREAK_TIME")))) {
                 return true;
             }
+        }
+
+        if (current == MealPeriod.break_time) {
+            return false;
         }
         return false;
     }
@@ -83,10 +86,11 @@ public final class MealPeriodHelper {
     public static String getPeriodDescription(String mealPeriods) {
         if (mealPeriods == null || mealPeriods.isBlank()) return "Cả ngày";
         String upper = mealPeriods.toUpperCase();
-        if (upper.contains("ALL_DAY")) return "Cả ngày (06:00 - 22:00)";
+        if (upper.contains("ALL_DAY") || upper.contains("ALLDAY")) return "Cả ngày (06:00 - 22:00)";
         StringBuilder sb = new StringBuilder();
         if (upper.contains("MORNING")) sb.append("Sáng (06:00 - 10:30) ");
         if (upper.contains("NOON")) sb.append("Trưa (10:30 - 14:30) ");
+        if (upper.contains("BREAK")) sb.append("Giờ nghỉ (14:30 - 16:30) ");
         if (upper.contains("EVENING")) sb.append("Tối (16:30 - 22:00) ");
         return sb.toString().trim();
     }

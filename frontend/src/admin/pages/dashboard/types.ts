@@ -1,6 +1,6 @@
 export interface DashboardMetrics {
-  totalTables: number;
-  totalOrders: number;
-  totalRevenue: number;
-  activeStaff: number;
+  total_tables: number;
+  total_orders: number;
+  total_revenue: number;
+  active_staff: number;
 }

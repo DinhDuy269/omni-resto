@@ -6,13 +6,13 @@ import { CartDrawer } from '../components/CartDrawer';
 import { ClientActiveOrderBar } from '../components/ClientActiveOrderBar';
 import { ClientAiChatWidget } from '../components/chat/ClientAiChatWidget';
 import { apiClient } from '../../shared/api/client';
+import { useWebSocket } from '../../shared/hooks/useWebSocket';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 import './ClientLayout.css';
 
 const NAV_LINKS = [
   { to: '/client/menu',        label: 'Thực đơn' },
   { to: '/client/orders',      label: 'Đơn hàng' },
-  { to: '/client/reservation', label: 'Đặt bàn'  },
   { to: '/client/events',      label: 'Sự kiện'  },
   { to: '/client/about',       label: 'Giới thiệu' },
 ];
@@ -82,10 +82,17 @@ const NewsletterMini: React.FC = () => {
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 export const ClientLayout: React.FC = () => {
-  const { isCartOpen, openCart, closeCart } = useClientStore();
+  const { isCartOpen, openCart, closeCart, tableSession, handleServerOrderEvent } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
   const hasActiveOrder = useClientStore(selectHasActiveOrders);
+
+  // Lắng nghe sự kiện cập nhật trạng thái đơn hàng thời gian thực từ Server (Admin duyệt, bếp nấu, hoàn tất)
+  useWebSocket((event) => {
+    if (event?.order) {
+      handleServerOrderEvent(event.order);
+    }
+  });
 
   return (
     <div className="client-layout client-scope">
@@ -137,27 +144,52 @@ export const ClientLayout: React.FC = () => {
             })}
           </nav>
 
-          {/* Cart */}
-          <button
-            id="client-cart-button"
-            className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}
-            onClick={openCart}
-            aria-label={`Xem giỏ hàng (${totalItems} món)`}
-          >
-            <ShoppingCart size={19} strokeWidth={2.2} />
-            {totalItems > 0 ? (
-              <>
-                <span className="client-cart-amount">
-                  {totalAmount.toLocaleString('vi-VN')}đ
-                </span>
-                <span className="client-cart-badge" aria-label={`${totalItems} món`}>
-                  {totalItems}
-                </span>
-              </>
-            ) : (
-              <span style={{ fontSize: '0.875rem' }}>Giỏ hàng</span>
+          {/* Header Right Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {tableSession && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '5px 12px',
+                  borderRadius: 'var(--c-r-full)',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  color: '#065f46',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                }}
+                title={`Đang dùng tại Bàn ${tableSession.tableNo || tableSession.table_no}`}
+              >
+                <span>📍</span>
+                <span>Bàn {tableSession.tableNo || tableSession.table_no}</span>
+              </div>
             )}
-          </button>
+
+            {/* Cart */}
+            <button
+              id="client-cart-button"
+              className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}
+              onClick={openCart}
+              aria-label={`Xem giỏ hàng (${totalItems} món)`}
+            >
+              <ShoppingCart size={19} strokeWidth={2.2} />
+              {totalItems > 0 ? (
+                <>
+                  <span className="client-cart-amount">
+                    {totalAmount.toLocaleString('vi-VN')}đ
+                  </span>
+                  <span className="client-cart-badge" aria-label={`${totalItems} món`}>
+                    {totalItems}
+                  </span>
+                </>
+              ) : (
+                <span style={{ fontSize: '0.875rem' }}>Giỏ hàng</span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 

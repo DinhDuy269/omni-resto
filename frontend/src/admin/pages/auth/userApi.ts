@@ -1,12 +1,23 @@
 import { apiClient, transformAxiosErrorResponse } from '../../../shared/api/client';
-import type { StaffUser, UserResponse, UserStatus } from '../../../shared/types/admin';
+import type { StaffUser, UserStatus } from '../../../shared/types/admin';
+
+export const transformStaffUser = (usr: any): StaffUser => ({
+  id: usr.id,
+  full_name: usr.fullName || usr.full_name || '',
+  email: usr.email || '',
+  phone: usr.phone || '',
+  role: usr.role || 'store_manager',
+  status: (usr.status || 'active') as UserStatus,
+  avatar: usr.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
+  created_at: usr.createdAt || usr.created_at,
+});
 
 export const userApi = {
   getUsers: async (): Promise<StaffUser[]> => {
     try {
-      const res = await apiClient.get<StaffUser[] | UserResponse>('/users');
-      if (Array.isArray(res.data)) return res.data;
-      return res.data.users || [];
+      const res = await apiClient.get<any>('/users');
+      const list = Array.isArray(res.data) ? res.data : (res.data.users || []);
+      return list.map(transformStaffUser);
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -14,9 +25,9 @@ export const userApi = {
 
   getUser: async (id: string): Promise<StaffUser> => {
     try {
-      const res = await apiClient.get<StaffUser | UserResponse>(`/users/${id}`);
-      if ('user' in res.data && res.data.user) return res.data.user;
-      return res.data as StaffUser;
+      const res = await apiClient.get<any>(`/users/${id}`);
+      const raw = res.data.user || res.data;
+      return transformStaffUser(raw);
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -24,9 +35,16 @@ export const userApi = {
 
   createUser: async (request: Partial<StaffUser>): Promise<StaffUser> => {
     try {
-      const res = await apiClient.post<StaffUser | UserResponse>('/users', request);
-      if ('user' in res.data && res.data.user) return res.data.user;
-      return res.data as StaffUser;
+      const payload = {
+        fullName: request.full_name,
+        email: request.email,
+        phone: request.phone,
+        role: request.role,
+        avatar: request.avatar,
+      };
+      const res = await apiClient.post<any>('/users', payload);
+      const raw = res.data.user || res.data;
+      return transformStaffUser(raw);
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -34,9 +52,11 @@ export const userApi = {
 
   updateUserStatus: async (id: string, status: UserStatus): Promise<StaffUser> => {
     try {
-      const res = await apiClient.patch<StaffUser | UserResponse>(`/users/${id}/status`, null, { params: { status } });
-      if ('user' in res.data && res.data.user) return res.data.user;
-      return res.data as StaffUser;
+      const res = await apiClient.patch<any>(`/users/${id}/status`, null, {
+        params: { status: status.toLowerCase() },
+      });
+      const raw = res.data.user || res.data;
+      return transformStaffUser(raw);
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }

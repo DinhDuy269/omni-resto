@@ -24,8 +24,10 @@ import {
 import { useClientStore } from '../../store/clientStore';
 import { OrderStatusStepper } from '../../components/OrderStatusStepper';
 import { ServiceRequestModal } from '../../components/ServiceRequestModal';
-import type { PlacedOrder } from '../../../shared/types/client';
+import type { PlacedOrder, VnPayPaymentInfo } from '../../../shared/types/client';
+import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
+import { createVnPayPayment, processVnPayDirectPayment } from '../../../shared/api/vnpayApi';
 
 export const ClientOrdersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +35,7 @@ export const ClientOrdersPage: React.FC = () => {
     orders,
     tableSession,
     refreshTableSession,
+    fetchOrdersFromServer,
     requestPayment,
     cancelPaymentRequest,
     verifySessionDemo,
@@ -43,16 +46,25 @@ export const ClientOrdersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'batches' | 'all_dishes'>('batches');
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentTab, setPaymentTab] = useState<'qr' | 'cash'>('qr');
+  const [paymentTab, setPaymentTab] = useState<'vnpay' | 'qr' | 'cash'>('vnpay');
+  const [vnpayInfo, setVnPayInfo] = useState<VnPayPaymentInfo | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  // Tự động làm mới dữ liệu phiên bàn từ Server khi vào trang
+  // VNPAY Sandbox card inputs (set sẵn mặc định)
+  const [vnpayCardNumber, setVnPayCardNumber] = useState(VNPAY_SANDBOX_CONFIG.card_number);
+  const [vnpayCardHolder, setVnPayCardHolder] = useState(VNPAY_SANDBOX_CONFIG.card_holder);
+  const [vnpayPaymentDate, setVnPayPaymentDate] = useState(VNPAY_SANDBOX_CONFIG.payment_date);
+  const [vnpayOtp, setVnPayOtp] = useState(VNPAY_SANDBOX_CONFIG.otp);
+  const [isPayingVnPay, setIsPayingVnPay] = useState(false);
+
+  // Tự động làm mới dữ liệu phiên bàn & danh sách đơn hàng từ Server khi vào trang
   useEffect(() => {
+    fetchOrdersFromServer();
     if (tableSession?.sessionToken) {
       refreshTableSession();
     }
-  }, []);
+  }, [tableSession?.sessionToken, fetchOrdersFromServer, refreshTableSession]);
 
   // Filter orders by search
   const filteredOrders = useMemo(() => {
@@ -76,6 +88,18 @@ export const ClientOrdersPage: React.FC = () => {
     () => filteredOrders.filter((o) => o.status === 'COMPLETED'),
     [filteredOrders]
   );
+
+  // Tự động tạo mã VNPAY-QR khi mở modal thanh toán bàn
+  useEffect(() => {
+    if (isPaymentModalOpen && paymentTab === 'vnpay') {
+      const targetOrderId = activeOrders[0]?.id;
+      if (targetOrderId && !vnpayInfo) {
+        createVnPayPayment(targetOrderId)
+          .then((info) => setVnPayInfo(info))
+          .catch((err) => console.warn('Lỗi tạo VNPAY bill bàn:', err));
+      }
+    }
+  }, [isPaymentModalOpen, paymentTab, activeOrders, vnpayInfo]);
 
   // Default: Chỉ mở rộng đợt gọi món mới nhất, các đợt khác thu gọn
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
@@ -1210,51 +1234,227 @@ export const ClientOrdersPage: React.FC = () => {
               }}
             >
               <button
+                onClick={() => setPaymentTab('vnpay')}
+                style={{
+                  flex: 1,
+                  padding: '9px 8px',
+                  border: 'none',
+                  borderRadius: '9px',
+                  background: paymentTab === 'vnpay' ? '#ffffff' : 'transparent',
+                  color: paymentTab === 'vnpay' ? '#0284c7' : '#64748b',
+                  fontWeight: paymentTab === 'vnpay' ? 800 : 600,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  boxShadow: paymentTab === 'vnpay' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                }}
+              >
+                <QrCode size={14} color={paymentTab === 'vnpay' ? '#0284c7' : '#64748b'} />
+                <span>VNPAY-QR</span>
+                <span style={{ fontSize: '0.65rem', background: '#e0f2fe', color: '#0369a1', padding: '1px 4px', borderRadius: 4, fontWeight: 800 }}>
+                  Sandbox
+                </span>
+              </button>
+
+              <button
                 onClick={() => setPaymentTab('qr')}
                 style={{
                   flex: 1,
-                  padding: '9px 12px',
+                  padding: '9px 8px',
                   border: 'none',
                   borderRadius: '9px',
                   background: paymentTab === 'qr' ? '#ffffff' : 'transparent',
                   color: paymentTab === 'qr' ? '#0f172a' : '#64748b',
                   fontWeight: paymentTab === 'qr' ? 800 : 600,
-                  fontSize: '0.85rem',
+                  fontSize: '0.8rem',
                   cursor: 'pointer',
                   boxShadow: paymentTab === 'qr' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px',
+                  gap: '4px',
                 }}
               >
-                <QrCode size={15} />
-                <span>Quét mã VietQR</span>
+                <QrCode size={14} />
+                <span>VietQR</span>
               </button>
 
               <button
                 onClick={() => setPaymentTab('cash')}
                 style={{
                   flex: 1,
-                  padding: '9px 12px',
+                  padding: '9px 8px',
                   border: 'none',
                   borderRadius: '9px',
                   background: paymentTab === 'cash' ? '#ffffff' : 'transparent',
                   color: paymentTab === 'cash' ? '#0f172a' : '#64748b',
                   fontWeight: paymentTab === 'cash' ? 800 : 600,
-                  fontSize: '0.85rem',
+                  fontSize: '0.8rem',
                   cursor: 'pointer',
                   boxShadow: paymentTab === 'cash' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px',
+                  gap: '4px',
                 }}
               >
-                <Banknote size={15} />
-                <span>Tiền mặt / Thẻ tại bàn</span>
+                <Banknote size={14} />
+                <span>Tiền mặt/Thẻ</span>
               </button>
             </div>
+
+            {/* Tab: VNPAY Sandbox (Thẻ & OTP Set Sẵn) */}
+            {paymentTab === 'vnpay' && (
+              <div style={{ textAlign: 'center' }}>
+                {(() => {
+                  const targetOrderId = activeOrders[0]?.id;
+
+                  const handlePayTableVnPay = async () => {
+                    if (isPayingVnPay) return;
+                    setIsPayingVnPay(true);
+                    try {
+                      if (targetOrderId) {
+                        await processVnPayDirectPayment({
+                          order_id: targetOrderId,
+                          card_number: vnpayCardNumber,
+                          card_holder: vnpayCardHolder,
+                          payment_date: vnpayPaymentDate,
+                          otp: vnpayOtp,
+                        });
+                      }
+                      await confirmPaymentDemo('VNPAY_QR');
+                      setIsPaymentModalOpen(false);
+                      alert('🎉 Thanh toán VNPAY Sandbox thành công! Cảm ơn quý khách đã dùng bữa tại OmniResto.');
+                    } catch (err: any) {
+                      alert(err.message || 'Thanh toán VNPAY thất bại. Vui lòng thử lại!');
+                    } finally {
+                      setIsPayingVnPay(false);
+                    }
+                  };
+
+                  return (
+                    <div>
+                      {/* Card Preview */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, #034ea2 0%, #002d62 100%)',
+                        borderRadius: 14, padding: '14px 16px', color: '#ffffff',
+                        textAlign: 'left', marginBottom: 12, boxShadow: '0 6px 16px rgba(3, 78, 162, 0.25)',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 900, letterSpacing: 1 }}>NCB BANK</span>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '1px 6px', borderRadius: 4 }}>
+                            VNPAY SANDBOX
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.95rem', letterSpacing: 2, fontWeight: 700, marginBottom: 8, fontFamily: 'monospace' }}>
+                          {vnpayCardNumber.replace(/(\d{4})/g, '$1 ').trim()}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.7rem' }}>
+                          <div>
+                            <div style={{ opacity: 0.7, fontSize: '0.6rem' }}>CHỦ THẺ</div>
+                            <div style={{ fontWeight: 800 }}>{vnpayCardHolder}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ opacity: 0.7, fontSize: '0.6rem' }}>HẾT HẠN</div>
+                            <div style={{ fontWeight: 800 }}>{vnpayPaymentDate}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Inputs Form (Đã SET SẴN thông tin) */}
+                      <div style={{
+                        background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12,
+                        padding: 10, marginBottom: 12, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 8,
+                      }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: 3 }}>
+                            Số thẻ (Đã set sẵn):
+                          </label>
+                          <input
+                            type="text"
+                            value={vnpayCardNumber}
+                            onChange={(e) => setVnPayCardNumber(e.target.value)}
+                            style={{
+                              width: '100%', padding: '7px 9px', borderRadius: 6,
+                              border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 700,
+                              background: '#ffffff', color: '#0f172a', boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: 3 }}>
+                            Tên chủ thẻ (Đã set sẵn):
+                          </label>
+                          <input
+                            type="text"
+                            value={vnpayCardHolder}
+                            onChange={(e) => setVnPayCardHolder(e.target.value.toUpperCase())}
+                            style={{
+                              width: '100%', padding: '7px 9px', borderRadius: 6,
+                              border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 700,
+                              background: '#ffffff', color: '#0f172a', boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: 3 }}>
+                              Ngày phát hành:
+                            </label>
+                            <input
+                              type="text"
+                              value={vnpayPaymentDate}
+                              onChange={(e) => setVnPayPaymentDate(e.target.value)}
+                              style={{
+                                width: '100%', padding: '7px 9px', borderRadius: 6,
+                                border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 700,
+                                background: '#ffffff', color: '#0f172a', boxSizing: 'border-box',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#0369a1', marginBottom: 3 }}>
+                              OTP xác thực:
+                            </label>
+                            <input
+                              type="text"
+                              value={vnpayOtp}
+                              onChange={(e) => setVnPayOtp(e.target.value)}
+                              style={{
+                                width: '100%', padding: '7px 9px', borderRadius: 6,
+                                border: '1.5px solid #0284c7', fontSize: '0.82rem', fontWeight: 800,
+                                background: '#f0f9ff', color: '#0284c7', boxSizing: 'border-box',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Main Action Button */}
+                      <button
+                        type="button"
+                        disabled={isPayingVnPay}
+                        onClick={handlePayTableVnPay}
+                        style={{
+                          width: '100%', padding: '12px', borderRadius: 10,
+                          background: isPayingVnPay ? '#94a3b8' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                          color: '#ffffff', fontWeight: 800, fontSize: '0.88rem',
+                          cursor: isPayingVnPay ? 'not-allowed' : 'pointer', border: 'none',
+                          boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)', marginBottom: 8,
+                        }}
+                      >
+                        {isPayingVnPay ? 'Đang thanh toán...' : `⚡ Xác nhận thanh toán VNPAY (${totalTableAmount.toLocaleString('vi-VN')}đ)`}
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Tab 1: VietQR Content */}
             {paymentTab === 'qr' && (

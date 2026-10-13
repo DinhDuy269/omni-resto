@@ -1,7 +1,12 @@
 import { useAdminStore } from '../../../store/adminStore';
 
 export const useDashboard = () => {
-  const { orders, menuItems, tables, staffList } = useAdminStore();
+  const { orders, menu_items, tables, staff_list } = useAdminStore();
 
-  return { orders, menuItems, tables, staffList };
+  return {
+    orders,
+    menu_items,
+    tables,
+    staff_list,
+  };
 };

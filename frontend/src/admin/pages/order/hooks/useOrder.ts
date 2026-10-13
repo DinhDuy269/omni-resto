@@ -9,8 +9,8 @@ export const useOrder = () => {
   const filteredOrders = orders.filter((ord) => {
     const matchesStatus = statusTab === 'ALL' || ord.status === statusTab;
     const matchesSearch =
-      ord.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (ord.customerName && ord.customerName.toLowerCase().includes(searchQuery.toLowerCase()));
+      ord.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (ord.customer_name && ord.customer_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return matchesStatus && matchesSearch;
   });

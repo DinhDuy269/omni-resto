@@ -260,22 +260,22 @@ const ClientAbout: React.FC = () => {
             Sẵn sàng trải nghiệm chưa?
           </h2>
           <p style={{ color: 'var(--c-text-muted)', lineHeight: 1.7, maxWidth: 480, margin: '0 auto 32px', fontSize: '0.9375rem' }}>
-            Đặt bàn ngay hôm nay để có bữa ăn trọn vẹn nhất cùng gia đình và người thân.
+            Khám phá thực đơn phong phú và trải nghiệm ẩm thực trọn vẹn cùng gia đình và người thân.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               className="c-btn c-btn-primary c-btn-lg"
-              onClick={() => navigate('/client/reservation')}
+              onClick={() => navigate('/client/menu')}
               style={{ display: 'flex', alignItems: 'center', gap: 8 }}
             >
-              Đặt bàn ngay <ChevronRight size={18} />
+              Xem thực đơn <ChevronRight size={18} />
             </button>
             <button
               className="c-btn c-btn-lg"
-              onClick={() => navigate('/client/menu')}
+              onClick={() => navigate('/client/scan')}
               style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: '1.5px solid var(--c-border)', color: 'var(--c-text-main)' }}
             >
-              Xem thực đơn
+              Quét mã bàn
             </button>
           </div>
         </div>

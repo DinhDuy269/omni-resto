@@ -82,9 +82,11 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
   const sizes = React.useMemo(() => {
     if (!item) return [];
     if (item.options && item.options.length > 0) {
-      const sizeOpts = item.options.filter((o) => o.optionType === 'SIZE');
+      const sizeOpts = item.options.filter((o) => o.option_type === 'SIZE');
       if (sizeOpts.length > 0) {
-        return sizeOpts.map((o) => ({ name: o.name, extraPrice: Number(o.price) || 0 }));
+        const mapped = sizeOpts.map((o) => ({ name: o.name, extraPrice: Number(o.price) || 0 }));
+        const hasBaseSize = mapped.some((s) => s.extraPrice === 0);
+        return hasBaseSize ? mapped : [{ name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 }, ...mapped];
       }
     }
     return categoryConfig?.sizes || [{ name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 }];
@@ -93,7 +95,7 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
   const availableToppings = React.useMemo(() => {
     if (!item) return [];
     if (item.options && item.options.length > 0) {
-      const topOpts = item.options.filter((o) => o.optionType === 'TOPPING');
+      const topOpts = item.options.filter((o) => o.option_type === 'TOPPING');
       if (topOpts.length > 0) {
         return topOpts.map((o) => ({ name: o.name, price: Number(o.price) || 0 }));
       }
@@ -133,7 +135,7 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
   };
 
   const toppingsPrice = selectedToppings.reduce((sum, t) => sum + t.price, 0);
-  const unitPrice = item.basePrice + selectedSize.extraPrice + toppingsPrice;
+  const unitPrice = item.base_price + selectedSize.extraPrice + toppingsPrice;
   const totalPrice = unitPrice * quantity;
 
   const handleConfirmAdd = () => {
@@ -142,15 +144,18 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
       selectedToppings.length > 0 ? ' + ' + selectedToppings.map((t) => t.name).join(', ') : ''
     })${noteSuffix}`;
 
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        menuItemId: `${item.id}-${selectedSize.name}-${selectedToppings.map((t) => t.name).join('-')}`,
+    const uniqueCartKey = `${item.id}-${selectedSize.name}-${selectedToppings.map((t) => t.name).join('-')}`;
+    addToCart(
+      {
+        id: uniqueCartKey,
+        menuItemId: item.id,
         name: customizedName,
         category: item.category,
         price: unitPrice,
         image: item.image,
-      });
-    }
+      },
+      quantity
+    );
 
     onClose();
   };
@@ -214,7 +219,7 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
           >
             <X size={20} />
           </button>
-          {item.isBestSeller && (
+          {item.is_best_seller && (
             <span
               style={{
                 position: 'absolute',

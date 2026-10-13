@@ -17,15 +17,14 @@ import { useNavigate } from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { orders, menuItems, tables, staffList } = useAdminStore();
+  const { orders, menu_items, tables, staff_list } = useAdminStore();
 
-  const completedRevenue = orders
-    .filter((o) => o.status === 'COMPLETED')
-    .reduce((sum, o) => sum + o.totalAmount, 0);
-  const totalRevenue = 45600000 + completedRevenue;
+  const totalRevenue = orders
+    .filter((o) => o.status === 'COMPLETED' || o.payment_status === 'PAID')
+    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
   const totalOrders = orders.length;
   const occupiedTablesCount = tables.filter((t) => t.status === 'OCCUPIED').length;
-  const bestSellers = menuItems.filter((item) => item.isBestSeller);
+  const bestSellers = menu_items.filter((item) => item.is_best_seller);
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -106,7 +105,7 @@ export const AdminDashboard: React.FC = () => {
         />
         <StatCard
           title="NHÂN SỰ VẬN HÀNH"
-          value={staffList.length}
+          value={staff_list.length}
           change="+1 ca trực"
           isPositive={true}
           icon={Users}
@@ -163,7 +162,7 @@ export const AdminDashboard: React.FC = () => {
                     textAlign: 'center',
                   }}
                 >
-                  <strong style={{ fontSize: '1rem', color: style.color }}>{table.tableNo}</strong>
+                  <strong style={{ fontSize: '1rem', color: style.color }}>{table.table_no}</strong>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{table.capacity} chỗ</span>
                   <StatusBadge status={table.status} size="sm" />
                 </div>
@@ -202,17 +201,17 @@ export const AdminDashboard: React.FC = () => {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <strong style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
-                      {ord.orderNumber}
+                      {ord.order_number}
                     </strong>
                     <StatusBadge status={ord.status} size="sm" />
                   </div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    {ord.tableNo ? `Bàn: ${ord.tableNo}` : 'Mang về / Đặt online'}
+                    {ord.table_no ? `Bàn: ${ord.table_no}` : 'Mang về / Đặt online'}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '0.9rem' }}>
                     <span style={{ color: 'var(--text-body)' }}>{ord.items.length} món ăn</span>
                     <strong style={{ color: 'var(--text-main)', fontSize: '0.975rem' }}>
-                      {ord.totalAmount.toLocaleString('vi-VN')} đ
+                      {ord.total_amount.toLocaleString('vi-VN')} đ
                     </strong>
                   </div>
                 </div>
@@ -270,7 +269,7 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                   <strong style={{ fontSize: '0.975rem', color: 'var(--primary)' }}>
-                    {item.basePrice.toLocaleString('vi-VN')} đ
+                    {item.base_price.toLocaleString('vi-VN')} đ
                   </strong>
                 </div>
               ))}

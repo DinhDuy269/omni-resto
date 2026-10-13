@@ -1,5 +1,9 @@
 package com.omniresto.backend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.omniresto.backend.config.OrderWebSocketHandler;
+import com.omniresto.backend.domain.CategoryOptionEntity;
+import com.omniresto.backend.domain.MenuItemEntity;
 import com.omniresto.backend.domain.OrderEntity;
 import com.omniresto.backend.domain.OrderItemEntity;
 import com.omniresto.backend.domain.TableSessionEntity;
@@ -12,16 +16,19 @@ import com.omniresto.backend.domain.enums.TableSessionStatus;
 import com.omniresto.backend.exception.BadRequestException;
 import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.helper.MealPeriodHelper;
+import com.omniresto.backend.model.order.request.OrderItemRequest;
 import com.omniresto.backend.model.order.request.OrderRequest;
-import com.omniresto.backend.model.order.response.OrderEventMessage;
 import com.omniresto.backend.model.order.response.OrderItemResponse;
 import com.omniresto.backend.model.order.response.OrderResponse;
+import com.omniresto.backend.repository.CategoryOptionRepository;
 import com.omniresto.backend.repository.MenuItemRepository;
 import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,10 +36,10 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,22 +47,60 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class OrderService {
 
+    public static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final MenuItemRepository menuItemRepository;
+    private final CategoryOptionRepository categoryOptionRepository;
     private final TableSessionService tableSessionService;
+    private final OrderWebSocketHandler orderWebSocketHandler;
+    private final ObjectMapper objectMapper;
 
     @Setter
-    private Clock clock = Clock.systemDefaultZone();
+    @Value("${restaurant.business-hours.enforce:true}")
+    private boolean enforceBusinessHours = true;
+
+    @Setter
+    private Clock clock = Clock.system(DEFAULT_ZONE);
+
+    // Cache Idempotency-Key chống gửi trùng (TTL 60 giây)
+    private final Map<String, CachedIdempotencyEntry> idempotencyCache = new ConcurrentHashMap<>();
+
+    @Getter
+    private static class CachedIdempotencyEntry {
+        private final OrderResponse response;
+        private final long createdAtEpochMs;
+
+        public CachedIdempotencyEntry(OrderResponse response) {
+            this.response = response;
+            this.createdAtEpochMs = System.currentTimeMillis();
+        }
+
+        public boolean isExpired(long ttlMs) {
+            return (System.currentTimeMillis() - createdAtEpochMs) > ttlMs;
+        }
+    }
 
     public List<OrderResponse> getAllOrders(OrderStatus status) {
         List<OrderEntity> orders;
         if (status != null) {
-            orders = orderRepository.findByStatus(status);
+            orders = orderRepository.findByStatusWithItems(status);
         } else {
-            orders = orderRepository.findAll();
+            orders = orderRepository.findAllWithItems();
         }
 
+        return orders.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public List<OrderResponse> getOrdersBySession(String sessionToken) {
+        if (sessionToken == null || sessionToken.isBlank()) {
+            return Collections.emptyList();
+        }
+        var session = tableSessionService.validateAndTouchSession(sessionToken);
+        List<OrderEntity> orders = orderRepository.findByTableSessionIdWithItems(session.getId());
         return orders.stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -73,45 +118,62 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
-        return createOrder(request, null);
+        return createOrder(request, null, null);
     }
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request, String sessionToken) {
-        // ── 1. Kiểm tra thời gian phục vụ của các món theo buổi ────────────────
+        return createOrder(request, sessionToken, null);
+    }
+
+    @Transactional
+    public OrderResponse createOrder(OrderRequest request, String sessionToken, String idempotencyKey) {
+        // ── 0. Kiểm tra chống gửi trùng (Idempotency Key) ─────────────────────
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            String trimmedKey = idempotencyKey.trim();
+            cleanExpiredIdempotencyKeys();
+            CachedIdempotencyEntry cached = idempotencyCache.get(trimmedKey);
+            if (cached != null) {
+                log.info("⚡ Idempotency key '{}' matched existing order, returning cached response without duplicate", trimmedKey);
+                return cached.getResponse();
+            }
+        }
+
+        // ── 1. Kiểm tra validation cơ bản ────────────────────────────────────
+        if (request == null || request.getOrderType() == null) {
+            throw new BadRequestException("Loại đơn hàng (orderType) không được để trống!");
+        }
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new BadRequestException("Danh sách món ăn không được để trống!");
+        }
+
+        // ── 2. Kiểm tra thời gian phục vụ của nhà hàng ────────────────────────
         LocalTime now = LocalTime.now(clock);
         MealPeriod currentPeriod = MealPeriodHelper.getCurrentPeriod(now);
 
-        if (currentPeriod == MealPeriod.closed) {
+        if (enforceBusinessHours && currentPeriod == MealPeriod.closed) {
             throw new BadRequestException(
                     "Nhà hàng hiện đang trong giờ đóng cửa (22:00 - 06:00). Quý khách vui lòng đặt món vào ca Sáng từ 06:00!"
             );
         }
 
-        // ── 2. Bảo mật phiên bàn & Khóa phiên bi quan (Pessimistic Lock) ──────────
+        // ── 3. Bảo mật phiên bàn & Khóa phiên bi quan (Pessimistic Lock) ──────
         String resolvedTableId = null;
         String resolvedTableNo = request.getTableNo();
         TableSessionEntity lockedSession = null;
 
         if (request.getOrderType() == OrderType.dine_in) {
-            String token = (sessionToken != null && !sessionToken.isBlank())
-                    ? sessionToken
-                    : request.getSessionToken();
-
-            if (token == null || token.isBlank()) {
+            if (sessionToken == null || sessionToken.isBlank()) {
                 throw new BadRequestException(
-                        "Đơn dùng tại bàn bắt buộc phải quét mã QR tại bàn để xác thực phiên (thiếu X-Table-Session)!"
+                        "Đơn dùng tại bàn bắt buộc phải quét mã QR tại bàn để xác thực phiên (thiếu Header X-Table-Session)!"
                 );
             }
 
             // Khóa dòng phiên bàn (SELECT ... FOR UPDATE) để chống Race Condition khi nhiều máy cùng đặt
-            lockedSession = tableSessionService.validateAndTouchSessionWithLock(token);
+            lockedSession = tableSessionService.validateAndTouchSessionWithLock(sessionToken);
             resolvedTableId = lockedSession.getTableId();
             resolvedTableNo = lockedSession.getTableNo();
-        }
 
-        // ── 3. Kiểm tra xem bàn này đã có Hóa đơn mở (Active Order) chưa? ───────
-        if (request.getOrderType() == OrderType.dine_in && lockedSession != null) {
             // Chặn thêm món khi hóa đơn đang đóng băng để thanh toán
             if (lockedSession.getStatus() == TableSessionStatus.payment_requested) {
                 throw new BadRequestException(
@@ -119,25 +181,31 @@ public class OrderService {
                 );
             }
 
+            // Kiểm tra xem bàn này đã có Hóa đơn mở (Active Order) chưa
             List<OrderStatus> activeStatuses = List.of(
                     OrderStatus.pending,
                     OrderStatus.confirmed,
                     OrderStatus.preparing,
-                    OrderStatus.ready
+                    OrderStatus.ready,
+                    OrderStatus.completed
             );
 
             Optional<OrderEntity> activeOrderOpt = orderRepository
                     .findFirstByTableSessionIdAndStatusInOrderByCreatedAtDesc(lockedSession.getId(), activeStatuses);
 
             if (activeOrderOpt.isPresent()) {
-                // ── [CHÍNH SÁCH 3 TẦNG]: CỘNG DỒN ĐỢT GỌI MỚI (ROUND) VÀO HÓA ĐƠN CŨ ──
+                // [CHÍNH SÁCH CỘNG DỒN ĐỢT GỌI MỚI (ROUND) VÀO HÓA ĐƠN CŨ]
                 OrderEntity existingOrder = activeOrderOpt.get();
-                return appendNewRoundToOrder(existingOrder, request, now, currentPeriod, lockedSession);
+                OrderResponse response = appendNewRoundToOrder(existingOrder, request, now, currentPeriod, lockedSession);
+                cacheIdempotencyKey(idempotencyKey, response);
+                return response;
             }
         }
 
-        // ── 4. Chưa có đơn mở (Đợt 1 / Khởi tạo hóa đơn mới) ───────────────────
-        return createFreshOrder(request, lockedSession, resolvedTableId, resolvedTableNo, now, currentPeriod);
+        // ── 4. Chưa có đơn mở (Đợt 1 / Khởi tạo hóa đơn mới) ──────────────────
+        OrderResponse response = createFreshOrder(request, lockedSession, resolvedTableId, resolvedTableNo, now, currentPeriod);
+        cacheIdempotencyKey(idempotencyKey, response);
+        return response;
     }
 
     /**
@@ -154,28 +222,34 @@ public class OrderService {
         BigDecimal calculatedTotal = BigDecimal.ZERO;
         List<OrderItemEntity> itemEntities = new ArrayList<>();
 
-        String orderId = "ord-" + UUID.randomUUID().toString().substring(0, 8);
-        String orderNum = "ORD-" + (System.currentTimeMillis() % 100000);
+        OrderType resolvedOrderType = request.getOrderType();
+        String orderId = "ord-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+        String orderNum = "ORD-" + System.currentTimeMillis() + "-" + String.format("%04d", (int) (Math.random() * 10000));
 
-        // Bảo mật riêng tư: Không ép hoặc để lộ thông tin cá nhân tại bàn
         String customerName = request.getCustomerName();
         if ((customerName == null || customerName.isBlank()) && tableNo != null) {
-            customerName = "Bàn " + tableNo;
+            customerName = tableNo.toLowerCase().startsWith("bàn") ? tableNo : "Bàn " + tableNo;
         }
 
-        boolean isSessionVerified = (session != null && session.isVerified());
-        OrderStatus initialOrderStatus = (session != null && !isSessionVerified)
-                ? OrderStatus.pending // Đợt 1: Chờ nhân viên xác nhận tại bàn
-                : OrderStatus.confirmed; // Đã xác nhận: Vào hàng đợi bếp (confirmed) chờ bắt đầu nấu
+        // QUY TẮC AN TOÀN TRẠNG THÁI:
+        // Đơn Dine-in: Nếu session đã xác nhận -> confirmed (hàng đợi bếp). Chưa xác nhận -> pending.
+        // Đơn Takeaway & Delivery: Luôn là pending (chờ nhân viên/thu ngân duyệt đơn hoặc thanh toán).
+        OrderStatus initialOrderStatus;
+        OrderItemStatus initialItemStatus;
 
-        OrderItemStatus initialItemStatus = (session != null && !isSessionVerified)
-                ? OrderItemStatus.pending
-                : OrderItemStatus.confirmed;
+        if (resolvedOrderType == OrderType.dine_in) {
+            boolean isSessionVerified = (session != null && session.isVerified());
+            initialOrderStatus = isSessionVerified ? OrderStatus.confirmed : OrderStatus.pending;
+            initialItemStatus = isSessionVerified ? OrderItemStatus.confirmed : OrderItemStatus.pending;
+        } else {
+            initialOrderStatus = OrderStatus.pending;
+            initialItemStatus = OrderItemStatus.pending;
+        }
 
         OrderEntity entity = OrderEntity.builder()
                 .orderNumber(orderNum)
                 .tableSessionId(session != null ? session.getId() : null)
-                .orderType(request.getOrderType())
+                .orderType(resolvedOrderType)
                 .tableId(tableId)
                 .tableNo(tableNo)
                 .status(initialOrderStatus)
@@ -188,34 +262,37 @@ public class OrderService {
 
         OrderEntity saved = orderRepository.save(entity);
 
-        if (request.getItems() != null) {
-            for (var itemReq : request.getItems()) {
-                if (itemReq.getMenuItemId() == null || itemReq.getMenuItemId().isBlank()) {
-                    throw new BadRequestException("Mỗi món ăn phải có menuItemId hợp lệ từ hệ thống.");
-                }
-                var m = menuItemRepository.findById(itemReq.getMenuItemId())
-                        .orElseThrow(() -> new BadRequestException("Món ăn không tồn tại trong hệ thống!"));
-                validateMealPeriodForDish(m, now, currentPeriod);
-                BigDecimal unitPrice = m.getBasePrice() != null ? m.getBasePrice() : BigDecimal.ZERO;
-                String itemName = m.getName();
-
-                int qty = (itemReq.getQuantity() != null && itemReq.getQuantity() > 0) ? itemReq.getQuantity() : 1;
-                calculatedTotal = calculatedTotal.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
-
-                OrderItemEntity item = OrderItemEntity.builder()
-                        .order(saved)
-                        .menuItemId(m.getId())
-                        .itemName(itemName)
-                        .quantity(qty)
-                        .unitPrice(unitPrice)
-                        .notes(itemReq.getNotes())
-                        .roundNo(1) // Đợt 1
-                        .status(initialItemStatus)
-                        .addedAt(LocalDateTime.now())
-                        .build();
-                item.setId("item-" + UUID.randomUUID().toString().substring(0, 8));
-                itemEntities.add(orderItemRepository.save(item));
+        for (OrderItemRequest itemReq : request.getItems()) {
+            if (itemReq.getMenuItemId() == null || itemReq.getMenuItemId().isBlank()) {
+                throw new BadRequestException("Mỗi món ăn phải có menuItemId hợp lệ từ hệ thống.");
             }
+
+            MenuItemEntity m = menuItemRepository.findById(itemReq.getMenuItemId().trim())
+                    .orElseThrow(() -> new BadRequestException("Món ăn không tồn tại hoặc đã ngừng phục vụ (ID: " + itemReq.getMenuItemId() + ")"));
+
+            validateMealPeriodForDish(m, now, currentPeriod);
+
+            // Tính đơn giá chính xác bao gồm giá gốc + phụ thu Topping/Size từ Database
+            BigDecimal unitPrice = calculateUnitPriceWithOptions(m, itemReq);
+            String displayItemName = buildItemDisplayName(m, itemReq);
+
+            int qty = (itemReq.getQuantity() != null && itemReq.getQuantity() > 0) ? itemReq.getQuantity() : 1;
+            calculatedTotal = calculatedTotal.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
+
+            OrderItemEntity item = OrderItemEntity.builder()
+                    .order(saved)
+                    .menuItemId(m.getId())
+                    .itemName(displayItemName)
+                    .quantity(qty)
+                    .unitPrice(unitPrice)
+                    .notes(itemReq.getNotes())
+                    .roundNo(1) // Đợt 1
+                    .status(initialItemStatus)
+                    .addedAt(LocalDateTime.now(DEFAULT_ZONE))
+                    .build();
+            item.setId("item-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24));
+            saved.addItem(item);
+            itemEntities.add(orderItemRepository.save(item));
         }
 
         saved.setTotalAmount(calculatedTotal);
@@ -244,42 +321,41 @@ public class OrderService {
                 .max()
                 .orElse(1) + 1;
 
-        // Nếu phiên bàn đã được nhân viên duyệt (isVerified = true), các đợt gọi thêm vào hàng đợi bếp (confirmed)
         boolean isSessionVerified = (session != null && session.isVerified());
         OrderItemStatus newRoundItemStatus = isSessionVerified
-                ? OrderItemStatus.confirmed // Gửi vào hàng đợi bếp chờ bấm nấu
+                ? OrderItemStatus.confirmed
                 : OrderItemStatus.pending;
 
         List<OrderItemEntity> newRoundItems = new ArrayList<>();
 
-        if (request.getItems() != null) {
-            for (var itemReq : request.getItems()) {
-                if (itemReq.getMenuItemId() == null || itemReq.getMenuItemId().isBlank()) {
-                    throw new BadRequestException("Mỗi món ăn gọi thêm phải có menuItemId hợp lệ từ hệ thống.");
-                }
-                var m = menuItemRepository.findById(itemReq.getMenuItemId())
-                        .orElseThrow(() -> new BadRequestException("Món ăn gọi thêm không tồn tại trong hệ thống!"));
-                validateMealPeriodForDish(m, now, currentPeriod);
-                BigDecimal unitPrice = m.getBasePrice() != null ? m.getBasePrice() : BigDecimal.ZERO;
-                String itemName = m.getName();
-
-                int qty = (itemReq.getQuantity() != null && itemReq.getQuantity() > 0) ? itemReq.getQuantity() : 1;
-
-                // Lưu từng dòng món riêng biệt gắn với round_no mới (KHÔNG gộp cứng số lượng)
-                OrderItemEntity item = OrderItemEntity.builder()
-                        .order(order)
-                        .menuItemId(m.getId())
-                        .itemName(itemName)
-                        .quantity(qty)
-                        .unitPrice(unitPrice)
-                        .notes(itemReq.getNotes())
-                        .roundNo(nextRoundNo) // Đợt N
-                        .status(newRoundItemStatus)
-                        .addedAt(LocalDateTime.now())
-                        .build();
-                item.setId("item-" + UUID.randomUUID().toString().substring(0, 8));
-                newRoundItems.add(orderItemRepository.save(item));
+        for (OrderItemRequest itemReq : request.getItems()) {
+            if (itemReq.getMenuItemId() == null || itemReq.getMenuItemId().isBlank()) {
+                throw new BadRequestException("Mỗi món ăn gọi thêm phải có menuItemId hợp lệ từ hệ thống.");
             }
+
+            MenuItemEntity m = menuItemRepository.findById(itemReq.getMenuItemId().trim())
+                    .orElseThrow(() -> new BadRequestException("Món ăn gọi thêm không tồn tại hoặc đã ngừng phục vụ (ID: " + itemReq.getMenuItemId() + ")"));
+
+            validateMealPeriodForDish(m, now, currentPeriod);
+
+            BigDecimal unitPrice = calculateUnitPriceWithOptions(m, itemReq);
+            String displayItemName = buildItemDisplayName(m, itemReq);
+
+            int qty = (itemReq.getQuantity() != null && itemReq.getQuantity() > 0) ? itemReq.getQuantity() : 1;
+
+            OrderItemEntity item = OrderItemEntity.builder()
+                    .order(order)
+                    .menuItemId(m.getId())
+                    .itemName(displayItemName)
+                    .quantity(qty)
+                    .unitPrice(unitPrice)
+                    .notes(itemReq.getNotes())
+                    .roundNo(nextRoundNo) // Đợt N
+                    .status(newRoundItemStatus)
+                    .addedAt(LocalDateTime.now(DEFAULT_ZONE))
+                    .build();
+            item.setId("item-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24));
+            newRoundItems.add(orderItemRepository.save(item));
         }
 
         // Tính lại tổng tiền chính xác từ tất cả các món không bị hủy
@@ -310,7 +386,41 @@ public class OrderService {
         return response;
     }
 
-    private void validateMealPeriodForDish(com.omniresto.backend.domain.MenuItemEntity menuItem, LocalTime now, MealPeriod currentPeriod) {
+    /**
+     * Tính đơn giá dòng món = Giá gốc + phụ thu các Options (Topping/Size)
+     */
+    private BigDecimal calculateUnitPriceWithOptions(MenuItemEntity menuItem, OrderItemRequest itemReq) {
+        BigDecimal unitPrice = menuItem.getBasePrice() != null ? menuItem.getBasePrice() : BigDecimal.ZERO;
+        if (itemReq.getOptionIds() != null && !itemReq.getOptionIds().isEmpty()) {
+            List<CategoryOptionEntity> options = categoryOptionRepository.findAllById(itemReq.getOptionIds());
+            BigDecimal optionsExtra = options.stream()
+                    .map(CategoryOptionEntity::getPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            unitPrice = unitPrice.add(optionsExtra);
+        }
+        return unitPrice;
+    }
+
+    /**
+     * Tên món hiển thị kèm tóm tắt Options
+     */
+    private String buildItemDisplayName(MenuItemEntity menuItem, OrderItemRequest itemReq) {
+        if (itemReq.getOptionIds() == null || itemReq.getOptionIds().isEmpty()) {
+            return menuItem.getName();
+        }
+        List<CategoryOptionEntity> options = categoryOptionRepository.findAllById(itemReq.getOptionIds());
+        if (options.isEmpty()) {
+            return menuItem.getName();
+        }
+        String optNames = options.stream().map(CategoryOptionEntity::getName).collect(Collectors.joining(", "));
+        return menuItem.getName() + " (" + optNames + ")";
+    }
+
+    private void validateMealPeriodForDish(MenuItemEntity menuItem, LocalTime now, MealPeriod currentPeriod) {
+        if (!enforceBusinessHours) {
+            return;
+        }
         if (!MealPeriodHelper.isAvailableNow(menuItem.getMealPeriods(), now)) {
             String periodDesc = MealPeriodHelper.getPeriodDescription(menuItem.getMealPeriods());
             throw new BadRequestException(
@@ -324,7 +434,22 @@ public class OrderService {
     @Transactional
     public OrderResponse updateOrderStatus(String id, OrderStatus status) {
         OrderEntity entity = findOrderById(id);
-        entity.setStatus(status);
+
+        if (status == OrderStatus.cancelled) {
+            // Hủy toàn bộ đơn: Hủy các món chưa phục vụ
+            List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
+            for (OrderItemEntity it : items) {
+                if (it.getStatus() != OrderItemStatus.served && it.getStatus() != OrderItemStatus.cancelled) {
+                    it.setStatus(OrderItemStatus.cancelled);
+                    orderItemRepository.save(it);
+                }
+            }
+            entity.setStatus(OrderStatus.cancelled);
+        } else {
+            // Cập nhật trạng thái tổng thể hợp lệ
+            entity.setStatus(status);
+        }
+
         OrderEntity updated = orderRepository.save(entity);
         OrderResponse response = mapToResponse(updated);
 
@@ -337,6 +462,9 @@ public class OrderService {
         OrderItemEntity item = orderItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dòng món với ID: " + itemId));
         item.setStatus(itemStatus);
+        if (itemStatus == OrderItemStatus.served) {
+            item.setConfirmedAt(LocalDateTime.now(DEFAULT_ZONE));
+        }
         orderItemRepository.save(item);
 
         OrderEntity order = item.getOrder();
@@ -367,7 +495,8 @@ public class OrderService {
         }
 
         item.setStatus(OrderItemStatus.cancelled);
-        String cancelNote = "[Đã hủy" + (reason != null && !reason.isBlank() ? ": " + reason : "") + "]";
+        String auditActor = (staffId != null && !staffId.isBlank()) ? "Nhân viên " + staffId : "Hệ thống";
+        String cancelNote = "[Đã hủy bởi " + auditActor + (reason != null && !reason.isBlank() ? ": " + reason : "") + "]";
         item.setNotes(item.getNotes() != null && !item.getNotes().isBlank()
                 ? item.getNotes() + " | " + cancelNote
                 : cancelNote);
@@ -385,6 +514,8 @@ public class OrderService {
         OrderStatus derivedStatus = calculateDerivedOrderStatus(allItems, order.getStatus());
         order.setStatus(derivedStatus);
         OrderEntity updatedOrder = orderRepository.save(order);
+
+        log.info("🚫 Item {} of order {} cancelled by {}. Reason: {}", itemId, orderId, auditActor, reason);
 
         OrderResponse response = mapToResponseWithItems(updatedOrder, allItems);
         sendWebSocketEvent("ORDER_ITEM_CANCELLED", response);
@@ -428,11 +559,37 @@ public class OrderService {
     }
 
     private void sendWebSocketEvent(String eventType, OrderResponse orderResponse) {
-        log.debug("Order event: {} for order: {}", eventType, orderResponse != null ? orderResponse.getId() : null);
+        try {
+            if (orderWebSocketHandler != null && orderResponse != null) {
+                Map<String, Object> message = Map.of(
+                        "eventType", eventType,
+                        "event_type", eventType,
+                        "order", orderResponse
+                );
+                String json = objectMapper.writeValueAsString(message);
+                orderWebSocketHandler.broadcast(json);
+                log.info("📢 Broadcasted WebSocket event '{}' for order {}", eventType, orderResponse.getId());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to broadcast WebSocket event: {}", e.getMessage());
+        }
+    }
+
+    private void cacheIdempotencyKey(String key, OrderResponse response) {
+        if (key != null && !key.isBlank() && response != null) {
+            idempotencyCache.put(key.trim(), new CachedIdempotencyEntry(response));
+        }
+    }
+
+    private void cleanExpiredIdempotencyKeys() {
+        long ttlMs = 60_000L; // 60 seconds TTL
+        idempotencyCache.entrySet().removeIf(entry -> entry.getValue().isExpired(ttlMs));
     }
 
     private OrderResponse mapToResponse(OrderEntity entity) {
-        List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
+        List<OrderItemEntity> items = entity.getItems() != null && !entity.getItems().isEmpty()
+                ? entity.getItems()
+                : orderItemRepository.findByOrder_Id(entity.getId());
         return mapToResponseWithItems(entity, items);
     }
 
@@ -465,7 +622,7 @@ public class OrderService {
         res.setPaymentMethod(entity.getPaymentMethod());
         res.setCustomerName(entity.getCustomerName());
         res.setItems(itemResponses);
-        res.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt() : LocalDateTime.now());
+        res.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt() : LocalDateTime.now(DEFAULT_ZONE));
         return res;
     }
 }

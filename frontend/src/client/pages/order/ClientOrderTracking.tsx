@@ -30,34 +30,32 @@ const STEPS: { key: PlacedOrderStatus; label: string; icon: React.FC<{ size?: nu
 export const ClientOrderTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const { orders, placedOrder, tableSession } = useClientStore();
+  const { orders, placedOrder, tableSession, fetchOrderById } = useClientStore();
 
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isQrAccordionOpen, setIsQrAccordionOpen] = useState(false);
 
   // Tìm đơn hàng theo ID hoặc orderNumber
   const matchedOrder = orders.find(
-    (o) => o.id === orderId || o.order_number === orderId
-  ) || (placedOrder?.id === orderId ? placedOrder : null);
+    (o) => o.id === orderId || o.order_number === orderId || o.orderNumber === orderId
+  ) || (placedOrder?.id === orderId || placedOrder?.orderNumber === orderId ? placedOrder : null);
 
-  const [simulatedStatus, setSimulatedStatus] = useState<PlacedOrderStatus>(
-    matchedOrder?.status ?? 'PENDING'
-  );
+  const currentStatus: PlacedOrderStatus = ((matchedOrder?.status ?? 'PENDING').toUpperCase() as PlacedOrderStatus);
 
+  // Đồng bộ trạng thái đơn hàng từ Server theo thời gian thực (ngay khi mở trang & polling dự phòng)
   useEffect(() => {
-    if (!matchedOrder) return;
-    setSimulatedStatus(matchedOrder.status);
+    if (!orderId) return;
+    fetchOrderById(orderId);
 
-    // Tự động mô phỏng tiến trình cho test / demo
-    if (matchedOrder.status === 'PENDING') {
-      const t1 = setTimeout(() => setSimulatedStatus('PREPARING'), 5000);
-      const t2 = setTimeout(() => setSimulatedStatus('READY'), 14000);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
-    }
-  }, [matchedOrder?.status, matchedOrder?.id]);
+    const interval = setInterval(() => {
+      const current = useClientStore.getState().orders.find((o) => o.id === orderId || o.order_number === orderId || o.orderNumber === orderId);
+      if (!current || (current.status !== 'COMPLETED' && current.status !== 'CANCELLED')) {
+        fetchOrderById(orderId);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [orderId, fetchOrderById]);
 
   if (!matchedOrder) {
     return (
@@ -84,19 +82,51 @@ export const ClientOrderTracking: React.FC = () => {
   }
 
   const currentOrder = matchedOrder;
-  const isCompleted = simulatedStatus === 'COMPLETED';
-  const tableDisplay = currentOrder.table_no || tableSession?.table_no || 'Tại bàn';
+  const isCompleted = currentStatus === 'COMPLETED';
 
-  const currentStepIdx = STEPS.findIndex((s) => s.key === simulatedStatus);
+  const orderMode = currentOrder.order_mode || (currentOrder as any).orderMode || (currentOrder.table_no ? 'DINE_IN' : 'TAKEAWAY');
+  let orderModeBadge = {
+    icon: '🍽️',
+    label: currentOrder.table_no || tableSession?.table_no ? `Bàn ${currentOrder.table_no || tableSession?.table_no}` : 'Tại bàn',
+    bg: '#ecfdf5',
+    color: '#047857',
+    border: '#a7f3d0'
+  };
+
+  if (orderMode === 'TAKEAWAY') {
+    orderModeBadge = {
+      icon: '🛍️',
+      label: currentOrder.table_no ? `Mang về (Bàn ${currentOrder.table_no})` : 'Mang về',
+      bg: '#fff7ed',
+      color: '#c2410c',
+      border: '#fed7aa'
+    };
+  } else if (orderMode === 'DELIVERY') {
+    orderModeBadge = {
+      icon: '🛵',
+      label: 'Giao hàng tận nơi',
+      bg: '#eff6ff',
+      color: '#1d4ed8',
+      border: '#bfdbfe'
+    };
+  }
+
+  const currentStepIdx = STEPS.findIndex((s) => s.key === currentStatus);
   const progressPercent = currentStepIdx === -1 ? 0 : (currentStepIdx / (STEPS.length - 1)) * 100;
 
   // Trạng thái hiển thị từng món ăn
   const getItemStatusBadge = () => {
-    switch (simulatedStatus) {
+    switch (currentStatus) {
       case 'COMPLETED':
-        return { text: 'Đã lên bàn', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅' };
+        return {
+          text: orderMode === 'TAKEAWAY' ? 'Đã nhận món' : orderMode === 'DELIVERY' ? 'Đã giao' : 'Đã lên bàn',
+          color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅'
+        };
       case 'READY':
-        return { text: 'Đang bưng ra', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: '🔔' };
+        return {
+          text: orderMode === 'TAKEAWAY' ? 'Sẵn sàng lấy' : orderMode === 'DELIVERY' ? 'Đang ship' : 'Đang bưng ra',
+          color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: '🔔'
+        };
       case 'PREPARING':
         return { text: 'Bếp đang nấu', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa', icon: '🔥' };
       default:
@@ -135,10 +165,10 @@ export const ClientOrderTracking: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{
-              background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
+              background: orderModeBadge.bg, color: orderModeBadge.color, border: `1px solid ${orderModeBadge.border}`,
               padding: '3px 10px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800,
             }}>
-              📍 {tableDisplay}
+              {orderModeBadge.icon} {orderModeBadge.label}
             </span>
           </div>
         </div>
@@ -172,11 +202,13 @@ export const ClientOrderTracking: React.FC = () => {
                   margin: '0 0 2px', lineHeight: 1.3,
                 }}>
                   {isCompleted
-                    ? 'Đơn hàng đã phục vụ xong'
-                    : simulatedStatus === 'READY'
-                    ? 'Món đã sẵn sàng phục vụ!'
-                    : simulatedStatus === 'PREPARING'
+                    ? (orderMode === 'TAKEAWAY' ? 'Đơn mang về đã hoàn tất' : orderMode === 'DELIVERY' ? 'Giao hàng thành công' : 'Đơn hàng đã phục vụ xong')
+                    : currentStatus === 'READY'
+                    ? (orderMode === 'TAKEAWAY' ? 'Món đã sẵn sàng để mang về!' : orderMode === 'DELIVERY' ? 'Đơn hàng đang được giao!' : 'Món đã sẵn sàng phục vụ!')
+                    : currentStatus === 'PREPARING'
                     ? 'Bếp đang chế biến món'
+                    : currentStatus === 'CONFIRMED'
+                    ? 'Đơn đã duyệt (Chuyển bếp nấu)'
                     : 'Đã gửi vào bếp (Chờ nấu)'}
                 </h1>
                 <div style={{ fontSize: '0.8rem', color: '#64748b' }}>

@@ -5,6 +5,20 @@ import { PAYMENT_CONFIG, generateVietQRUrl } from '../../shared/config/paymentCo
 
 const STORAGE_KEY = 'omniresto_client_orders';
 const TABLE_SESSION_KEY = 'omniresto_client_table_session';
+const DEVICE_TOKEN_KEY = 'omniresto_device_token';
+
+export const getOrCreateDeviceToken = (): string => {
+  try {
+    let token = localStorage.getItem(DEVICE_TOKEN_KEY);
+    if (!token) {
+      token = 'dev_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+      localStorage.setItem(DEVICE_TOKEN_KEY, token);
+    }
+    return token;
+  } catch {
+    return 'dev_' + Date.now().toString(36);
+  }
+};
 
 const loadSavedOrders = (): PlacedOrder[] => {
   try {
@@ -18,7 +32,7 @@ const loadSavedOrders = (): PlacedOrder[] => {
 const saveOrdersToStorage = (orders: PlacedOrder[]) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-  } catch {}
+  } catch { }
 };
 
 const loadSavedTableSession = (): TableSession | null => {
@@ -37,7 +51,55 @@ const saveTableSessionToStorage = (session: TableSession | null) => {
     } else {
       localStorage.removeItem(TABLE_SESSION_KEY);
     }
-  } catch {}
+  } catch { }
+};
+
+export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?: PlacedOrder | null): PlacedOrder => {
+  const mappedItems: CartItem[] = (serverOrderData.items || []).map((it: any) => {
+    const existingItem = existingOrder?.items?.find((c) => c.menuItemId === it.menuItemId || c.id === it.id);
+    return {
+      id: it.id,
+      menuItemId: it.menuItemId,
+      name: it.name,
+      category: existingItem?.category || 'Món chính',
+      price: Number(it.price || 0),
+      quantity: it.quantity || 1,
+      image: existingItem?.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop',
+      notes: it.notes,
+      roundNo: it.roundNo || 1,
+      status: (it.status?.toUpperCase() as any) || 'CONFIRMED',
+      addedAt: it.addedAt,
+    };
+  });
+
+  const rawMode = (serverOrderData.orderType || serverOrderData.order_type || existingOrder?.orderMode || 'dine_in').toLowerCase();
+  const orderMode: OrderMode = rawMode === 'takeaway' ? 'TAKEAWAY' : rawMode === 'delivery' ? 'DELIVERY' : 'DINE_IN';
+
+  const rawStatus = (serverOrderData.status || existingOrder?.status || 'PENDING').toUpperCase() as PlacedOrderStatus;
+
+  return {
+    id: serverOrderData.id,
+    orderNumber: serverOrderData.orderNumber || serverOrderData.order_number,
+    order_number: serverOrderData.orderNumber || serverOrderData.order_number,
+    tableSessionId: serverOrderData.tableSessionId || serverOrderData.table_session_id,
+    orderMode,
+    order_mode: orderMode,
+    tableNo: serverOrderData.tableNo || serverOrderData.table_no,
+    table_no: serverOrderData.tableNo || serverOrderData.table_no,
+    customerName: serverOrderData.customerName || serverOrderData.customer_name,
+    customer_name: serverOrderData.customerName || serverOrderData.customer_name,
+    items: mappedItems,
+    totalAmount: Number(serverOrderData.totalAmount || serverOrderData.total_amount || 0),
+    total_amount: Number(serverOrderData.totalAmount || serverOrderData.total_amount || 0),
+    status: rawStatus,
+    paymentStatus: (serverOrderData.paymentStatus?.toUpperCase() as any) || 'UNPAID',
+    placedAt: existingOrder?.placedAt || new Date(serverOrderData.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    placed_at: existingOrder?.placed_at || new Date(serverOrderData.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    estimatedMinutes: existingOrder?.estimatedMinutes || (orderMode === 'DELIVERY' ? 35 : orderMode === 'TAKEAWAY' ? 20 : 15),
+    estimated_minutes: existingOrder?.estimated_minutes || (orderMode === 'DELIVERY' ? 35 : orderMode === 'TAKEAWAY' ? 20 : 15),
+    paymentMethod: serverOrderData.paymentMethod || serverOrderData.payment_method || existingOrder?.paymentMethod,
+    payment_method: serverOrderData.paymentMethod || serverOrderData.payment_method || existingOrder?.payment_method,
+  };
 };
 
 // ─── State Interface ──────────────────────────────────────────────────────────
@@ -74,6 +136,9 @@ interface ClientState {
   placeOrder: (draft: ClientOrderDraft) => Promise<PlacedOrder | null>;
   clearPlacedOrder: () => void;
   syncOrderStatus: (id: string, status: PlacedOrderStatus) => void;
+  fetchOrderById: (orderId: string) => Promise<PlacedOrder | null>;
+  fetchOrdersFromServer: () => Promise<PlacedOrder[]>;
+  handleServerOrderEvent: (serverOrder: any) => void;
 
   // Table service requests (e.g. xin đá, đũa muỗng, gọi thanh toán)
   serviceRequests: Record<string, string[]>;
@@ -117,35 +182,36 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   addToCart: (item, quantity = 1) =>
     set((state) => {
-      const existing = state.cart.find((c) => c.menuItemId === item.menuItemId);
+      const itemKey = item.id || item.menuItemId;
+      const existing = state.cart.find((c) => (c.id || c.menuItemId) === itemKey);
       if (existing) {
         return {
           cart: state.cart.map((c) =>
-            c.menuItemId === item.menuItemId
+            (c.id || c.menuItemId) === itemKey
               ? { ...c, quantity: c.quantity + quantity }
               : c
           ),
         };
       }
-      return { cart: [...state.cart, { ...item, quantity }] };
+      return { cart: [...state.cart, { ...item, id: itemKey, quantity }] };
     }),
 
-  removeFromCart: (menuItemId) =>
+  removeFromCart: (key) =>
     set((state) => ({
-      cart: state.cart.filter((c) => c.menuItemId !== menuItemId),
+      cart: state.cart.filter((c) => (c.id || c.menuItemId) !== key),
     })),
 
-  updateQuantity: (menuItemId, delta) =>
+  updateQuantity: (key, delta) =>
     set((state) => {
-      const item = state.cart.find((c) => c.menuItemId === menuItemId);
+      const item = state.cart.find((c) => (c.id || c.menuItemId) === key);
       if (!item) return state;
       const newQty = item.quantity + delta;
       if (newQty <= 0) {
-        return { cart: state.cart.filter((c) => c.menuItemId !== menuItemId) };
+        return { cart: state.cart.filter((c) => (c.id || c.menuItemId) !== key) };
       }
       return {
         cart: state.cart.map((c) =>
-          c.menuItemId === menuItemId ? { ...c, quantity: newQty } : c
+          (c.id || c.menuItemId) === key ? { ...c, quantity: newQty } : c
         ),
       };
     }),
@@ -171,11 +237,17 @@ export const useClientStore = create<ClientState>((set, get) => ({
       throw new Error('Mã QR bàn không được để trống!');
     }
 
+    const deviceToken = getOrCreateDeviceToken();
+
     try {
       const res = await fetch('/api/table-sessions/check-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrSecretToken: trimmed, mode: 'PAY_AFTER' }),
+        body: JSON.stringify({
+          qrSecretToken: trimmed,
+          deviceToken,
+          mode: 'pay_after',
+        }),
       });
       if (res.ok) {
         const sessionData: TableSession = await res.json();
@@ -188,24 +260,51 @@ export const useClientStore = create<ClientState>((set, get) => ({
       }
 
       const errorData = await res.json().catch(() => ({}));
-      // Nếu server từ chối hợp lệ (400, 403, 409...), hiển thị lỗi từ server
-      if (res.status !== 404 && res.status !== 502 && res.status !== 503) {
-        throw new Error(errorData.message || 'Mã QR bàn không hợp lệ hoặc bàn đã có phiên khác!');
+      // Xử lý các mã lỗi cụ thể từ Server (khi Backend đang hoạt động)
+      if (res.status === 409) {
+        throw new Error(errorData.message || 'Bàn này hiện đang có khách sử dụng và đã được khóa bởi một thiết bị khác!');
+      }
+      if (res.status === 400) {
+        throw new Error(errorData.message || 'Mã QR bàn không hợp lệ hoặc đã bị thay đổi!');
+      }
+      if (res.status === 500) {
+        throw new Error(errorData.message || 'Máy chủ gặp sự cố khi kích hoạt phiên bàn!');
+      }
+      if (res.status !== 502 && res.status !== 503) {
+        throw new Error(errorData.message || `Lỗi kích hoạt bàn (${res.status})!`);
       }
     } catch (err: any) {
-      if (err.message && err.message !== 'Failed to fetch' && !err.message.includes('Mã QR') && !err.message.includes('NetworkError')) {
+      // Chỉ kích hoạt chế độ Offline/Demo nếu thực sự mất kết nối mạng hoặc server sập (Failed to fetch)
+      const isNetworkFailure = !err.status && (
+        err.message === 'Failed to fetch' ||
+        err.message?.includes('NetworkError') ||
+        err.message?.includes('Failed to fetch') ||
+        err.name === 'TypeError'
+      );
+
+      if (!isNetworkFailure) {
         throw err;
       }
-      console.warn('Backend chưa sẵn sàng, kích hoạt chế độ nhận diện mã bàn demo:', err);
+      console.warn('Backend chưa sẵn sàng hoặc không thể kết nối mạng, kích hoạt chế độ nhận diện mã bàn demo:', err);
     }
 
     // Nhận diện mã bàn khi chạy Offline / Demo:
-    // Hỗ trợ định dạng qr-token-tbl-03-xxx, tbl-03, ban-3, ban-03, tbl-3,...
+    // Hỗ trợ định dạng qr-sec-tbl01-xxx, qr-token-tbl-03-xxx, tbl-03, ban-3, ban-03, tbl-3,...
     const match = trimmed.match(/(?:tbl|ban)[_-]?0?(\d+)/i);
     let tableNum = match ? parseInt(match[1], 10) : null;
 
     if (!tableNum) {
       const knownTokens: Record<string, number> = {
+        'qr-sec-tbl01-a1b2c3d4e5f6': 1,
+        'qr-sec-tbl02-b2c3d4e5f6g7': 2,
+        'qr-sec-tbl03-c3d4e5f6g7h8': 3,
+        'qr-sec-tbl04-d4e5f6g7h8i9': 4,
+        'qr-sec-tbl05-e5f6g7h8i9j0': 5,
+        'qr-sec-tbl06-f6g7h8i9j0k1': 6,
+        'qr-sec-tbl07-g7h8i9j0k1l2': 7,
+        'qr-sec-tbl08-h8i9j0k1l2m3': 8,
+        'qr-sec-tbl09-i9j0k1l2m3n4': 9,
+        'qr-sec-tbl10-j0k1l2m3n4o5': 10,
         'qr-token-tbl-01-a1b2c3d4e5f6': 1,
         'qr-token-tbl-02-b2c3d4e5f6g7': 2,
         'qr-token-tbl-03-c3d4e5f6g7h8': 3,
@@ -226,11 +325,26 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
     if (tableNum && tableNum >= 1 && tableNum <= 50) {
       const pad = tableNum < 10 ? `0${tableNum}` : `${tableNum}`;
+
+      // Cơ chế khóa 1 thiết bị cho Demo Offline:
+      const demoLockKey = `omniresto_demo_lock_tbl_${tableNum}`;
+      const existingLock = localStorage.getItem(demoLockKey);
+      if (existingLock && existingLock !== deviceToken) {
+        throw new Error(
+          `Bàn ${pad} hiện đang có khách sử dụng và đã được khóa cho 1 thiết bị quản lý. ` +
+          `Để tránh trùng lặp đơn, mỗi bàn chỉ cho phép 1 thiết bị đặt món. ` +
+          `Vui lòng liên hệ nhân viên phục vụ để mở khóa bàn!`
+        );
+      }
+      localStorage.setItem(demoLockKey, deviceToken);
+
       const simSession: TableSession = {
         id: `sess-tbl-${tableNum}-${Date.now()}`,
         tableId: `tbl-${tableNum}`,
         tableNo: `Bàn ${pad}`,
         sessionToken: `sess-sim-tbl-${tableNum}-${Math.random().toString(36).substring(2, 9)}`,
+        deviceToken,
+        isDeviceMaster: true,
         status: 'ACTIVE',
         mode: 'PAY_AFTER',
         expiresAt: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
@@ -258,6 +372,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
         saveTableSessionToStorage(data);
         set({ tableSession: data });
         return data;
+      } else if (res.status === 404) {
+        // Token cũ không còn tồn tại trên server (phiên hết hạn hoặc DB mới)
+        saveTableSessionToStorage(null);
+        set({ tableSession: null });
+        return null;
       }
     } catch (err) {
       console.warn('Failed to refresh table session from server:', err);
@@ -416,33 +535,42 @@ export const useClientStore = create<ClientState>((set, get) => ({
       await fetch(`/api/table-sessions/confirm-payment?sessionToken=${encodeURIComponent(currentSession.sessionToken)}&staffId=STAFF-POS&method=${encodeURIComponent(method)}`, {
         method: 'POST',
       });
-    } catch {}
-    const updated: TableSession = {
-      ...currentSession,
-      status: 'PAID',
-      paymentStatus: 'PAID',
-    };
+    } catch { }
+    // Xóa demo lock nếu có
+    if (currentSession.tableId) {
+      const match = currentSession.tableId.match(/\d+/);
+      if (match) {
+        localStorage.removeItem(`omniresto_demo_lock_tbl_${parseInt(match[0], 10)}`);
+      }
+    }
+
     const updatedOrders = get().orders.map((o) => ({
       ...o,
       status: 'COMPLETED' as const,
       paymentStatus: 'PAID' as const,
     }));
-    saveTableSessionToStorage(updated);
-    saveOrdersToStorage(updatedOrders);
-    set({ tableSession: updated, orders: updatedOrders });
 
-    if (typeof window !== 'undefined' && updated.tableId) {
+    // Khi thanh toán xong -> Hủy phiên bàn, giải phóng bàn và chuyển về chế độ giao hàng
+    saveTableSessionToStorage(null);
+    saveOrdersToStorage(updatedOrders);
+    set({
+      tableSession: null,
+      orderMode: 'DELIVERY',
+      orders: updatedOrders,
+    });
+
+    if (typeof window !== 'undefined' && currentSession.tableId) {
       window.dispatchEvent(
         new CustomEvent('omniresto:table_session_closed', {
-          detail: { tableId: updated.tableId, reason: 'CLIENT_PAYMENT_CONFIRMED' },
+          detail: { tableId: currentSession.tableId, reason: 'CLIENT_PAYMENT_CONFIRMED' },
         })
       );
     }
-    return updated;
+    return null;
   },
 
   // Order
-  orderMode: initialSavedTableSession ? 'DINE_IN' : 'DINE_IN',
+  orderMode: initialSavedTableSession ? 'DINE_IN' : 'DELIVERY',
   setOrderMode: (mode) => set({ orderMode: mode }),
   orderDraft: {},
   setOrderDraft: (patch) =>
@@ -463,9 +591,9 @@ export const useClientStore = create<ClientState>((set, get) => ({
       return null;
     }
 
-    // Chặn đặt món nếu hóa đơn đang đóng băng để thanh toán
-    if (state.tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED') {
-      alert('Hóa đơn của bàn đang được đóng băng để thanh toán. Quý khách vui lòng bấm "Hủy yêu cầu thanh toán" trên ứng dụng nếu muốn tiếp tục gọi thêm món!');
+    // Chặn đặt món nếu hóa đơn đang đóng băng để thanh toán (chỉ áp dụng khi gọi món ăn tại bàn)
+    if (draft.orderMode === 'DINE_IN' && state.tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED') {
+      alert('Hóa đơn của bàn đang được đóng băng để thanh toán. Quý khách vui lòng bấm "Hủy yêu cầu thanh toán" trên ứng dụng nếu muốn tiếp tục gọi thêm món tại bàn!');
       return null;
     }
 
@@ -474,38 +602,55 @@ export const useClientStore = create<ClientState>((set, get) => ({
       return null;
     }
 
+    const session = state.tableSession as any;
     const effectiveTableNo = draft.orderMode === 'DINE_IN'
-      ? state.tableSession?.tableNo
-      : undefined;
+      ? (session?.tableNo || session?.table_no)
+      : (draft.orderMode === 'TAKEAWAY' && session ? (session?.tableNo || session?.table_no) : draft.tableNo);
 
     const effectiveSessionToken = draft.orderMode === 'DINE_IN'
-      ? state.tableSession?.sessionToken
+      ? (session?.sessionToken || session?.session_token)
       : undefined;
+
+    if (draft.orderMode === 'DINE_IN' && !effectiveSessionToken) {
+      alert('Chưa có thông tin bàn ăn! Quý khách vui lòng quét mã QR tại bàn trước khi đặt món.');
+      return null;
+    }
 
     // Gửi đơn lên Backend Server (Single Source of Truth)
     let serverOrderData: any = null;
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const headers: Record<string, string> = { 
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'idemp_' + Math.random().toString(36).substring(2) + '_' + Date.now(),
+      };
       if (effectiveSessionToken) {
         headers['X-Table-Session'] = effectiveSessionToken;
       }
+      const rawMethod = (draft.paymentMethod || 'cash').toLowerCase();
+      const normalizedPaymentMethod = rawMethod === 'cash' ? 'cash' : rawMethod === 'card' ? 'card' : 'qr_code';
+
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           orderType: draft.orderMode === 'DINE_IN' ? 'dine_in' : draft.orderMode === 'TAKEAWAY' ? 'takeaway' : 'delivery',
           tableNo: effectiveTableNo,
-          sessionToken: effectiveSessionToken,
           customerName: draft.customerName,
-          paymentMethod: draft.paymentMethod,
-          totalAmount: state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-          items: state.cart.map((it) => ({
-            menuItemId: it.menuItemId,
-            name: it.name,
-            quantity: it.quantity,
-            price: it.price,
-            notes: it.notes,
-          })),
+          paymentMethod: normalizedPaymentMethod,
+          items: state.cart.map((it) => {
+            let realId = it.menuItemId || (it as any).menu_item_id || '';
+            if (!realId && it.id) {
+              realId = it.id;
+            }
+            return {
+              menuItemId: realId,
+              name: it.name,
+              quantity: it.quantity,
+              price: it.price,
+              notes: it.notes,
+              optionIds: (it as any).optionIds || (it as any).selectedOptionIds || [],
+            };
+          }),
         }),
       });
 
@@ -527,7 +672,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
         id: `ord-sim-${Date.now()}`,
         orderNumber: simOrderNum,
         tableNo: effectiveTableNo,
-        orderType: draft.orderMode === 'DINE_IN' ? 'dine_in' : 'takeaway',
+        orderType: draft.orderMode === 'DINE_IN' ? 'dine_in' : draft.orderMode === 'TAKEAWAY' ? 'takeaway' : 'delivery',
         status: 'pending',
         paymentStatus: 'unpaid',
         totalAmount: state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -547,40 +692,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
       return null;
     }
 
-    // Mapping từ dữ liệu chuẩn xác của Backend
-    const mappedItems: CartItem[] = (serverOrderData.items || []).map((it: any) => {
-      const foundLocal = state.cart.find((c) => c.menuItemId === it.menuItemId);
-      return {
-        id: it.id,
-        menuItemId: it.menuItemId,
-        name: it.name,
-        category: foundLocal?.category || 'Món chính',
-        price: it.price,
-        quantity: it.quantity,
-        image: foundLocal?.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop',
-        notes: it.notes,
-        roundNo: it.roundNo || 1,
-        status: (it.status?.toUpperCase() as any) || 'CONFIRMED',
-        addedAt: it.addedAt,
-      };
-    });
-
-    const finalOrder: PlacedOrder = {
-      id: serverOrderData.id,
-      orderNumber: serverOrderData.orderNumber,
-      tableSessionId: serverOrderData.tableSessionId,
+    const existingOrder = state.orders.find((o) => o.id === serverOrderData.id || o.orderNumber === serverOrderData.orderNumber);
+    const finalOrder = mapServerOrderToPlacedOrder(serverOrderData, existingOrder || {
       orderMode: draft.orderMode,
-      tableNo: serverOrderData.tableNo || effectiveTableNo,
-      sessionToken: effectiveSessionToken,
-      customerName: serverOrderData.customerName || draft.customerName,
-      items: mappedItems,
-      totalAmount: serverOrderData.totalAmount,
-      status: (serverOrderData.status?.toUpperCase() as PlacedOrderStatus) || 'CONFIRMED',
-      paymentStatus: (serverOrderData.paymentStatus?.toUpperCase() as any) || 'UNPAID',
-      placedAt: new Date(serverOrderData.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      estimatedMinutes: draft.orderMode === 'DELIVERY' ? 35 : draft.orderMode === 'TAKEAWAY' ? 20 : 15,
       paymentMethod: draft.paymentMethod,
-    };
+    } as any);
 
     // Cập nhật danh sách đơn
     const existingIndex = state.orders.findIndex((o) => o.id === finalOrder.id);
@@ -596,9 +712,9 @@ export const useClientStore = create<ClientState>((set, get) => ({
     // Đồng bộ với Admin Store
     useAdminStore.getState().addOrderFromClient({
       id: finalOrder.id,
-      orderNumber: finalOrder.orderNumber,
-      orderType: finalOrder.orderMode,
-      tableNo: finalOrder.tableNo,
+      order_number: finalOrder.orderNumber || finalOrder.id,
+      order_type: finalOrder.orderMode,
+      table_no: finalOrder.tableNo,
       status: (finalOrder.status as any) || 'CONFIRMED',
       items: finalOrder.items.map((it, i) => ({
         id: String(i + 1),
@@ -607,10 +723,10 @@ export const useClientStore = create<ClientState>((set, get) => ({
         price: it.price,
         notes: it.notes,
       })),
-      totalAmount: finalOrder.totalAmount,
-      createdAt: 'Vừa xong',
-      customerName: finalOrder.customerName,
-      paymentMethod: finalOrder.paymentMethod as any,
+      total_amount: finalOrder.totalAmount || 0,
+      created_at: 'Vừa xong',
+      customer_name: finalOrder.customerName,
+      payment_method: finalOrder.paymentMethod as any,
     });
 
     // Chỉ clear giỏ hàng khi backend đã ghi nhận tạo/cộng dồn đơn thành công
@@ -627,16 +743,17 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   syncOrderStatus: (id, status) =>
     set((state) => {
+      const normStatus = (status || 'PENDING').toUpperCase() as PlacedOrderStatus;
       let changed = false;
       const updatedOrders = state.orders.map((o) => {
-        if (o.id === id || o.orderNumber === id) {
+        if (o.id === id || o.orderNumber === id || o.order_number === id) {
           changed = true;
           return {
             ...o,
-            status,
+            status: normStatus,
             items: o.items.map((it) => ({
               ...it,
-              status: (status === 'COMPLETED' ? 'READY' : status) as any,
+              status: (normStatus === 'COMPLETED' ? 'READY' : normStatus) as any,
             })),
           };
         }
@@ -646,19 +763,114 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
       saveOrdersToStorage(updatedOrders);
       const updatedPlaced =
-        state.placedOrder && (state.placedOrder.id === id || state.placedOrder.orderNumber === id)
+        state.placedOrder && (state.placedOrder.id === id || state.placedOrder.orderNumber === id || state.placedOrder.order_number === id)
           ? {
-              ...state.placedOrder,
-              status,
-              items: state.placedOrder.items.map((it) => ({
-                ...it,
-                status: (status === 'COMPLETED' ? 'READY' : status) as any,
-              })),
-            }
+            ...state.placedOrder,
+            status: normStatus,
+            items: state.placedOrder.items.map((it) => ({
+              ...it,
+              status: (normStatus === 'COMPLETED' ? 'READY' : normStatus) as any,
+            })),
+          }
           : state.placedOrder;
 
       return { orders: updatedOrders, placedOrder: updatedPlaced };
     }),
+
+  fetchOrderById: async (orderId: string) => {
+    if (!orderId) return null;
+    try {
+      const res = await fetch(`/api/orders/${orderId}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const existing = get().orders.find((o) => o.id === data.id || o.orderNumber === data.orderNumber || o.order_number === data.orderNumber);
+      const updated = mapServerOrderToPlacedOrder(data, existing);
+
+      set((state) => {
+        const idx = state.orders.findIndex((o) => o.id === updated.id || o.orderNumber === updated.orderNumber);
+        const newOrders = [...state.orders];
+        if (idx !== -1) {
+          newOrders[idx] = updated;
+        } else {
+          newOrders.unshift(updated);
+        }
+        saveOrdersToStorage(newOrders);
+
+        const newPlaced = state.placedOrder && (state.placedOrder.id === updated.id || state.placedOrder.orderNumber === updated.orderNumber || state.placedOrder.order_number === updated.orderNumber)
+          ? updated
+          : state.placedOrder;
+
+        return { orders: newOrders, placedOrder: newPlaced };
+      });
+      return updated;
+    } catch (err) {
+      console.warn('Failed to fetch order from server:', err);
+      return null;
+    }
+  },
+
+  fetchOrdersFromServer: async () => {
+    const sessionToken = get().tableSession?.sessionToken;
+    try {
+      const headers: Record<string, string> = {};
+      if (sessionToken) headers['X-Table-Session'] = sessionToken;
+      const res = await fetch('/api/orders', { headers });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!Array.isArray(data)) return [];
+
+      const currentOrders = get().orders;
+      const updatedList = data.map((d: any) => {
+        const existing = currentOrders.find((o) => o.id === d.id || o.orderNumber === d.orderNumber || o.order_number === d.orderNumber);
+        return mapServerOrderToPlacedOrder(d, existing);
+      });
+
+      const serverIds = new Set(updatedList.map((o) => o.id));
+      const remaining = currentOrders.filter((o) => !serverIds.has(o.id));
+      const finalList = [...updatedList, ...remaining];
+
+      saveOrdersToStorage(finalList);
+      set({ orders: finalList });
+      return finalList;
+    } catch (err) {
+      console.warn('Failed to fetch orders from server:', err);
+      return [];
+    }
+  },
+
+  handleServerOrderEvent: (serverOrder: any) => {
+    if (!serverOrder?.id) return;
+    const currentOrders = get().orders;
+    const currentSession = get().tableSession;
+
+    // Kiểm tra xem đơn hàng này có thuộc về thiết bị/phiên của khách này không
+    const matchesSession = currentSession?.id && (serverOrder.tableSessionId === currentSession.id || serverOrder.table_session_id === currentSession.id);
+    const matchesExisting = currentOrders.some((o) => o.id === serverOrder.id || o.orderNumber === serverOrder.orderNumber || o.order_number === serverOrder.orderNumber);
+
+    if (!matchesSession && !matchesExisting) {
+      return;
+    }
+
+    const existing = currentOrders.find((o) => o.id === serverOrder.id || o.orderNumber === serverOrder.orderNumber || o.order_number === serverOrder.orderNumber);
+    const updated = mapServerOrderToPlacedOrder(serverOrder, existing);
+
+    set((state) => {
+      const idx = state.orders.findIndex((o) => o.id === updated.id || o.orderNumber === updated.orderNumber);
+      const newOrders = [...state.orders];
+      if (idx !== -1) {
+        newOrders[idx] = updated;
+      } else {
+        newOrders.unshift(updated);
+      }
+      saveOrdersToStorage(newOrders);
+
+      const newPlaced = state.placedOrder && (state.placedOrder.id === updated.id || state.placedOrder.orderNumber === updated.orderNumber || state.placedOrder.order_number === updated.orderNumber)
+        ? updated
+        : state.placedOrder;
+
+      return { orders: newOrders, placedOrder: newPlaced };
+    });
+  },
 
   // Table service requests (kết nối API backend với rate limiting)
   serviceRequests: {},
@@ -712,8 +924,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
       };
 
       try {
-        useAdminStore.getState().addServiceRequest({ tableNo, orderId, requestText });
-      } catch {}
+        useAdminStore.getState().addServiceRequest({ table_no: tableNo, order_id: orderId, request_text: requestText });
+      } catch { }
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
@@ -741,7 +953,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(TABLE_SESSION_KEY);
-    } catch {}
+    } catch { }
     set({
       orders: [],
       placedOrder: null,
@@ -780,6 +992,7 @@ if (typeof window !== 'undefined') {
     const current = useClientStore.getState().tableSession;
     if (current && (!e.detail?.tableId || current.tableId === e.detail.tableId)) {
       useClientStore.getState().clearTableSession();
+      useClientStore.setState({ orderMode: 'DELIVERY' });
       alert('🔔 Bàn của quý khách đã hoàn tất thanh toán hoặc kết thúc phiên. Cảm ơn quý khách đã dùng bữa tại OmniResto!');
     }
   }) as EventListener);

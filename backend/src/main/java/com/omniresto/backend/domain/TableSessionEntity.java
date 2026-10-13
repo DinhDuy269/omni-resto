@@ -26,6 +26,9 @@ public class TableSessionEntity extends BaseEntity {
     @Column(name = "session_token", nullable = false, unique = true, length = 64)
     private String sessionToken;
 
+    @Column(name = "device_token", length = 64)
+    private String deviceToken;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

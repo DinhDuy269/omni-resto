@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useAdminStore } from '../../../store/adminStore';
 
 export const useMenu = () => {
-  const { menuItems, addMenuItem, toggleMenuItemStatus } = useAdminStore();
+  const { menu_items, addMenuItem, toggleMenuItemStatus } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
 
-  const filteredItems = menuItems.filter((item) => {
+  const filteredItems = menu_items.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.code.toLowerCase().includes(searchQuery.toLowerCase());
@@ -15,8 +15,8 @@ export const useMenu = () => {
   });
 
   return {
-    menuItems: filteredItems,
-    allMenuItems: menuItems,
+    menu_items: filteredItems,
+    all_menu_items: menu_items,
     searchQuery,
     setSearchQuery,
     activeCategory,

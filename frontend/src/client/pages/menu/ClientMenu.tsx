@@ -41,7 +41,7 @@ const getCurrentPeriodClient = (): string => {
  * ClientMenu — Browsing + ordering interface phân theo Buổi ăn
  */
 export const ClientMenu: React.FC = () => {
-  const { menuItems, setMenuItems } = useAdminStore();
+  const { menu_items, setMenuItems } = useAdminStore();
   const { openCart } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
@@ -86,40 +86,53 @@ export const ClientMenu: React.FC = () => {
 
   // Kiểm tra một món có đang trong giờ phục vụ thực tế hay không
   const checkIsItemAvailableNow = (item: MenuItem): boolean => {
-    if (item.isAvailableNow !== undefined) {
-      return item.isAvailableNow;
-    }
-    const p = (item.mealPeriods || '').toUpperCase();
-    if (!p || p.includes('ALL_DAY') || p.includes('ALLDAY')) {
-      return currentPeriod !== 'CLOSED' && currentPeriod !== 'BREAK';
-    }
-    if (currentPeriod === 'BREAK' || currentPeriod === 'CLOSED') {
+    if (currentPeriod === 'CLOSED') {
       return false;
     }
+    const p = (item.meal_periods || '').toUpperCase();
+    const isAllDayOrDrink = !p ||
+      p.includes('ALL_DAY') ||
+      p.includes('ALLDAY') ||
+      p.includes('BREAK') ||
+      Boolean(item.category && (item.category.includes('Đồ Uống') || item.category.includes('Tráng Miệng')));
+
+    // Trong giờ nghỉ bếp (14:30 - 16:30), quầy Bar đồ uống và tráng miệng / món cả ngày vẫn phục vụ
+    if (currentPeriod === 'BREAK') {
+      return isAllDayOrDrink;
+    }
+
+    if (item.is_available_now !== undefined) {
+      return item.is_available_now;
+    }
+
+    if (isAllDayOrDrink) {
+      return true;
+    }
+
     return p.includes(currentPeriod);
   };
 
   // Build category list
   const categories: string[] = useMemo(() => {
-    const cats = Array.from(new Set(menuItems.map((m) => m.category))).filter(Boolean) as string[];
+    const cats = Array.from(new Set(menu_items.map((m) => m.category))).filter(Boolean) as string[];
     return [ALL_CATEGORY, ...cats];
-  }, [menuItems]);
+  }, [menu_items]);
 
   // Filter + sort items
   const filteredItems = useMemo(() => {
-    let items = menuItems.map(item => ({
+    let items = menu_items.map(item => ({
       ...item,
-      isAvailableNow: checkIsItemAvailableNow(item),
+      is_available_now: checkIsItemAvailableNow(item),
     }));
 
     // Lọc theo buổi
     if (activePeriod !== 'ALL') {
       items = items.filter((m) => {
-        const p = (m.mealPeriods || '').toUpperCase();
+        const p = (m.meal_periods || '').toUpperCase();
         if (activePeriod === 'ALL_DAY') {
-          return p.includes('ALL_DAY') || m.category.includes('Đồ Uống');
+          return p.includes('ALL_DAY') || p.includes('ALLDAY') || (m.category && (m.category.includes('Đồ Uống') || m.category.includes('Tráng Miệng')));
         }
-        return p.includes(activePeriod) || p.includes('ALL_DAY');
+        return p.includes(activePeriod) || p.includes('ALL_DAY') || p.includes('ALLDAY');
       });
     }
 
@@ -138,13 +151,13 @@ export const ClientMenu: React.FC = () => {
 
     // Món bán chạy và món sẵn sàng lên đầu
     return [...items].sort((a, b) => {
-      if (a.isAvailableNow && !b.isAvailableNow) return -1;
-      if (!a.isAvailableNow && b.isAvailableNow) return 1;
-      return (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0);
+      if (a.is_available_now && !b.is_available_now) return -1;
+      if (!a.is_available_now && b.is_available_now) return 1;
+      return (b.is_best_seller ? 1 : 0) - (a.is_best_seller ? 1 : 0);
     });
-  }, [menuItems, activePeriod, activeCategory, searchQuery, currentPeriod]);
+  }, [menu_items, activePeriod, activeCategory, searchQuery, currentPeriod]);
 
-  const availableCount = filteredItems.filter((m) => (m.status === 'AVAILABLE' || m.status === 'available') && m.isAvailableNow).length;
+  const availableCount = filteredItems.filter((m) => (m.status === 'AVAILABLE' || m.status === 'available') && m.is_available_now).length;
 
   // Banner status message
   const getPeriodBanner = () => {
@@ -298,7 +311,7 @@ export const ClientMenu: React.FC = () => {
           {MEAL_PERIOD_TABS.map((tab) => {
             const isSelected = activePeriod === tab.id;
             const isLive = tab.id === 'ALL_DAY'
-              ? currentPeriod !== 'CLOSED' && currentPeriod !== 'BREAK'
+              ? currentPeriod !== 'CLOSED'
               : currentPeriod === tab.id;
             return (
               <button
@@ -349,7 +362,7 @@ export const ClientMenu: React.FC = () => {
         }}>
           {categories.map((cat) => {
             const isActive = cat === activeCategory;
-            const count = cat === ALL_CATEGORY ? menuItems.length : menuItems.filter((m) => m.category === cat).length;
+            const count = cat === ALL_CATEGORY ? menu_items.length : menu_items.filter((m) => m.category === cat).length;
             return (
               <button
                 key={cat}

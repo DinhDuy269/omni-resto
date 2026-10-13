@@ -8,9 +8,9 @@ import { useAdminStore } from '../../../admin/store/adminStore';
  */
 const ClientHome: React.FC = () => {
   const navigate = useNavigate();
-  const { menuItems } = useAdminStore();
+  const { menu_items } = useAdminStore();
 
-  const bestSellers = menuItems.filter((m) => m.is_best_seller).slice(0, 4);
+  const bestSellers = menu_items.filter((m) => m.is_best_seller).slice(0, 4);
 
   return (
     <div style={{ fontFamily: 'var(--c-font)' }}>
@@ -101,16 +101,16 @@ const ClientHome: React.FC = () => {
                 <ArrowRight size={18} strokeWidth={2.2} />
               </button>
               <button
-                id="hero-reservation-btn"
+                id="hero-scan-btn"
                 className="c-btn c-btn-lg"
                 style={{
                   background: 'rgba(255,255,255,0.12)', color: '#fff',
                   border: '1.5px solid rgba(255,255,255,0.3)',
                   backdropFilter: 'blur(8px)',
                 }}
-                onClick={() => navigate('/client/reservation')}
+                onClick={() => navigate('/client/scan')}
               >
-                📅 Đặt Bàn Ngay
+                📱 Quét Mã Bàn
               </button>
             </div>
 
@@ -118,7 +118,7 @@ const ClientHome: React.FC = () => {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
               {[
                 { icon: '⭐', value: '4.9/5', label: '2,400+ đánh giá' },
-                { icon: '🍲', value: `${menuItems.length}+ món`, label: 'Đặc sắc ẩm thực' },
+                { icon: '🍲', value: `${menu_items.length}+ món`, label: 'Đặc sắc ẩm thực' },
                 { icon: '⚡', value: '15 phút', label: 'Phục vụ nhanh chóng' },
               ].map((item) => (
                 <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

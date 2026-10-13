@@ -4,7 +4,7 @@ import type { Order, OrderResponse, OrderStatus } from '../../../shared/types/ad
 export const orderApi = {
   getOrders: async (status?: OrderStatus): Promise<Order[]> => {
     try {
-      const q = toQueryString({ status });
+      const q = toQueryString({ status: status ? status.toLowerCase() : undefined });
       const res = await apiClient.get<Order[] | OrderResponse>(`/orders${q}`);
       if (Array.isArray(res.data)) return res.data;
       return res.data.orders || [];
@@ -35,7 +35,7 @@ export const orderApi = {
 
   updateOrderStatus: async (id: string, status: OrderStatus): Promise<Order> => {
     try {
-      const res = await apiClient.patch<Order | OrderResponse>(`/orders/${id}/status`, null, { params: { status } });
+      const res = await apiClient.patch<Order | OrderResponse>(`/orders/${id}/status`, null, { params: { status: status.toLowerCase() } });
       if ('order' in res.data && res.data.order) return res.data.order;
       return res.data as Order;
     } catch (error) {
