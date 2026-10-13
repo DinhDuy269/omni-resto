@@ -53,7 +53,7 @@ export const ReservationManagement: React.FC = () => {
   // Init on mount
   useEffect(() => {
     initialize();
-  }, [initialize]);
+  }, []);
 
   // ─── Derived data ──────────────────────────────────────────────────────────
   const filtered = reservations.filter((r) => {

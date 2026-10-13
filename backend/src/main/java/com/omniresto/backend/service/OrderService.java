@@ -11,6 +11,7 @@ import com.omniresto.backend.domain.enums.PaymentStatus;
 import com.omniresto.backend.domain.enums.TableSessionStatus;
 import com.omniresto.backend.exception.BadRequestException;
 import com.omniresto.backend.exception.ResourceNotFoundException;
+import com.omniresto.backend.helper.MealPeriodHelper;
 import com.omniresto.backend.model.order.request.OrderRequest;
 import com.omniresto.backend.model.order.response.OrderEventMessage;
 import com.omniresto.backend.model.order.response.OrderItemResponse;
@@ -20,7 +21,7 @@ import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,8 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -42,7 +43,6 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final MenuItemRepository menuItemRepository;
-    private final SimpMessagingTemplate messagingTemplate;
     private final TableSessionService tableSessionService;
 
     @Setter
@@ -58,17 +58,17 @@ public class OrderService {
 
         return orders.stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    public List<OrderResponse> getAllOrders(String branchId, OrderStatus status) {
-        return getAllOrders(status);
+                .toList();
     }
 
     public OrderResponse getOrderById(String id) {
-        OrderEntity entity = orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + id));
+        OrderEntity entity = findOrderById(id);
         return mapToResponse(entity);
+    }
+
+    private OrderEntity findOrderById(String id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + id));
     }
 
     @Transactional
@@ -80,9 +80,9 @@ public class OrderService {
     public OrderResponse createOrder(OrderRequest request, String sessionToken) {
         // ── 1. Kiểm tra thời gian phục vụ của các món theo buổi ────────────────
         LocalTime now = LocalTime.now(clock);
-        MealPeriod currentPeriod = MealPeriod.getCurrentPeriod(now);
+        MealPeriod currentPeriod = MealPeriodHelper.getCurrentPeriod(now);
 
-        if (currentPeriod == MealPeriod.CLOSED) {
+        if (currentPeriod == MealPeriod.closed) {
             throw new BadRequestException(
                     "Nhà hàng hiện đang trong giờ đóng cửa (22:00 - 06:00). Quý khách vui lòng đặt món vào ca Sáng từ 06:00!"
             );
@@ -113,7 +113,7 @@ public class OrderService {
         // ── 3. Kiểm tra xem bàn này đã có Hóa đơn mở (Active Order) chưa? ───────
         if (request.getOrderType() == OrderType.dine_in && lockedSession != null) {
             // Chặn thêm món khi hóa đơn đang đóng băng để thanh toán
-            if (lockedSession.getStatus() == TableSessionStatus.PAYMENT_REQUESTED) {
+            if (lockedSession.getStatus() == TableSessionStatus.payment_requested) {
                 throw new BadRequestException(
                         "Hóa đơn của " + lockedSession.getTableNo() + " đang được đóng băng để thanh toán. Quý khách vui lòng bấm 'Hủy yêu cầu thanh toán' trên ứng dụng nếu muốn tiếp tục gọi thêm món!"
                 );
@@ -311,11 +311,11 @@ public class OrderService {
     }
 
     private void validateMealPeriodForDish(com.omniresto.backend.domain.MenuItemEntity menuItem, LocalTime now, MealPeriod currentPeriod) {
-        if (!MealPeriod.isAvailableNow(menuItem.getMealPeriods(), now)) {
-            String periodDesc = MealPeriod.getPeriodDescription(menuItem.getMealPeriods());
+        if (!MealPeriodHelper.isAvailableNow(menuItem.getMealPeriods(), now)) {
+            String periodDesc = MealPeriodHelper.getPeriodDescription(menuItem.getMealPeriods());
             throw new BadRequestException(
                     "Món '" + menuItem.getName() + "' chỉ phục vụ vào: " + periodDesc
-                            + ". Hiện tại đã hết thời gian phục vụ của món này (" + currentPeriod.getDisplayName()
+                            + ". Hiện tại đã hết thời gian phục vụ của món này (" + MealPeriodHelper.getDisplayName(currentPeriod)
                             + "), quý khách vui lòng chọn các món thuộc thực đơn hiện tại!"
             );
         }
@@ -323,8 +323,7 @@ public class OrderService {
 
     @Transactional
     public OrderResponse updateOrderStatus(String id, OrderStatus status) {
-        OrderEntity entity = orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + id));
+        OrderEntity entity = findOrderById(id);
         entity.setStatus(status);
         OrderEntity updated = orderRepository.save(entity);
         OrderResponse response = mapToResponse(updated);
@@ -429,15 +428,7 @@ public class OrderService {
     }
 
     private void sendWebSocketEvent(String eventType, OrderResponse orderResponse) {
-        try {
-            OrderEventMessage message = OrderEventMessage.builder()
-                    .eventType(eventType)
-                    .order(orderResponse)
-                    .build();
-            messagingTemplate.convertAndSend("/topic/orders", message);
-        } catch (Exception e) {
-            System.err.println("Failed to broadcast WebSocket event: " + e.getMessage());
-        }
+        log.debug("Order event: {} for order: {}", eventType, orderResponse != null ? orderResponse.getId() : null);
     }
 
     private OrderResponse mapToResponse(OrderEntity entity) {
@@ -460,7 +451,7 @@ public class OrderService {
             res.setConfirmedByStaffId(i.getConfirmedByStaffId());
             res.setConfirmedAt(i.getConfirmedAt());
             return res;
-        }).collect(Collectors.toList());
+        }).toList();
 
         OrderResponse res = new OrderResponse();
         res.setId(entity.getId());

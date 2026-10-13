@@ -271,7 +271,7 @@ export const ClientOrdersPage: React.FC = () => {
         </div>
 
         {/* ── BANNER 1: Hóa đơn đang đóng băng để thanh toán ── */}
-        {tableSession?.status === 'PAYMENT_REQUESTED' && (
+        {tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED' && (
           <div
             style={{
               background: '#eff6ff',
@@ -991,7 +991,7 @@ export const ClientOrdersPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {tableSession?.status === 'PAYMENT_REQUESTED' ? (
+              {tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED' ? (
                 <>
                   <button
                     onClick={() => setIsPaymentModalOpen(true)}

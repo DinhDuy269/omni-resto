@@ -2,21 +2,21 @@ export type TableStatus = 'available' | 'occupied' | 'reserved' | 'cleaning' | '
 
 export interface TableInfo {
   id: string;
-  tableNo: string;
+  table_no: string;
   capacity: number;
   status: TableStatus;
-  currentOrderAmount?: number;
-  occupiedSince?: string;
-  qrSecretToken?: string;
-  isVerified?: boolean;
-  paymentRequested?: boolean;
-  isPaid?: boolean;
-  activeOrderNumber?: string;
-  activeSessionToken?: string;
+  current_order_amount?: number;
+  occupied_since?: string;
+  qr_secret_token?: string;
+  is_verified?: boolean;
+  payment_requested?: boolean;
+  is_paid?: boolean;
+  active_order_number?: string;
+  active_session_token?: string;
 }
 
 export interface TableRequest {
-  tableNo: string;
+  table_no: string;
   capacity: number;
 }
 

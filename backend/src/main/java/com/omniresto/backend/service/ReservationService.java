@@ -7,13 +7,14 @@ import com.omniresto.backend.model.reservation.request.ReservationRequest;
 import com.omniresto.backend.model.reservation.response.ReservationResponse;
 import com.omniresto.backend.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -39,22 +40,14 @@ public class ReservationService {
 
         return reservations.stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Overload for backward compatibility if branchId is passed.
-     */
-    public List<ReservationResponse> getAllReservations(String branchId, LocalDate date, ReservationStatus status) {
-        return getAllReservations(date, status);
+                .toList();
     }
 
     /**
      * Get a single reservation by id.
      */
     public ReservationResponse getReservationById(String id) {
-        ReservationEntity entity = reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin đặt bàn với ID: " + id));
+        ReservationEntity entity = findReservationById(id);
         return mapToResponse(entity);
     }
 
@@ -84,8 +77,7 @@ public class ReservationService {
      */
     @Transactional
     public ReservationResponse updateReservationStatus(String id, ReservationStatus status) {
-        ReservationEntity entity = reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin đặt bàn với ID: " + id));
+        ReservationEntity entity = findReservationById(id);
         entity.setStatus(status);
         ReservationEntity updated = reservationRepository.save(entity);
         return mapToResponse(updated);
@@ -96,8 +88,7 @@ public class ReservationService {
      */
     @Transactional
     public ReservationResponse assignTable(String id, String tableNo) {
-        ReservationEntity entity = reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin đặt bàn với ID: " + id));
+        ReservationEntity entity = findReservationById(id);
         entity.setTableNo(tableNo);
         ReservationEntity updated = reservationRepository.save(entity);
         return mapToResponse(updated);
@@ -108,9 +99,13 @@ public class ReservationService {
      */
     @Transactional
     public void deleteReservation(String id) {
-        ReservationEntity entity = reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin đặt bàn với ID: " + id));
+        ReservationEntity entity = findReservationById(id);
         reservationRepository.delete(entity);
+    }
+
+    private ReservationEntity findReservationById(String id) {
+        return reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin đặt bàn với ID: " + id));
     }
 
     // ─── Mapper ──────────────────────────────────────────────────────────────

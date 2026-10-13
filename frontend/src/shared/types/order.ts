@@ -11,23 +11,23 @@ export interface OrderItemInfo {
 
 export interface Order {
   id: string;
-  orderNumber: string;
-  orderType: OrderType;
-  tableNo?: string;
+  order_number: string;
+  order_type: OrderType;
+  table_no?: string;
   status: OrderStatus;
   items: OrderItemInfo[];
-  totalAmount: number;
-  createdAt: string;
-  customerName?: string;
-  paymentMethod: 'cash' | 'card' | 'qr_code' | 'CASH' | 'CARD' | 'QR_CODE';
+  total_amount: number;
+  created_at: string;
+  customer_name?: string;
+  payment_method: 'cash' | 'card' | 'qr_code' | 'CASH' | 'CARD' | 'QR_CODE';
 }
 
 export interface OrderRequest {
-  orderType: OrderType;
-  tableNo?: string;
+  order_type: OrderType;
+  table_no?: string;
   items: OrderItemInfo[];
-  customerName?: string;
-  paymentMethod?: string;
+  customer_name?: string;
+  payment_method?: string;
 }
 
 export interface OrderResponse {

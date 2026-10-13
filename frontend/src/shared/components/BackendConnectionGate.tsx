@@ -10,24 +10,27 @@ export const BackendConnectionGate: React.FC<Props> = ({ children }) => {
 
   useEffect(() => {
     let isMounted = true;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const checkAndConnect = async () => {
-      const connected = await checkBackendConnection();
-      if (connected && isMounted) {
+    const verifyConnection = async () => {
+      const ok = await checkBackendConnection();
+      if (!isMounted) return;
+
+      if (ok) {
         setIsConnected(true);
+      } else {
+        // Chỉ thử lại định kỳ 3 giây/lần khi Backend chưa bật
+        retryTimer = setTimeout(verifyConnection, 3000);
       }
     };
 
-    checkAndConnect();
-
-    // Thử lại định kỳ 5 giây/lần cho tới khi Backend được bật thành công
-    const timer = setInterval(() => {
-      checkAndConnect();
-    }, 5000);
+    verifyConnection();
 
     return () => {
       isMounted = false;
-      clearInterval(timer);
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+      }
     };
   }, []);
 

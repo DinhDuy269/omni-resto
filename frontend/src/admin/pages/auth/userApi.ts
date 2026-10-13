@@ -24,9 +24,7 @@ export const userApi = {
 
   createUser: async (request: Partial<StaffUser>): Promise<StaffUser> => {
     try {
-      const res = await apiClient.post<StaffUser | UserResponse>('/users', {
-        user: request,
-      });
+      const res = await apiClient.post<StaffUser | UserResponse>('/users', request);
       if ('user' in res.data && res.data.user) return res.data.user;
       return res.data as StaffUser;
     } catch (error) {
