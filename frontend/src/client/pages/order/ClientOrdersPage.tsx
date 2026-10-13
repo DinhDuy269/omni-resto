@@ -19,7 +19,6 @@ import {
   Banknote,
   Copy,
   X,
-  ShieldCheck,
 } from 'lucide-react';
 import { useClientStore } from '../../store/clientStore';
 import { OrderStatusStepper } from '../../components/OrderStatusStepper';
@@ -38,7 +37,6 @@ export const ClientOrdersPage: React.FC = () => {
     fetchOrdersFromServer,
     requestPayment,
     cancelPaymentRequest,
-    verifySessionDemo,
     confirmPaymentDemo,
   } = useClientStore();
 
@@ -360,57 +358,6 @@ export const ClientOrdersPage: React.FC = () => {
                 🔓 Hủy để gọi thêm
               </button>
             </div>
-          </div>
-        )}
-
-        {/* ── BANNER 2: Bàn chưa được nhân viên xác nhận tại chỗ (Chống đơn ma) ── */}
-        {tableSession && !tableSession.isVerified && (
-          <div
-            style={{
-              background: '#fffbeb',
-              border: '1px solid #fde68a',
-              borderRadius: '14px',
-              padding: '12px 18px',
-              marginBottom: '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '1.3rem' }}>⏳</span>
-              <div>
-                <strong style={{ fontSize: '0.875rem', color: '#92400e' }}>
-                  Đợt 1 đang chờ nhân viên kiểm tra bàn
-                </strong>
-                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#b45309' }}>
-                  Sau khi nhân viên duyệt tại bàn, các đợt gọi thêm tiếp theo sẽ được gửi thẳng vào bếp.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                await verifySessionDemo();
-              }}
-              style={{
-                background: '#d97706',
-                color: '#ffffff',
-                border: 'none',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-            >
-              <ShieldCheck size={14} />
-              <span>Duyệt bàn ngay (Test)</span>
-            </button>
           </div>
         )}
 
