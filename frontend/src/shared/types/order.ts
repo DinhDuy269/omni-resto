@@ -12,24 +12,11 @@ export interface OrderItemInfo {
 export interface Order {
   id: string;
   order_number: string;
-<<<<<<< HEAD
-  order_type: OrderType;
-=======
   order_type?: OrderType;
->>>>>>> main
   table_no?: string;
   status: OrderStatus;
   items: OrderItemInfo[];
   total_amount: number;
-<<<<<<< HEAD
-  created_at: string;
-  customer_name?: string;
-  payment_method: 'cash' | 'card' | 'qr_code' | 'CASH' | 'CARD' | 'QR_CODE';
-}
-
-export interface OrderRequest {
-  order_type: OrderType;
-=======
   created_at?: string;
   customer_name?: string;
   payment_status?: string;
@@ -38,7 +25,6 @@ export interface OrderRequest {
 
 export interface OrderRequest {
   order_type?: OrderType;
->>>>>>> main
   table_no?: string;
   items: OrderItemInfo[];
   customer_name?: string;

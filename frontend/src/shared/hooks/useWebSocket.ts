@@ -2,12 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Order } from '../types/admin';
 
 export interface OrderEventMessage {
-<<<<<<< HEAD
-  event_type: 'ORDER_CREATED' | 'ORDER_STATUS_CHANGED';
-=======
   event_type?: string;
   eventType?: string;
->>>>>>> main
   order: Order;
 }
 

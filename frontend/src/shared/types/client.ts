@@ -6,32 +6,14 @@ export type OrderItemLineStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY
 
 export interface CartItem {
   id?: string;
-<<<<<<< HEAD
-  menu_item_id: string;
-=======
   menu_item_id?: string;
   menuItemId?: string;
->>>>>>> main
   name: string;
   category: MenuCategory | string;
   price: number;
   quantity: number;
   image: string;
   notes?: string;
-<<<<<<< HEAD
-  roung_no?: number;
-  status?: OrderItemLineStatus;
-  added_at?: string;
-}
-
-export interface VietQRInfo {
-  qr_image_url: string;
-  amount: number;
-  bank_id: string;
-  account_number: string;
-  account_name: string;
-  transfer_content: string;
-=======
   round_no?: number;
   roundNo?: number;
   roung_no?: number;
@@ -52,29 +34,10 @@ export interface VietQRInfo {
   accountName?: string;
   transfer_content?: string;
   transferContent?: string;
->>>>>>> main
 }
 
 export interface TableSession {
   id: string;
-<<<<<<< HEAD
-  table_id: string;
-  table_no: string;
-  session_token: string;
-  status: 'ACTIVE' | 'PAYMENT_REQUESTED' | 'PAYMENT_PENDING' | 'PAID' | 'CLOSED' | 'EXPIRED'
-    | 'active' | 'payment_requested' | 'payment_pending' | 'paid' | 'closed' | 'expired';
-  mode: 'PAY_AFTER' | 'PAY_FIRST' | 'pay_after' | 'pay_first';
-  expires_at: string;
-  is_verified?: boolean;
-  verified_at?: string;
-  verified_by_staff_id?: string;
-  message?: string;
-  active_order_id?: string;
-  active_order_number?: string;
-  total_amount?: number;
-  payment_status?: PaymentStatusType;
-  viet_qr?: VietQRInfo;
-=======
   table_id?: string;
   tableId?: string;
   table_no?: string;
@@ -107,7 +70,6 @@ export interface TableSession {
   paymentStatus?: PaymentStatusType;
   viet_qr?: VietQRInfo;
   vietQr?: VietQRInfo;
->>>>>>> main
 }
 
 // ─── Order ────────────────────────────────────────────────────────────────────
@@ -154,16 +116,6 @@ export const VNPAY_SANDBOX_CONFIG = {
 };
 
 export interface ClientOrderDraft {
-<<<<<<< HEAD
-  order_mode: OrderMode;
-  table_no?: string;
-  session_token?: string;
-  customer_name?: string;
-  customer_phone?: string;
-  delivery_address?: string;
-  notes?: string;
-  payment_method: ClientPaymentMethod;
-=======
   order_mode?: OrderMode;
   orderMode?: OrderMode;
   table_no?: string;
@@ -179,7 +131,6 @@ export interface ClientOrderDraft {
   notes?: string;
   payment_method?: ClientPaymentMethod;
   paymentMethod?: ClientPaymentMethod;
->>>>>>> main
 }
 
 export type PlacedOrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -187,21 +138,6 @@ export type PaymentStatusType = 'UNPAID' | 'PARTIAL' | 'PAID' | 'REFUNDED';
 
 export interface PlacedOrder {
   id: string;
-<<<<<<< HEAD
-  order_number: string;
-  table_session_id?: string;
-  order_mode: OrderMode;
-  table_no?: string;
-  session_token?: string;
-  customer_name?: string;
-  items: CartItem[];
-  total_amount: number;
-  status: PlacedOrderStatus;
-  payment_status?: PaymentStatusType;
-  placed_at: string;
-  estimated_minutes: number;
-  payment_method: ClientPaymentMethod;
-=======
   order_number?: string;
   orderNumber?: string;
   table_session_id?: string;
@@ -226,5 +162,4 @@ export interface PlacedOrder {
   estimatedMinutes?: number;
   payment_method?: ClientPaymentMethod;
   paymentMethod?: ClientPaymentMethod;
->>>>>>> main
 }
