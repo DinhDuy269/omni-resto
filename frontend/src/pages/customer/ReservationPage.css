@@ -1,4 +1,4 @@
-/* ── Reset & Container ── */
+/* ── Container & Global Reset ── */
 .res-container {
   max-width: 980px;
   margin: 0 auto;
@@ -25,33 +25,6 @@
   color: #6b7280;
   margin-top: 8px;
   font-size: 1rem;
-}
-
-/* ── Tab Switcher ── */
-.res-tab-bar {
-  display: inline-flex;
-  background-color: #f3f4f6;
-  padding: 5px;
-  border-radius: 12px;
-  margin-top: 24px;
-}
-
-.res-tab-item {
-  padding: 9px 24px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border: none;
-  background: transparent;
-  color: #4b5563;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.res-tab-item.active {
-  background-color: #ffffff;
-  color: #111827;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 /* ── Main Card Box ── */
@@ -81,16 +54,80 @@
   margin-top: 4px;
 }
 
-.text-center { text-align: center; }
+/* ── Banner Hotline Đoàn Đông (> 10 Người) ── */
+.res-large-group-banner {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #fde68a;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
 
-/* ── Sơ đồ bàn (Màn hình 1) ── */
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.banner-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #f59e0b;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.banner-title {
+  margin: 0;
+  font-size: 0.975rem;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.banner-desc {
+  margin: 3px 0 0;
+  font-size: 0.825rem;
+  color: #78350f;
+}
+
+.banner-hotline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #d97706;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.banner-hotline-btn:hover {
+  background-color: #b45309;
+  transform: translateY(-2px);
+}
+
+/* ── Sơ đồ bàn ăn (Screen 1) ── */
 .table-selection-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
   border-bottom: 1px solid #f3f4f6;
   padding-bottom: 16px;
 }
@@ -230,7 +267,7 @@
   opacity: 1;
 }
 
-/* ── Màn hình 2: Form điền thông tin ── */
+/* ── Màn hình Form điền thông tin (Screen 2) ── */
 .form-card-topbar {
   display: flex;
   justify-content: space-between;
@@ -372,7 +409,54 @@
   margin-bottom: 16px;
 }
 
-/* ── Success Box ── */
+/* ── Hộp Cảnh Báo Hotline khi chọn > 10 Người trong Form ── */
+.res-hotline-notice-card {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #92400e;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.notice-text {
+  color: #78350f;
+  font-size: 0.875rem;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.res-hotline-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #d97706;
+  color: #ffffff;
+  padding: 11px 24px;
+  border-radius: 30px;
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3);
+  transition: all 0.2s;
+}
+
+.res-hotline-call-btn:hover {
+  background-color: #b45309;
+  transform: translateY(-2px);
+}
+
+/* ── Màn hình đặt thành công ── */
 .res-success-view {
   text-align: center;
   padding: 20px 0;
@@ -429,102 +513,6 @@
   margin-left: auto;
   margin-right: auto;
 }
-
-/* ── Tracking Tab ── */
-.res-track-form {
-  display: flex;
-  gap: 10px;
-  margin: 24px 0;
-}
-
-.track-input-field {
-  text-transform: uppercase;
-  font-family: monospace;
-}
-
-.res-btn-track {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 22px;
-  background: #111827;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.res-track-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  background-color: #f9fafb;
-}
-
-.track-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 14px;
-}
-
-.track-lbl {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #6b7280;
-}
-
-.track-code {
-  font-family: monospace;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #111827;
-}
-
-.track-grid-info {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-top: 16px;
-}
-
-@media (max-width: 640px) {
-  .track-grid-info {
-    grid-template-columns: 1fr;
-  }
-}
-
-.track-grid-info label {
-  display: block;
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.track-grid-info strong {
-  font-size: 0.95rem;
-  color: #111827;
-}
-
-.track-note-box {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-  font-size: 0.85rem;
-}
-
-.status-badge-chip {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-.badge-pending { background-color: #fef3c7; color: #92400e; }
-.badge-confirmed { background-color: #dbeafe; color: #1e40af; }
-.badge-seated { background-color: #d1fae5; color: #065f46; }
-.badge-cancelled { background-color: #fee2e2; color: #991b1b; }
 
 .res-loading-state {
   text-align: center;

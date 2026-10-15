@@ -15,6 +15,7 @@ export interface OnlineReservationPayload {
   customerEmail?: string | null;
   partySize: number;
   reservationTime: string;
+  tableId?: string | null;
   specialNotes?: string;
 }
 
@@ -25,30 +26,31 @@ export interface OfflineReservationPayload {
   partySize: number;
   reservationTime: string;
   tableId?: string | null;
+  tableIds?: string[]; // Danh sách các bàn ghép khi đoàn đông gọi hotline
   specialNotes?: string | null;
   seatedImmediately?: boolean;
 }
 
 export interface AssignTablePayload {
-  tableId: string;
+  tableIds: string[]; // Mảng các bàn cần gán/ghép
 }
 
 const RESERVATION_ENDPOINT = '/tables/reservations';
 
 export const reservationApi = {
-  // 1. Khách đặt bàn trực tuyến
+  // 1. Khách đặt bàn trực tuyến (Tối đa 10 người)
   createOnline: async (data: OnlineReservationPayload) => {
     const res = await api.post(`${RESERVATION_ENDPOINT}/online`, data);
     return res.data;
   },
 
-  // 2. Nhân viên tạo đơn đặt bàn Offline (Hotline hoặc tại chỗ)
+  // 2. Nhân viên tạo đơn đặt bàn Offline (Hotline đoàn đông hoặc khách vãng lai)
   createOffline: async (data: OfflineReservationPayload) => {
     const res = await api.post(`${RESERVATION_ENDPOINT}/offline`, data);
     return res.data;
   },
 
-  // 3. Lấy danh sách đặt bàn (hỗ trợ lọc query ?status=PENDING, CONFIRMED, ...)
+  // 3. Lấy danh sách đặt bàn
   getAll: async (status: string = '') => {
     const res = await api.get(RESERVATION_ENDPOINT, {
       params: status ? { status } : {},
@@ -62,9 +64,9 @@ export const reservationApi = {
     return res.data;
   },
 
-  // 5. Nhân viên gán/xếp bàn cho đơn PENDING
-  assignTable: async (reservationId: string, tableId: string) => {
-    const res = await api.put(`${RESERVATION_ENDPOINT}/${reservationId}/assign-table`, { tableId });
+  // 5. Nhân viên gán/ghép nhiều bàn cho đơn PENDING
+  assignTable: async (reservationId: string, tableIds: string[]) => {
+    const res = await api.put(`${RESERVATION_ENDPOINT}/${reservationId}/assign-table`, { tableIds });
     return res.data;
   },
 
@@ -82,7 +84,7 @@ export const reservationApi = {
     return res.data;
   },
 
-  // 8. Lấy danh sách sơ đồ bàn (Gọi endpoint do chính bạn cung cấp)
+  // 8. Lấy danh sách sơ đồ bàn
   getTables: async () => {
     const res = await api.get(`${RESERVATION_ENDPOINT}/tables`);
     return res.data;

@@ -1,10 +1,13 @@
 package com.omniresto.backend.model.reservation.request;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -25,9 +28,10 @@ public class OfflineReservationRequest {
     @NotNull(message = "Thời gian đặt bàn không được để trống")
     private LocalDateTime reservationTime;
 
-    private String tableId; // Nhân viên có thể chọn bàn ngay hoặc xếp sau
+    private String tableId;
+    private List<String> tableIds;
 
     private String specialNotes;
 
-    private boolean seatedImmediately; // True nếu khách đến quán ăn ngay (Walk-in check-in luôn)
+    private boolean seatedImmediately;
 }

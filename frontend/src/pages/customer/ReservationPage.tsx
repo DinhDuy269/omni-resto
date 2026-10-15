@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { reservationApi } from '../../api/reservationApi';
 import { 
   Calendar, Users, Phone, User, Mail, 
-  FileText, Search, CheckCircle2, Clock, AlertCircle,
-  Armchair, ArrowLeft, Utensils
+  FileText, CheckCircle2, Clock, AlertCircle,
+  Armchair, ArrowLeft, Utensils, PhoneCall
 } from 'lucide-react';
 import './ReservationPage.css';
 
@@ -48,7 +48,6 @@ function extractErrorMessage(err: unknown): string {
   return 'Đặt bàn không thành công!';
 }
 
-// Kiểm tra khung giờ đóng cửa hoặc nghỉ bếp ngay tại client
 function checkOperatingHoursClient(timeStr: string): string | null {
   const [hStr, mStr] = timeStr.split(':');
   const totalMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
@@ -70,7 +69,7 @@ function checkOperatingHoursClient(timeStr: string): string | null {
 }
 
 export default function ReservationPage(): React.ReactElement {
-  const [currentView, setCurrentView] = useState<'tables' | 'form' | 'tracking'>('tables');
+  const [currentView, setCurrentView] = useState<'tables' | 'form'>('tables');
   
   const [tablesLoading, setTablesLoading] = useState<boolean>(true);
   const [tables, setTables] = useState<TableItem[]>([]);
@@ -89,10 +88,6 @@ export default function ReservationPage(): React.ReactElement {
     reservationTime: '19:00',
     specialNotes: '',
   });
-
-  const [trackCode, setTrackCode] = useState<string>('');
-  const [trackResult, setTrackResult] = useState<ReservationDetail | null>(null);
-  const [trackError, setTrackError] = useState<string>('');
 
   useEffect(() => {
     let isCancelled = false;
@@ -128,7 +123,6 @@ export default function ReservationPage(): React.ReactElement {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Cảnh báo ngay nếu khách chọn giờ đóng cửa/nghỉ bếp
     if (name === 'reservationTime') {
       const closedReason = checkOperatingHoursClient(value);
       if (closedReason) {
@@ -139,13 +133,14 @@ export default function ReservationPage(): React.ReactElement {
     }
   };
 
+  const isGroupOver10 = Number(formData.partySize) > 10;
+
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTable || loading) return;
+    if (!selectedTable || loading || isGroupOver10) return;
 
     setErrorMsg('');
 
-    // Kiểm tra giờ mở cửa
     const closedReason = checkOperatingHoursClient(formData.reservationTime);
     if (closedReason) {
       setErrorMsg(closedReason);
@@ -172,6 +167,7 @@ export default function ReservationPage(): React.ReactElement {
         customerEmail: formData.customerEmail ? formData.customerEmail.trim() : null,
         partySize: Number(formData.partySize),
         reservationTime: fullDateTime,
+        tableId: selectedTable.id, // Gửi chính xác ID của Bàn T-07 lên Backend
         specialNotes: combinedNotes,
       };
 
@@ -192,23 +188,6 @@ export default function ReservationPage(): React.ReactElement {
     }
   };
 
-  const handleTrackSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackCode.trim() || loading) return;
-    setLoading(true);
-    setTrackError('');
-    setTrackResult(null);
-
-    try {
-      const res = await reservationApi.trackByCode(trackCode.trim());
-      setTrackResult(res.data);
-    } catch (err: unknown) {
-      setTrackError(extractErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const isAvail = (status: string) => status?.toLowerCase() === 'available';
 
   return (
@@ -216,31 +195,32 @@ export default function ReservationPage(): React.ReactElement {
       <div className="res-top-header">
         <h1 className="res-main-title">Đặt Bàn Trực Tuyến</h1>
         <p className="res-main-subtitle">Thưởng thức ẩm thực trọn vẹn trong không gian ấm cúng tại OmniResto</p>
-
-        <div className="res-tab-bar">
-          <button
-            type="button"
-            onClick={() => { setCurrentView('tables'); setSuccessBooking(null); }}
-            className={`res-tab-item ${currentView !== 'tracking' ? 'active' : ''}`}
-          >
-            Sơ Đồ Chọn Bàn
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentView('tracking')}
-            className={`res-tab-item ${currentView === 'tracking' ? 'active' : ''}`}
-          >
-            Tra Cứu Mã Đặt Bàn
-          </button>
-        </div>
       </div>
 
       {currentView === 'tables' && (
         <div className="res-box">
+          {/* Banner hướng dẫn đoàn trên 10 người gọi hotline ghép bàn */}
+          <div className="res-large-group-banner">
+            <div className="banner-left">
+              <div className="banner-icon-circle">
+                <Users size={22} />
+              </div>
+              <div>
+                <h4 className="banner-title">Bạn muốn đặt tiệc đoàn đông trên 10 người?</h4>
+                <p className="banner-desc">
+                  Để đảm bảo không gian và hỗ trợ <strong>ghép các bàn liền kề</strong> tốt nhất, xin vui lòng liên hệ hotline trực tiếp.
+                </p>
+              </div>
+            </div>
+            <a href="tel:02438259999" className="banner-hotline-btn">
+              <PhoneCall size={16} /> Hotline: 024 3825 9999
+            </a>
+          </div>
+
           <div className="table-selection-header">
             <div>
-              <h2 className="box-heading">Chọn Bàn Còn Trống</h2>
-              <p className="box-subheading">Bấm vào bàn trống bạn muốn ngồi để tiến hành đăng ký</p>
+              <h2 className="box-heading">Chọn Bàn Còn Trống (Dưới 10 Người)</h2>
+              <p className="box-subheading">Bấm vào bàn trống bạn muốn ngồi để tiến hành đăng ký thông tin</p>
             </div>
             <div className="table-legend">
               <span className="legend-tag legend-tag--avail">
@@ -307,6 +287,28 @@ export default function ReservationPage(): React.ReactElement {
               <p className="success-note-text">
                 Nhân viên nhà hàng sẽ kiểm tra và liên hệ xác nhận bàn cho bạn trong thời gian sớm nhất.
               </p>
+
+              <button
+                type="button"
+                className="res-btn-submit"
+                style={{ marginTop: 24 }}
+                onClick={() => {
+                  setSuccessBooking(null);
+                  setSelectedTable(null);
+                  setCurrentView('tables');
+                  setFormData({
+                    customerName: '',
+                    customerPhone: '',
+                    customerEmail: '',
+                    partySize: 2,
+                    reservationDate: new Date().toISOString().split('T')[0],
+                    reservationTime: '19:00',
+                    specialNotes: '',
+                  });
+                }}
+              >
+                ← Quay lại đặt thêm bàn khác
+              </button>
             </div>
           ) : (
             <>
@@ -321,7 +323,7 @@ export default function ReservationPage(): React.ReactElement {
 
                 <div className="chosen-table-pill">
                   <Utensils size={15} />
-                  <span>Đang đặt: <strong>Bàn {selectedTable.tableNo}</strong> (Tối đa {selectedTable.capacity} khách)</span>
+                  <span>Đang đặt: <strong>Bàn {selectedTable.tableNo}</strong> (Sức chứa {selectedTable.capacity} khách)</span>
                 </div>
               </div>
 
@@ -333,16 +335,8 @@ export default function ReservationPage(): React.ReactElement {
               {errorMsg && (
                 <div className="res-error-banner">
                   <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div>
                     <span>{errorMsg}</span>
-                    {errorMsg.includes('đang có đơn đặt bàn') && (
-                      <span 
-                        onClick={() => setCurrentView('tracking')}
-                        style={{ textDecoration: 'underline', cursor: 'pointer', fontWeight: 700 }}
-                      >
-                        Bấm vào đây để chuyển sang tra cứu đơn hiện tại →
-                      </span>
-                    )}
                   </div>
                 </div>
               )}
@@ -401,13 +395,13 @@ export default function ReservationPage(): React.ReactElement {
                       type="number"
                       name="partySize"
                       min="1"
-                      max={selectedTable.capacity}
+                      max="30"
                       required
                       value={formData.partySize}
                       onChange={handleChange}
                       className="res-field-input"
                     />
-                    <small className="field-hint">Tối đa {selectedTable.capacity} người theo sức chứa của bàn</small>
+                    <small className="field-hint">Hệ thống hỗ trợ đặt trực tuyến tối đa 10 người</small>
                   </div>
 
                   <div className="res-field-group">
@@ -453,85 +447,32 @@ export default function ReservationPage(): React.ReactElement {
                   ></textarea>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="res-btn-submit"
-                >
-                  {loading ? 'Đang kiểm tra & xử lý...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
-                </button>
+                {/* Khi khách nhập > 10 người -> chặn nút đặt và hiện banner gọi hotline */}
+                {isGroupOver10 ? (
+                  <div className="res-hotline-notice-card">
+                    <div className="notice-header">
+                      <AlertCircle size={22} color="#b45309" />
+                      <strong>Đoàn trên 10 người cần ghép bàn</strong>
+                    </div>
+                    <p className="notice-text">
+                      Các bàn đơn hiện tại không đủ sức chứa cho đoàn {formData.partySize} người. 
+                      Vui lòng gọi hotline để nhân viên sắp xếp và ghép nhiều bàn liền kề cho đoàn của bạn.
+                    </p>
+                    <a href="tel:02438259999" className="res-hotline-call-btn">
+                      <PhoneCall size={18} /> Gọi Hotline Ghép Bàn: 024 3825 9999
+                    </a>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="res-btn-submit"
+                  >
+                    {loading ? 'Đang kiểm tra & xử lý...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
+                  </button>
+                )}
               </form>
             </>
-          )}
-        </div>
-      )}
-
-      {currentView === 'tracking' && (
-        <div className="res-box res-form-card">
-          <h2 className="box-heading text-center">Tra Cứu Tiến Độ Đặt Bàn</h2>
-          <p className="box-subheading text-center">Nhập mã phiếu để kiểm tra xem bàn của bạn đã được xác nhận hay chưa</p>
-
-          <form onSubmit={handleTrackSubmit} className="res-track-form">
-            <input
-              type="text"
-              required
-              value={trackCode}
-              onChange={(e) => setTrackCode(e.target.value)}
-              placeholder="Nhập mã phiếu (Ví dụ: RSV-ONL-1562)"
-              className="res-field-input track-input-field"
-            />
-            <button type="submit" disabled={loading} className="res-btn-track">
-              <Search size={16} /> {loading ? 'Đang tìm...' : 'Tra Cứu'}
-            </button>
-          </form>
-
-          {trackError && <div className="res-error-banner">{trackError}</div>}
-
-          {trackResult && (
-            <div className="res-track-card">
-              <div className="track-head">
-                <div>
-                  <span className="track-lbl">MÃ PHIẾU ĐẶT BÀN</span>
-                  <div className="track-code">{trackResult.reservationCode}</div>
-                </div>
-                <div className={`status-badge-chip badge-${trackResult.status.toLowerCase()}`}>
-                  {trackResult.status === 'PENDING' && 'Chờ xác nhận'}
-                  {trackResult.status === 'CONFIRMED' && 'Đã xếp bàn'}
-                  {trackResult.status === 'SEATED' && 'Đang dùng bữa'}
-                  {trackResult.status === 'CANCELLED' && 'Đã hủy'}
-                </div>
-              </div>
-
-              <div className="track-grid-info">
-                <div>
-                  <label>Khách hàng</label>
-                  <strong>{trackResult.customerName}</strong>
-                </div>
-                <div>
-                  <label>Số điện thoại</label>
-                  <strong>{trackResult.customerPhone}</strong>
-                </div>
-                <div>
-                  <label>Số khách</label>
-                  <strong>{trackResult.partySize} người</strong>
-                </div>
-                <div>
-                  <label>Thời gian dùng bữa</label>
-                  <strong>{new Date(trackResult.reservationTime).toLocaleString('vi-VN')}</strong>
-                </div>
-                <div>
-                  <label>Bàn phục vụ</label>
-                  <strong>{trackResult.tableNo ? `Bàn ${trackResult.tableNo}` : 'Đang sắp xếp'}</strong>
-                </div>
-              </div>
-
-              {trackResult.specialNotes && (
-                <div className="track-note-box">
-                  <label>Ghi chú:</label>
-                  <p>{trackResult.specialNotes}</p>
-                </div>
-              )}
-            </div>
           )}
         </div>
       )}

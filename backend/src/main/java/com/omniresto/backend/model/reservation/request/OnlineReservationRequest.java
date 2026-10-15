@@ -26,12 +26,15 @@ public class OnlineReservationRequest {
 
     @NotNull(message = "Số lượng khách không được để trống")
     @Min(value = 1, message = "Số lượng khách tối thiểu là 1 người")
-    @Max(value = 50, message = "Đoàn trên 50 người vui lòng liên hệ hotline trực tiếp")
+    @Max(value = 10, message = "Đoàn trên 10 người vui lòng liên hệ hotline trực tiếp để được hỗ trợ ghép bàn")
     private Integer partySize;
 
     @NotNull(message = "Thời gian đặt bàn không được để trống")
-    @Future(message = "Thời gian đặt bàn phải ở tương lai")
+    @Future(message = "Thời gian đặt bàn phải là thời gian trong tương lai")
     private LocalDateTime reservationTime;
+
+    // Bổ sung nhận ID bàn do khách trực tiếp chọn trên sơ đồ
+    private String tableId;
 
     private String specialNotes;
 }

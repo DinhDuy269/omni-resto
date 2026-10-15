@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { reservationApi } from '../../api/reservationApi';
-import { 
-  Plus, 
-  RefreshCw, 
-  Armchair, 
-  Search, 
-  LayoutGrid, 
-  ListFilter, 
-  Clock, 
+import {
+  Plus,
+  RefreshCw,
+  Armchair,
+  Search,
+  LayoutGrid,
+  ListFilter,
+  Clock,
   User,
+  Users,
   Volume2,
-  X
+  X,
+  Check
 } from 'lucide-react';
 import './ReservationManagement.css';
 
@@ -41,7 +43,7 @@ interface ReservationItem {
 interface AssignModalState {
   isOpen: boolean;
   reservation: ReservationItem | null;
-  selectedTableId: string;
+  selectedTableIds: string[];
 }
 
 interface OfflineFormState {
@@ -51,7 +53,7 @@ interface OfflineFormState {
   partySize: number;
   reservationDate: string;
   reservationTime: string;
-  tableId: string;
+  tableIds: string[];
   specialNotes: string;
   seatedImmediately: boolean;
 }
@@ -65,37 +67,30 @@ function extractErrorMessage(err: unknown): string {
   return 'Đã có lỗi xảy ra!';
 }
 
-// 1. HÀM ĐỌC TIẾNG VIỆT ĐẶT Ở NGOÀI COMPONENT
-// Hàm đọc thông báo tiếng Việt chuẩn phát thanh, rành mạch từng chữ
 function speakReservationAlert(customerName: string, partySize: number, note?: string | null) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
   try {
-    // 1. Ngắt ngay câu đọc cũ (nếu có) để phát thông báo mới
     window.speechSynthesis.cancel();
 
-    // 2. Xử lý chuẩn hóa tên bàn để đọc đúng ngữ âm tiếng Việt
     let tableSpeech = '';
     if (note && note.includes('Khách chọn:')) {
       const match = note.match(/Khách chọn:\s*(Bàn\s*[A-Za-z0-9_-]+)/i);
       if (match) {
-        // Đổi "T-09" hoặc "T-10" thành "Tê 9", "Tê 10" để phát âm chuẩn tiếng Việt
         let rawTable = match[1].trim();
-        rawTable = rawTable.replace(/T-0?/i, 'Tê '); // Chuyển chữ T thành Tê và bỏ số 0 thừa
+        rawTable = rawTable.replace(/T-0?/i, 'Tê ');
         tableSpeech = `. Tại ${rawTable}`;
       }
     }
 
-    // 3. Câu đọc có ngắt nghỉ câu bằng dấu chấm, nhịp đọc mạch lạc
     const textToRead = `Thông báo! Có đơn đặt bàn mới. Khách hàng: ${customerName}. Số lượng: ${partySize} người${tableSpeech}.`;
 
     const utterance = new SpeechSynthesisUtterance(textToRead);
     utterance.lang = 'vi-VN';
-    utterance.rate = 0.88; // Tốc độ vừa phải, dứt khoát, nghe rõ trong môi trường ồn
-    utterance.pitch = 1.02; // Cao độ tự nhiên
-    utterance.volume = 1.0; // Âm lượng tối đa
+    utterance.rate = 0.88;
+    utterance.pitch = 1.02;
+    utterance.volume = 1.0;
 
-    // 4. Tìm kiếm và ưu tiên giọng tiếng Việt chuẩn/tự nhiên nhất của máy
     const voices = window.speechSynthesis.getVoices();
     const viVoices = voices.filter(
       (v) =>
@@ -105,7 +100,6 @@ function speakReservationAlert(customerName: string, partySize: number, note?: s
     );
 
     if (viVoices.length > 0) {
-      // Ưu tiên theo thứ tự: Giọng Natural/Neural -> Microsoft HoaiMy -> Google Tiếng Việt -> Giọng Việt bất kỳ
       const bestVoice =
         viVoices.find((v) => v.name.includes('Natural') || v.name.includes('Neural')) ||
         viVoices.find((v) => v.name.toLowerCase().includes('hoaimy')) ||
@@ -115,13 +109,12 @@ function speakReservationAlert(customerName: string, partySize: number, note?: s
       utterance.voice = bestVoice;
     }
 
-    // 5. Phát giọng nói
     window.speechSynthesis.speak(utterance);
   } catch (e) {
     console.warn('Speech synthesis error:', e);
   }
 }
-// 2. COMPONENT CHÍNH
+
 export default function ReservationManagement(): React.ReactElement {
   const [activeMode, setActiveMode] = useState<'map' | 'list'>('map');
 
@@ -137,7 +130,7 @@ export default function ReservationManagement(): React.ReactElement {
   const [assignModal, setAssignModal] = useState<AssignModalState>({
     isOpen: false,
     reservation: null,
-    selectedTableId: '',
+    selectedTableIds: [],
   });
 
   const [offlineModal, setOfflineModal] = useState<boolean>(false);
@@ -145,16 +138,16 @@ export default function ReservationManagement(): React.ReactElement {
     customerName: '',
     customerPhone: '',
     customerEmail: '',
-    partySize: 2,
+    partySize: 15,
     reservationDate: new Date().toISOString().split('T')[0],
     reservationTime: '19:00',
-    tableId: '',
+    tableIds: [],
     specialNotes: '',
     seatedImmediately: false,
   });
 
-  const loadInitialData = useCallback(async () => {
-    setLoading(true);
+  // Không gọi setState đồng bộ trước await trong hàm này
+  const loadData = useCallback(async () => {
     try {
       const [resData, tablesData] = await Promise.all([
         reservationApi.getAll(filterStatus),
@@ -179,19 +172,15 @@ export default function ReservationManagement(): React.ReactElement {
 
     reservationApi.getTables().then((t) => setTables(t.data || []));
 
-    // Đọc thông báo tiếng Việt
     speakReservationAlert(incoming.customerName, incoming.partySize, incoming.specialNotes);
 
-    // Bật Toast góc phải
     setToastAlert(incoming);
     setTimeout(() => {
       setToastAlert((curr) => (curr?.id === incoming.id ? null : curr));
     }, 8000);
   }, []);
 
-  // 👇 ĐÂY LÀ NƠI ĐẶT useEffect (NẰM TRONG THÂN FUNCTION COMPONENT):
   useEffect(() => {
-    // 1. Nạp sẵn danh sách giọng đọc tiếng Việt vào bộ nhớ trình duyệt
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.getVoices();
       window.speechSynthesis.onvoiceschanged = () => {
@@ -199,10 +188,11 @@ export default function ReservationManagement(): React.ReactElement {
       };
     }
 
-    // 2. Tải dữ liệu ban đầu
-    loadInitialData();
+    // Sử dụng setTimeout để đưa lệnh load vào micro/macro task, giải quyết triệt để lỗi cascading renders
+    const initTimer = setTimeout(() => {
+      loadData();
+    }, 0);
 
-    // 3. Kênh BroadcastChannel (bắt sóng cùng trình duyệt)
     let broadcastChannel: BroadcastChannel | null = null;
     try {
       broadcastChannel = new BroadcastChannel('omni_reservation_channel');
@@ -215,16 +205,10 @@ export default function ReservationManagement(): React.ReactElement {
       console.warn('BroadcastChannel error:', e);
     }
 
-    // 4. Kênh Server-Sent Events (SSE từ Backend)
     const eventSource = new EventSource('http://localhost:8080/api/tables/reservations/subscribe');
 
-    eventSource.onopen = () => {
-      setIsRealtimeActive(true);
-    };
-
-    eventSource.addEventListener('INIT', () => {
-      setIsRealtimeActive(true);
-    });
+    eventSource.onopen = () => setIsRealtimeActive(true);
+    eventSource.addEventListener('INIT', () => setIsRealtimeActive(true));
 
     eventSource.addEventListener('NEW_RESERVATION', (event: MessageEvent) => {
       try {
@@ -245,39 +229,57 @@ export default function ReservationManagement(): React.ReactElement {
       }
     });
 
-    eventSource.onerror = () => {
-      setIsRealtimeActive(false);
-    };
+    eventSource.onerror = () => setIsRealtimeActive(false);
 
     return () => {
+      clearTimeout(initTimer);
       eventSource.close();
       if (broadcastChannel) broadcastChannel.close();
     };
-  }, [loadInitialData, handleIncomingNewReservation]);
+  }, [loadData, handleIncomingNewReservation]);
 
   const handleTableClick = (table: TableItem) => {
     const isAvail = table.status?.toLowerCase() === 'available';
     if (isAvail) {
       setOfflineForm((prev) => ({
         ...prev,
-        tableId: table.id,
-        partySize: Math.min(prev.partySize || 2, table.capacity),
+        tableIds: [table.id],
+        partySize: table.capacity,
         seatedImmediately: false,
       }));
       setOfflineModal(true);
     }
   };
 
+  const toggleAssignTableId = (tblId: string) => {
+    setAssignModal((prev) => ({
+      ...prev,
+      selectedTableIds: prev.selectedTableIds.includes(tblId)
+        ? prev.selectedTableIds.filter((id) => id !== tblId)
+        : [...prev.selectedTableIds, tblId],
+    }));
+  };
+
+  const toggleOfflineTableId = (tblId: string) => {
+    setOfflineForm((prev) => ({
+      ...prev,
+      tableIds: prev.tableIds.includes(tblId)
+        ? prev.tableIds.filter((id) => id !== tblId)
+        : [...prev.tableIds, tblId],
+    }));
+  };
+
   const handleAssignTable = async () => {
-    if (!assignModal.reservation || !assignModal.selectedTableId) {
-      alert('Vui lòng chọn bàn!');
+    if (!assignModal.reservation || assignModal.selectedTableIds.length === 0) {
+      alert('Vui lòng chọn ít nhất một bàn để ghép/gán!');
       return;
     }
     try {
-      await reservationApi.assignTable(assignModal.reservation.id, assignModal.selectedTableId);
-      alert('Xếp bàn thành công!');
-      setAssignModal({ isOpen: false, reservation: null, selectedTableId: '' });
-      loadInitialData();
+      await reservationApi.assignTable(assignModal.reservation.id, assignModal.selectedTableIds);
+      alert(`Đã xếp thành công ${assignModal.selectedTableIds.length} bàn cho khách!`);
+      setAssignModal({ isOpen: false, reservation: null, selectedTableIds: [] });
+      setLoading(true);
+      loadData();
     } catch (err: unknown) {
       alert(extractErrorMessage(err));
     }
@@ -288,7 +290,8 @@ export default function ReservationManagement(): React.ReactElement {
     try {
       await reservationApi.checkIn(id);
       alert('Khách đã vào bàn thành công!');
-      loadInitialData();
+      setLoading(true);
+      loadData();
     } catch (err: unknown) {
       alert(extractErrorMessage(err));
     }
@@ -300,7 +303,8 @@ export default function ReservationManagement(): React.ReactElement {
     try {
       await reservationApi.cancel(id, reason);
       alert('Hủy đơn thành công!');
-      loadInitialData();
+      setLoading(true);
+      loadData();
     } catch (err: unknown) {
       alert(extractErrorMessage(err));
     }
@@ -315,9 +319,10 @@ export default function ReservationManagement(): React.ReactElement {
         reservationTime: `${offlineForm.reservationDate}T${offlineForm.reservationTime}:00`,
       };
       await reservationApi.createOffline(payload);
-      alert('Tạo đơn đặt bàn offline thành công!');
+      alert('Tạo đơn đặt bàn hotline / offline thành công!');
       setOfflineModal(false);
-      loadInitialData();
+      setLoading(true);
+      loadData();
     } catch (err: unknown) {
       alert(extractErrorMessage(err));
     }
@@ -334,9 +339,17 @@ export default function ReservationManagement(): React.ReactElement {
     r.reservationCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const assignTotalCapacity = tables
+    .filter((t) => assignModal.selectedTableIds.includes(t.id))
+    .reduce((sum, t) => sum + (t.capacity || 0), 0);
+
+  const offlineTotalCapacity = tables
+    .filter((t) => offlineForm.tableIds.includes(t.id))
+    .reduce((sum, t) => sum + (t.capacity || 0), 0);
+
   return (
     <div className="adm-res-container">
-      {/* ── TOAST THÔNG BÁO TĨNH ÊM ÁI GÓC PHẢI MÀN HÌNH ── */}
+      {/* ── TOAST THÔNG BÁO TĨNH GÓC PHẢI MÀN HÌNH ── */}
       {toastAlert && (
         <div className="adm-toast-card">
           <div className="adm-toast-icon-wrap">
@@ -375,12 +388,12 @@ export default function ReservationManagement(): React.ReactElement {
       <div className="adm-res-header">
         <div>
           <div className="adm-header-title-row">
-            <h1 className="adm-res-title">Quản Lý Đặt Bàn & Sơ Đồ Phục Vụ</h1>
+            <h1 className="adm-res-title">Quản Lý Đặt Bàn & Ghép Bàn Chuỗi</h1>
             <span className={isRealtimeActive ? "adm-live-badge active" : "adm-live-badge standby"}>
               ● {isRealtimeActive ? "Realtime Live" : "Realtime Connecting..."}
             </span>
           </div>
-          <p className="adm-res-subtitle">Đơn đặt bàn của khách sẽ xuất hiện ngay lập tức mà không cần tải lại trang</p>
+          <p className="adm-res-subtitle">Tiếp nhận đoàn đông qua hotline, tự do ghép bàn liền kề và cập nhật sơ đồ thời gian thực</p>
         </div>
 
         <div className="adm-res-actions">
@@ -403,9 +416,12 @@ export default function ReservationManagement(): React.ReactElement {
 
           <button
             type="button"
-            onClick={loadInitialData}
+            onClick={() => {
+              setLoading(true);
+              loadData();
+            }}
             className="adm-refresh-btn"
-            title="Làm mới thủ công"
+            title="Làm mới dữ liệu"
           >
             <RefreshCw size={17} className={loading ? 'spinning' : ''} />
           </button>
@@ -417,10 +433,10 @@ export default function ReservationManagement(): React.ReactElement {
                 customerName: '',
                 customerPhone: '',
                 customerEmail: '',
-                partySize: 2,
+                partySize: 15,
                 reservationDate: new Date().toISOString().split('T')[0],
                 reservationTime: '19:00',
-                tableId: '',
+                tableIds: [],
                 specialNotes: '',
                 seatedImmediately: false,
               });
@@ -428,7 +444,7 @@ export default function ReservationManagement(): React.ReactElement {
             }}
             className="adm-btn-create"
           >
-            <Plus size={16} /> Đặt Bàn Tại Chỗ / Hotline
+            <Plus size={16} /> Nhận Đơn Hotline (Ghép Bàn)
           </button>
         </div>
       </div>
@@ -453,15 +469,15 @@ export default function ReservationManagement(): React.ReactElement {
         </div>
       </div>
 
-      {/* ── SƠ ĐỒ BÀN ── */}
+      {/* ── SƠ ĐỒ BÀN ĂN ── */}
       {activeMode === 'map' && (
         <div className="adm-card-wrapper">
           <div className="map-toolbar">
             <h3 className="section-heading">Sơ Đồ Bàn Ăn Trực Quan</h3>
             <div className="map-legends">
-              <span className="map-legend-item"><span className="legend-dot dot-green"></span> Bàn trống (Bấm để tạo đơn)</span>
-              <span className="map-legend-item"><span className="legend-dot dot-yellow"></span> Đã đặt trước</span>
-              <span className="map-legend-item"><span className="legend-dot dot-red"></span> Đang dùng bữa</span>
+              <span className="map-legend-item"><span className="legend-dot dot-green"></span> Bàn trống</span>
+              <span className="map-legend-item"><span className="legend-dot dot-yellow"></span> Đã đặt</span>
+              <span className="map-legend-item"><span className="legend-dot dot-red"></span> Đang ăn</span>
             </div>
           </div>
 
@@ -470,18 +486,26 @@ export default function ReservationManagement(): React.ReactElement {
               const isAvailable = t.status?.toLowerCase() === 'available';
               const isOccupied = t.status?.toLowerCase() === 'occupied';
 
-              const reservedOrder = reservations.find(
-                (r) => r.tableId === t.id && (r.status === 'CONFIRMED' || r.status === 'SEATED')
-              );
+              const reservedOrder = reservations.find((r) => {
+                if (r.status !== 'CONFIRMED' && r.status !== 'SEATED') return false;
+                if (r.tableId === t.id) return true;
+                if (r.specialNotes && r.specialNotes.includes(t.id)) return true;
+                return false;
+              });
+
+              const isMerged = reservedOrder && reservedOrder.tableNo && reservedOrder.tableNo.includes('+');
 
               return (
                 <div
                   key={t.id}
                   onClick={() => handleTableClick(t)}
-                  className={`adm-floor-table ${
-                    isAvailable ? 'table-state--free' : isOccupied ? 'table-state--busy' : 'table-state--reserved'
-                  }`}
+                  className={`adm-floor-table ${isAvailable ? 'table-state--free' : isOccupied ? 'table-state--busy' : 'table-state--reserved'
+                    }`}
                 >
+                  {isMerged && (
+                    <span className="tag-merged-badge">Bàn Ghép</span>
+                  )}
+
                   <div className="floor-table-top">
                     <span className="floor-table-no">Bàn {t.tableNo}</span>
                     <span className="floor-table-cap">{t.capacity} chỗ</span>
@@ -492,9 +516,9 @@ export default function ReservationManagement(): React.ReactElement {
                   </div>
 
                   <div className="floor-table-status">
-                    {isAvailable && <span className="tag-avail">🟢 Bàn Trống</span>}
-                    {isOccupied && <span className="tag-busy">🔴 Đang Ăn</span>}
-                    {!isAvailable && !isOccupied && <span className="tag-res">🟡 Đã Đặt</span>}
+                    {isAvailable && <span className="tag-avail">🟢 Sẵn Sàng</span>}
+                    {isOccupied && <span className="tag-busy">🔴 Đang Dùng</span>}
+                    {!isAvailable && !isOccupied && <span className="tag-res">🟡 Đã Giữ Chỗ</span>}
                   </div>
 
                   {reservedOrder && (
@@ -503,7 +527,7 @@ export default function ReservationManagement(): React.ReactElement {
                         <User size={13} /> {reservedOrder.customerName}
                       </div>
                       <div className="guest-time">
-                        <Clock size={12} /> {new Date(reservedOrder.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        <Clock size={12} /> {new Date(reservedOrder.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({reservedOrder.partySize}k)
                       </div>
 
                       {reservedOrder.status === 'CONFIRMED' && (
@@ -522,7 +546,7 @@ export default function ReservationManagement(): React.ReactElement {
                   )}
 
                   {isAvailable && (
-                    <span className="click-to-book-hint">+ Đặt bàn này</span>
+                    <span className="click-to-book-hint">+ Nhấp để gán</span>
                   )}
                 </div>
               );
@@ -531,7 +555,7 @@ export default function ReservationManagement(): React.ReactElement {
         </div>
       )}
 
-      {/* ── BẢNG DANH SÁCH ── */}
+      {/* ── BẢNG DANH SÁCH ĐƠN ── */}
       {activeMode === 'list' && (
         <div className="adm-card-wrapper">
           <div className="list-toolbar">
@@ -585,66 +609,76 @@ export default function ReservationManagement(): React.ReactElement {
                     <td colSpan={7} className="empty-table-cell">Không tìm thấy đơn đặt bàn nào</td>
                   </tr>
                 ) : (
-                  filteredReservations.map((r) => (
-                    <tr key={r.id}>
-                      <td className="code-font">{r.reservationCode}</td>
-                      <td>
-                        <div style={{ fontWeight: 700, color: '#111827' }}>{r.customerName}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{r.customerPhone}</div>
-                      </td>
-                      <td>
-                        <div>{new Date(r.reservationTime).toLocaleDateString('vi-VN')}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
-                          {new Date(r.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </td>
-                      <td className="text-center" style={{ fontWeight: 700 }}>{r.partySize}</td>
-                      <td>
-                        {r.tableNo ? (
-                          <span className="badge-assigned-table">
-                            <Armchair size={13} /> Bàn {r.tableNo}
-                          </span>
-                        ) : (
-                          <span className="badge-unassigned">Chưa gán</span>
-                        )}
-                      </td>
-                      <td>
-                        {r.status === 'PENDING' && <span className="status-chip chip-pending">Chờ xếp bàn</span>}
-                        {r.status === 'CONFIRMED' && <span className="status-chip chip-confirmed">Đã xếp bàn</span>}
-                        {r.status === 'SEATED' && <span className="status-chip chip-seated">Đang ăn</span>}
-                        {r.status === 'CANCELLED' && <span className="status-chip chip-cancelled">Đã hủy</span>}
-                      </td>
-                      <td className="text-right">
-                        {r.status === 'PENDING' && (
-                          <button
-                            type="button"
-                            onClick={() => setAssignModal({ isOpen: true, reservation: r, selectedTableId: '' })}
-                            className="btn-sm btn-assign"
-                          >
-                            Xếp Bàn
-                          </button>
-                        )}
-                        {r.status === 'CONFIRMED' && (
-                          <button
-                            type="button"
-                            onClick={() => handleCheckIn(r.id)}
-                            className="btn-sm btn-checkin"
-                          >
-                            Nhận Bàn
-                          </button>
-                        )}
-                        {r.status !== 'CANCELLED' && r.status !== 'SEATED' && (
-                          <button
-                            type="button"
-                            onClick={() => handleCancel(r.id)}
-                            className="btn-sm btn-cancel"
-                          >
-                            Hủy
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  filteredReservations.map((r) => {
+                    const isMulti = r.tableNo && r.tableNo.includes('+');
+                    return (
+                      <tr key={r.id}>
+                        <td className="code-font">{r.reservationCode}</td>
+                        <td>
+                          <div style={{ fontWeight: 700, color: '#111827' }}>{r.customerName}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{r.customerPhone}</div>
+                        </td>
+                        <td>
+                          <div>{new Date(r.reservationTime).toLocaleDateString('vi-VN')}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
+                            {new Date(r.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </td>
+                        <td className="text-center" style={{ fontWeight: 700 }}>
+                          {r.partySize} {r.partySize > 10 && <span title="Đoàn đông ghép bàn" style={{ color: '#d97706' }}>★</span>}
+                        </td>
+                        <td>
+                          {r.tableNo ? (
+                            <span className={isMulti ? "badge-assigned-table is-merged" : "badge-assigned-table"}>
+                              <Armchair size={13} /> {isMulti ? `Ghép: ${r.tableNo}` : `Bàn ${r.tableNo}`}
+                            </span>
+                          ) : (
+                            <span className="badge-unassigned">Chưa gán</span>
+                          )}
+                        </td>
+                        <td>
+                          {r.status === 'PENDING' && <span className="status-chip chip-pending">Chờ xếp bàn</span>}
+                          {r.status === 'CONFIRMED' && <span className="status-chip chip-confirmed">Đã xếp bàn</span>}
+                          {r.status === 'SEATED' && <span className="status-chip chip-seated">Đang ăn</span>}
+                          {r.status === 'CANCELLED' && <span className="status-chip chip-cancelled">Đã hủy</span>}
+                        </td>
+                        <td className="text-right">
+                          {r.status === 'PENDING' && (
+                            <button
+                              type="button"
+                              // 👉 ĐẶT CHÍNH XÁC VÀO ĐÂY:
+                              onClick={() => setAssignModal({
+                                isOpen: true,
+                                reservation: r,
+                                selectedTableIds: r.tableId ? [r.tableId] : [] // Tự động tick chọn sẵn bàn khách đã đặt
+                              })}
+                              className="btn-sm btn-assign"
+                            >
+                              Xếp / Ghép Bàn
+                            </button>
+                          )}
+                          {r.status === 'CONFIRMED' && (
+                            <button
+                              type="button"
+                              onClick={() => handleCheckIn(r.id)}
+                              className="btn-sm btn-checkin"
+                            >
+                              Nhận Bàn
+                            </button>
+                          )}
+                          {r.status !== 'CANCELLED' && r.status !== 'SEATED' && (
+                            <button
+                              type="button"
+                              onClick={() => handleCancel(r.id)}
+                              className="btn-sm btn-cancel"
+                            >
+                              Hủy
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -652,38 +686,58 @@ export default function ReservationManagement(): React.ReactElement {
         </div>
       )}
 
-      {/* ── MODAL 1: XẾP BÀN ── */}
+      {/* ── MODAL 1: XẾP / GHÉP NHIỀU BÀN CHO ĐƠN PENDING ── */}
       {assignModal.isOpen && assignModal.reservation && (
         <div className="adm-modal-backdrop">
-          <div className="adm-modal-box">
-            <h3 className="modal-headline">Xếp Bàn Cho Phiếu: {assignModal.reservation.reservationCode}</h3>
+          <div className="adm-modal-box modal-width-lg">
+            <h3 className="modal-headline">
+              Xếp & Ghép Bàn Cho Phiếu: {assignModal.reservation.reservationCode}
+            </h3>
             <p className="modal-subtext">
-              Khách hàng: <strong>{assignModal.reservation.customerName}</strong> ({assignModal.reservation.partySize} người)
+              Khách hàng: <strong>{assignModal.reservation.customerName}</strong> • Quy mô đoàn: <strong>{assignModal.reservation.partySize} người</strong>
             </p>
 
+            <div className={`capacity-summary-bar ${assignTotalCapacity >= assignModal.reservation.partySize ? 'is-sufficient' : 'is-insufficient'}`}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={18} />
+                <span>
+                  Đã chọn: <strong>{assignModal.selectedTableIds.length} bàn</strong> • Tổng sức chứa: <strong>{assignTotalCapacity} ghế</strong> / {assignModal.reservation.partySize} khách
+                </span>
+              </div>
+              <span className="capacity-badge">
+                {assignTotalCapacity >= assignModal.reservation.partySize ? '✓ Đủ Sức Chứa' : '(! Cần ghép thêm bàn)'}
+              </span>
+            </div>
+
             <div className="modal-field-block">
-              <label>Chọn bàn khả dụng:</label>
-              <select
-                className="modal-select-control"
-                value={assignModal.selectedTableId}
-                onChange={(e) => setAssignModal((prev) => ({ ...prev, selectedTableId: e.target.value }))}
-              >
-                <option value="">-- Chọn bàn phù hợp --</option>
+              <label>Chọn một hoặc nhiều bàn trống để ghép cụm bàn:</label>
+              <div className="modal-table-picker-grid">
                 {tables
-                  .filter((t) => t.capacity >= (assignModal.reservation?.partySize || 0))
-                  .map((t) => (
-                    <option key={t.id} value={t.id}>
-                      Bàn {t.tableNo} ({t.capacity} chỗ) - Trạng thái: {t.status}
-                    </option>
-                  ))}
-              </select>
+                  .filter((t) => t.status?.toLowerCase() === 'available' || assignModal.selectedTableIds.includes(t.id))
+                  .map((t) => {
+                    const isSelected = assignModal.selectedTableIds.includes(t.id);
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => toggleAssignTableId(t.id)}
+                        className={`picker-table-chip ${isSelected ? 'selected' : ''}`}
+                      >
+                        <div className="chip-check-mark">
+                          {isSelected && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <div className="chip-table-no">Bàn {t.tableNo}</div>
+                        <div className="chip-table-cap">{t.capacity} chỗ ngồi</div>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
 
             <div className="modal-footer-btns">
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setAssignModal({ isOpen: false, reservation: null, selectedTableId: '' })}
+                onClick={() => setAssignModal({ isOpen: false, reservation: null, selectedTableIds: [] })}
               >
                 Hủy
               </button>
@@ -692,27 +746,27 @@ export default function ReservationManagement(): React.ReactElement {
                 className="btn-primary-action"
                 onClick={handleAssignTable}
               >
-                Xác Nhận Xếp Bàn
+                Xác Nhận Xếp {assignModal.selectedTableIds.length > 1 ? `Ghép ${assignModal.selectedTableIds.length} Bàn` : 'Bàn'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL 2: ĐẶT BÀN OFFLINE TẠI QUÁN / HOTLINE ── */}
+      {/* ── MODAL 2: ĐẶT BÀN OFFLINE TẠI QUÁN / HOTLINE GHÉP BÀN ── */}
       {offlineModal && (
         <div className="adm-modal-backdrop">
           <div className="adm-modal-box modal-width-lg">
-            <h3 className="modal-headline">Tạo Đặt Bàn Offline (Tại Chỗ / Hotline)</h3>
-            <p className="modal-subtext">Nhập thông tin khách đặt bàn trực tiếp hoặc qua điện thoại</p>
+            <h3 className="modal-headline">Tiếp Nhận Đặt Bàn Hotline / Đoàn Đông</h3>
+            <p className="modal-subtext">Nhập thông tin khách đặt qua điện thoại và chọn cụm bàn ghép tương ứng</p>
 
             <form onSubmit={handleCreateOffline} className="modal-styled-form">
               <div className="modal-field-block">
-                <label>Tên khách hàng *</label>
+                <label>Tên khách hàng / Đơn vị *</label>
                 <input
                   type="text"
                   required
-                  placeholder="VD: Anh Minh"
+                  placeholder="VD: Anh Tuấn (Công ty FPT)"
                   className="modal-input-control"
                   value={offlineForm.customerName}
                   onChange={(e) => setOfflineForm({ ...offlineForm, customerName: e.target.value })}
@@ -732,7 +786,7 @@ export default function ReservationManagement(): React.ReactElement {
                   />
                 </div>
                 <div className="modal-field-block">
-                  <label>Số lượng khách *</label>
+                  <label>Số lượng khách (người) *</label>
                   <input
                     type="number"
                     min="1"
@@ -768,19 +822,33 @@ export default function ReservationManagement(): React.ReactElement {
               </div>
 
               <div className="modal-field-block">
-                <label>Gán bàn ngay (tùy chọn):</label>
-                <select
-                  className="modal-select-control"
-                  value={offlineForm.tableId}
-                  onChange={(e) => setOfflineForm({ ...offlineForm, tableId: e.target.value })}
-                >
-                  <option value="">-- Xếp bàn sau --</option>
-                  {tables.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      Bàn {t.tableNo} ({t.capacity} chỗ) - [{t.status}]
-                    </option>
-                  ))}
-                </select>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label style={{ margin: 0 }}>Chọn các bàn cần ghép ({offlineForm.tableIds.length} bàn đã chọn):</label>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: offlineTotalCapacity >= offlineForm.partySize ? '#059669' : '#dc2626' }}>
+                    Sức chứa: {offlineTotalCapacity}/{offlineForm.partySize} ghế
+                  </span>
+                </div>
+
+                <div className="modal-table-picker-grid">
+                  {tables
+                    .filter((t) => t.status?.toLowerCase() === 'available' || offlineForm.tableIds.includes(t.id))
+                    .map((t) => {
+                      const isSelected = offlineForm.tableIds.includes(t.id);
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => toggleOfflineTableId(t.id)}
+                          className={`picker-table-chip ${isSelected ? 'selected' : ''}`}
+                        >
+                          <div className="chip-check-mark">
+                            {isSelected && <Check size={12} strokeWidth={3} />}
+                          </div>
+                          <div className="chip-table-no">Bàn {t.tableNo}</div>
+                          <div className="chip-table-cap">{t.capacity} chỗ</div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
 
               <div className="modal-checkbox-row">
@@ -792,15 +860,15 @@ export default function ReservationManagement(): React.ReactElement {
                   onChange={(e) => setOfflineForm({ ...offlineForm, seatedImmediately: e.target.checked })}
                 />
                 <label htmlFor="seatedImmediatelyCheck">
-                  Khách nhận bàn ăn ngay (Đổi bàn sang trạng thái Có Khách)
+                  Khách đang có mặt tại quán (Xếp vào ngồi ăn luôn - Check-in SEATED)
                 </label>
               </div>
 
               <div className="modal-field-block">
-                <label>Ghi chú đặc biệt:</label>
+                <label>Ghi chú sắp xếp bàn:</label>
                 <input
                   type="text"
-                  placeholder="VD: Không ăn cay, bàn ngoài trời..."
+                  placeholder="VD: Kê bàn chữ U, chuẩn bị hoa sinh nhật..."
                   className="modal-input-control"
                   value={offlineForm.specialNotes}
                   onChange={(e) => setOfflineForm({ ...offlineForm, specialNotes: e.target.value })}
@@ -816,7 +884,7 @@ export default function ReservationManagement(): React.ReactElement {
                   Hủy
                 </button>
                 <button type="submit" className="btn-primary-action">
-                  Lưu Đơn Đặt Bàn
+                  Lưu Đơn & Khóa Bàn Ghép
                 </button>
               </div>
             </form>

@@ -53,6 +53,7 @@ backend/
           omniresto/
             backend/
               config/
+                GlobalExceptionHandler.java
                 SecurityConfig.java
               controller/
                 BranchController.java
@@ -67,6 +68,7 @@ backend/
                 enums/
                   BranchStatus.java
                   MenuStatus.java
+                  OperatingShift.java
                   OrderStatus.java
                   OrderType.java
                   PaymentMethod.java
@@ -150,6 +152,7 @@ backend/
                 MenuItemService.java
                 OrderService.java
                 ReservationService.java
+                ReservationSseService.java
                 TableService.java
                 UserService.java
               OmniRestoApplication.java
@@ -361,83 +364,30 @@ public class ReservationScheduler {
 }
 </file>
 
-<file path="backend/src/main/java/com/omniresto/backend/controller/ReservationController.java">
-package com.omniresto.backend.controller;
+<file path="backend/src/main/java/com/omniresto/backend/config/GlobalExceptionHandler.java">
+package com.omniresto.backend.config;
 
 import com.omniresto.backend.model.base.response.ApiResponse;
-import com.omniresto.backend.model.reservation.request.AssignTableRequest;
-import com.omniresto.backend.model.reservation.request.OfflineReservationRequest;
-import com.omniresto.backend.model.reservation.request.OnlineReservationRequest;
-import com.omniresto.backend.model.reservation.response.ReservationResponse;
-import com.omniresto.backend.service.ReservationService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.List;
+@RestControllerAdvice
+public class GlobalExceptionHandler {
 
-@RestController
-@RequestMapping("/api/tables/reservations")
-@RequiredArgsConstructor
-@CrossOrigin(origins = "*")
-public class ReservationController {
-
-    private final ReservationService reservationService;
-
-    // 1. Khách đặt bàn Online
-    @PostMapping("/online")
-    public ResponseEntity<ApiResponse<ReservationResponse>> createOnline(@Valid @RequestBody OnlineReservationRequest request) {
-        ReservationResponse res = reservationService.createOnlineReservation(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Đặt bàn trực tuyến thành công!", res));
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
+        ApiResponse<Void> response = new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    // 2. Nhân viên tạo đơn Offline (Điện thoại hoặc tại quán)
-    @PostMapping("/offline")
-    public ResponseEntity<ApiResponse<ReservationResponse>> createOffline(@Valid @RequestBody OfflineReservationRequest request) {
-        ReservationResponse res = reservationService.createOfflineReservation(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Tạo đơn đặt bàn thành công!", res));
-    }
-
-    // 3. Lấy danh sách đặt bàn (hỗ trợ lọc ?status=PENDING, CONFIRMED, ...)
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getAll(@RequestParam(required = false) String status) {
-        return ResponseEntity.ok(ApiResponse.success(reservationService.getAll(status)));
-    }
-
-    // 4. Tra cứu thông tin đặt bàn qua mã code
-    @GetMapping("/track/{code}")
-    public ResponseEntity<ApiResponse<ReservationResponse>> getByCode(@PathVariable String code) {
-        return ResponseEntity.ok(ApiResponse.success(reservationService.getByCode(code)));
-    }
-
-    // 5. Nhân viên gán bàn cho đơn PENDING
-    @PutMapping("/{id}/assign-table")
-    public ResponseEntity<ApiResponse<ReservationResponse>> assignTable(
-            @PathVariable String id,
-            @Valid @RequestBody AssignTableRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Xếp bàn thành công!", reservationService.assignTable(id, request)));
-    }
-
-    // 6. Khách đến nhận bàn (Check-in)
-    @PutMapping("/{id}/check-in")
-    public ResponseEntity<ApiResponse<ReservationResponse>> checkIn(@PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.success("Khách đã nhận bàn thành công!", reservationService.checkIn(id)));
-    }
-
-    // 7. Hủy đơn đặt bàn
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<ReservationResponse>> cancel(
-            @PathVariable String id,
-            @RequestParam(required = false) String reason) {
-        return ResponseEntity.ok(ApiResponse.success("Hủy đặt bàn thành công!", reservationService.cancelReservation(id, reason)));
-    }
-
-    // Lấy danh sách bàn phục vụ xếp chỗ (nằm trong /api/tables/reservations/tables)
-    @GetMapping("/tables")
-    public ResponseEntity<ApiResponse<List<com.omniresto.backend.domain.TableEntity>>> getTables() {
-        return ResponseEntity.ok(ApiResponse.success(reservationService.getAllTables()));
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException ex) {
+        String defaultMsg = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        ApiResponse<Void> response = new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), defaultMsg, null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }
 </file>
@@ -499,6 +449,58 @@ public enum MenuStatus {
     available,
     out_of_stock,
     discontinued
+}
+</file>
+
+<file path="backend/src/main/java/com/omniresto/backend/domain/enums/OperatingShift.java">
+package com.omniresto.backend.domain.enums;
+
+import lombok.Getter;
+
+import java.time.LocalTime;
+
+@Getter
+public enum OperatingShift {
+    MORNING("Buổi Sáng", "06:00 - 10:30", LocalTime.of(6, 0), LocalTime.of(10, 30), true),
+    NOON("Buổi Trưa", "10:30 - 14:30", LocalTime.of(10, 30), LocalTime.of(14, 30), true),
+    BREAK("Giờ Nghỉ Bếp", "14:30 - 16:30", LocalTime.of(14, 30), LocalTime.of(16, 30), false),
+    EVENING("Buổi Tối", "16:30 - 22:00", LocalTime.of(16, 30), LocalTime.of(22, 0), true),
+    CLOSED("Đóng Cửa", "22:00 - 06:00", LocalTime.of(22, 0), LocalTime.of(6, 0), false);
+
+    private final String name;
+    private final String timeRange;
+    private final LocalTime startTime;
+    private final LocalTime endTime;
+    private final boolean isOpen;
+
+    OperatingShift(String name, String timeRange, LocalTime startTime, LocalTime endTime, boolean isOpen) {
+        this.name = name;
+        this.timeRange = timeRange;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.isOpen = isOpen;
+    }
+
+    public static OperatingShift fromTime(LocalTime time) {
+        // Buổi sáng: 06:00 <= time < 10:30
+        if (!time.isBefore(LocalTime.of(6, 0)) && time.isBefore(LocalTime.of(10, 30))) {
+            return MORNING;
+        }
+        // Buổi trưa: 10:30 <= time < 14:30
+        if (!time.isBefore(LocalTime.of(10, 30)) && time.isBefore(LocalTime.of(14, 30))) {
+            return NOON;
+        }
+        // Giờ nghỉ bếp: 14:30 <= time < 16:30
+        if (!time.isBefore(LocalTime.of(14, 30)) && time.isBefore(LocalTime.of(16, 30))) {
+            return BREAK;
+        }
+        // Buổi tối: 16:30 <= time < 22:00
+        if (!time.isBefore(LocalTime.of(16, 30)) && time.isBefore(LocalTime.of(22, 0))) {
+            return EVENING;
+        }
+        // Đóng cửa: từ 22:00 tối đến trước 06:00 sáng
+        return CLOSED;
+    }
 }
 </file>
 
@@ -1400,40 +1402,6 @@ public class OfflineReservationRequest {
 }
 </file>
 
-<file path="backend/src/main/java/com/omniresto/backend/model/reservation/request/OnlineReservationRequest.java">
-package com.omniresto.backend.model.reservation.request;
-
-import jakarta.validation.constraints.*;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.time.LocalDateTime;
-
-@Getter
-@Setter
-public class OnlineReservationRequest {
-
-    @NotBlank(message = "Tên khách hàng không được để trống")
-    private String customerName;
-
-    @NotBlank(message = "Số điện thoại không được để trống")
-    private String customerPhone;
-
-    @Email(message = "Email không đúng định dạng")
-    private String customerEmail;
-
-    @NotNull(message = "Số lượng khách không được để trống")
-    @Min(value = 1, message = "Số lượng khách tối thiểu là 1 người")
-    private Integer partySize;
-
-    @NotNull(message = "Thời gian đặt bàn không được để trống")
-    @Future(message = "Thời gian đặt bàn phải ở tương lai")
-    private LocalDateTime reservationTime;
-
-    private String specialNotes;
-}
-</file>
-
 <file path="backend/src/main/java/com/omniresto/backend/model/reservation/response/ReservationResponse.java">
 package com.omniresto.backend.model.reservation.response;
 
@@ -1868,48 +1836,6 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
 }
 </file>
 
-<file path="backend/src/main/java/com/omniresto/backend/repository/ReservationRepository.java">
-package com.omniresto.backend.repository;
-
-import com.omniresto.backend.domain.ReservationEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
-@Repository
-public interface ReservationRepository extends JpaRepository<ReservationEntity, String> {
-
-    Optional<ReservationEntity> findByReservationCode(String reservationCode);
-
-    List<ReservationEntity> findByStatusOrderByReservationTimeAsc(String status);
-
-    // Kiểm tra bàn có bị trùng lịch trong khoảng thời gian [startTime, endTime] hay không
-    @Query("SELECT r FROM ReservationEntity r WHERE r.table.id = :tableId " +
-            "AND r.status IN ('CONFIRMED', 'SEATED') " +
-            "AND r.reservationTime BETWEEN :startTime AND :endTime " +
-            "AND (:excludeReservationId IS NULL OR r.id != :excludeReservationId)")
-    List<ReservationEntity> findConflictingReservations(
-            @Param("tableId") String tableId,
-            @Param("startTime") LocalDateTime startTime,
-            @Param("endTime") LocalDateTime endTime,
-            @Param("excludeReservationId") String excludeReservationId
-    );
-
-    // Tìm các đơn đặt bàn chưa nhận bàn (PENDING hoặc CONFIRMED) đã quá giờ hẹn
-    @org.springframework.data.jpa.repository.Query(
-            "SELECT r FROM ReservationEntity r " +
-                    "WHERE r.status IN ('PENDING', 'CONFIRMED') " +
-                    "AND r.reservationTime < :threshold"
-    )
-    List<ReservationEntity> findExpiredReservations(@org.springframework.data.repository.query.Param("threshold") java.time.LocalDateTime threshold);
-}
-</file>
-
 <file path="backend/src/main/java/com/omniresto/backend/repository/TableRepository.java">
 package com.omniresto.backend.repository;
 
@@ -1946,235 +1872,66 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 }
 </file>
 
-<file path="backend/src/main/java/com/omniresto/backend/service/ReservationService.java">
+<file path="backend/src/main/java/com/omniresto/backend/service/ReservationSseService.java">
 package com.omniresto.backend.service;
 
-import com.omniresto.backend.domain.ReservationEntity;
-import com.omniresto.backend.domain.TableEntity;
-import com.omniresto.backend.domain.enums.TableStatus;
-import com.omniresto.backend.model.reservation.request.AssignTableRequest;
-import com.omniresto.backend.model.reservation.request.OfflineReservationRequest;
-import com.omniresto.backend.model.reservation.request.OnlineReservationRequest;
 import com.omniresto.backend.model.reservation.response.ReservationResponse;
-import com.omniresto.backend.repository.ReservationRepository;
-import com.omniresto.backend.repository.TableRepository;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.time.LocalDateTime;
+import java.io.IOException;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
-@RequiredArgsConstructor
-public class ReservationService {
+@Slf4j
+public class ReservationSseService {
 
-    private final ReservationRepository reservationRepository;
-    private final TableRepository tableRepository;
+    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
-    // 1. Khách đặt bàn trực tuyến (Lưu PENDING, chưa xếp bàn)
-    @Transactional
-    public ReservationResponse createOnlineReservation(OnlineReservationRequest request) {
-        String code = generateReservationCode("ONL");
+    public SseEmitter createConnection() {
+        // Timeout 24h
+        SseEmitter emitter = new SseEmitter(24L * 60 * 60 * 1000);
+        emitters.add(emitter);
 
-        ReservationEntity reservation = ReservationEntity.builder()
-                .reservationCode(code)
-                .customerName(request.getCustomerName().trim())
-                .customerPhone(request.getCustomerPhone().trim())
-                .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
-                .partySize(request.getPartySize())
-                .reservationTime(request.getReservationTime())
-                .status("PENDING")
-                .specialNotes(request.getSpecialNotes())
-                .build();
+        emitter.onCompletion(() -> emitters.remove(emitter));
+        emitter.onTimeout(() -> emitters.remove(emitter));
+        emitter.onError((e) -> emitters.remove(emitter));
 
-        return mapToResponse(reservationRepository.save(reservation));
+        try {
+            emitter.send(SseEmitter.event().name("INIT").data("CONNECTED"));
+        } catch (IOException e) {
+            emitters.remove(emitter);
+        }
+
+        return emitter;
     }
 
-    // 2. Nhân viên tạo đặt bàn Offline (Khách gọi điện hoặc khách vãng lai tới quán)
-    @Transactional
-    public ReservationResponse createOfflineReservation(OfflineReservationRequest request) {
-        String code = generateReservationCode("OFF");
-        TableEntity table = null;
-        String status = "PENDING";
-
-        if (request.getTableId() != null && !request.getTableId().isBlank()) {
-            table = validateAndGetAvailableTable(request.getTableId(), request.getPartySize(), request.getReservationTime(), null);
-            status = request.isSeatedImmediately() ? "SEATED" : "CONFIRMED";
-
-            if (request.isSeatedImmediately()) {
-                table.setStatus(TableStatus.occupied);
-                tableRepository.save(table);
+    public void broadcastNewReservation(ReservationResponse reservation) {
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("NEW_RESERVATION")
+                        .data(reservation, MediaType.APPLICATION_JSON));
+            } catch (IOException e) {
+                emitters.remove(emitter);
             }
         }
-
-        ReservationEntity reservation = ReservationEntity.builder()
-                .reservationCode(code)
-                .customerName(request.getCustomerName().trim())
-                .customerPhone(request.getCustomerPhone().trim())
-                .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
-                .partySize(request.getPartySize())
-                .reservationTime(request.getReservationTime())
-                .status(status)
-                .table(table)
-                .specialNotes(request.getSpecialNotes())
-                .build();
-
-        return mapToResponse(reservationRepository.save(reservation));
+        log.info("==> [REALTIME SSE] Đã đẩy đơn mới {} tới {} màn hình Admin", reservation.getReservationCode(), emitters.size());
     }
 
-    // 3. Nhân viên xếp bàn cho đơn PENDING (Chuyển thành CONFIRMED)
-    @Transactional
-    public ReservationResponse assignTable(String reservationId, AssignTableRequest request) {
-        ReservationEntity reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đặt bàn: " + reservationId));
-
-        if ("CANCELLED".equals(reservation.getStatus()) || "COMPLETED".equals(reservation.getStatus())) {
-            throw new RuntimeException("Đơn đặt bàn đã kết thúc hoặc bị hủy, không thể xếp bàn!");
+    public void broadcastReservationUpdated(ReservationResponse reservation) {
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("UPDATE_RESERVATION")
+                        .data(reservation, MediaType.APPLICATION_JSON));
+            } catch (IOException e) {
+                emitters.remove(emitter);
+            }
         }
-
-        TableEntity table = validateAndGetAvailableTable(
-                request.getTableId(),
-                reservation.getPartySize(),
-                reservation.getReservationTime(),
-                reservation.getId()
-        );
-
-        reservation.setTable(table);
-        reservation.setStatus("CONFIRMED");
-
-        return mapToResponse(reservationRepository.save(reservation));
-    }
-
-    // 4. Khách đến quán nhận bàn (Check-in -> SEATED)
-    @Transactional
-    public ReservationResponse checkIn(String reservationId) {
-        ReservationEntity reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt bàn!"));
-
-        if (reservation.getTable() == null) {
-            throw new RuntimeException("Đơn đặt bàn chưa được xếp bàn, vui lòng gán bàn trước khi nhận khách!");
-        }
-
-        reservation.setStatus("SEATED");
-        TableEntity table = reservation.getTable();
-        table.setStatus(TableStatus.occupied);
-        tableRepository.save(table);
-
-        return mapToResponse(reservationRepository.save(reservation));
-    }
-
-    // 5. Hủy đơn đặt bàn
-    @Transactional
-    public ReservationResponse cancelReservation(String reservationId, String reason) {
-        ReservationEntity reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt bàn!"));
-
-        reservation.setStatus("CANCELLED");
-        if (reason != null && !reason.isBlank()) {
-            String currentNotes = reservation.getSpecialNotes() != null ? reservation.getSpecialNotes() + " | " : "";
-            reservation.setSpecialNotes(currentNotes + "Lý do hủy: " + reason);
-        }
-
-        return mapToResponse(reservationRepository.save(reservation));
-    }
-
-
-// 6. Lấy danh sách đặt bàn (tự động quét hủy đơn trễ trước khi trả về danh sách)
-    @Transactional
-    public List<ReservationResponse> getAll(String status) {
-        // Tự động quét và hủy đơn quá 30 phút ngay khi load dữ liệu
-        autoCancelExpiredReservations();
-
-        List<ReservationEntity> list = (status != null && !status.isBlank())
-                ? reservationRepository.findByStatusOrderByReservationTimeAsc(status)
-                : reservationRepository.findAll();
-        return list.stream().map(this::mapToResponse).toList();
-    }
-
-    // 7. Tra cứu thông tin đặt bàn theo mã code
-    @Transactional(readOnly = true)
-    public ReservationResponse getByCode(String code) {
-        return reservationRepository.findByReservationCode(code)
-                .map(this::mapToResponse)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy mã đặt bàn: " + code));
-    }
-
-    // Helper: Kiểm tra bàn có đủ chỗ và có bị trùng cữ ăn trong vòng 2 tiếng không
-    private TableEntity validateAndGetAvailableTable(String tableId, int partySize, LocalDateTime reservationTime, String excludeResId) {
-        TableEntity table = tableRepository.findById(tableId)
-                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
-
-        if (table.getCapacity() < partySize) {
-            throw new RuntimeException("Bàn số " + table.getTableNo() + " chỉ chứa tối đa "
-                    + table.getCapacity() + " người (Yêu cầu: " + partySize + " người)!");
-        }
-
-        LocalDateTime conflictStart = reservationTime.minusHours(2);
-        LocalDateTime conflictEnd = reservationTime.plusHours(2);
-
-        List<ReservationEntity> conflicts = reservationRepository.findConflictingReservations(
-                tableId, conflictStart, conflictEnd, excludeResId
-        );
-
-        if (!conflicts.isEmpty()) {
-            throw new RuntimeException("Bàn " + table.getTableNo() + " đã có khách đặt lúc "
-                    + conflicts.get(0).getReservationTime() + "!");
-        }
-
-        return table;
-    }
-
-    private String generateReservationCode(String prefix) {
-        int randomNum = 1000 + new Random().nextInt(9000);
-        return "RSV-" + prefix + "-" + randomNum;
-    }
-
-    private ReservationResponse mapToResponse(ReservationEntity entity) {
-        return ReservationResponse.builder()
-                .id(entity.getId())
-                .reservationCode(entity.getReservationCode())
-                .customerName(entity.getCustomerName())
-                .customerPhone(entity.getCustomerPhone())
-                .customerEmail(entity.getCustomerEmail())
-                .partySize(entity.getPartySize())
-                .reservationTime(entity.getReservationTime())
-                .status(entity.getStatus())
-                .tableId(entity.getTable() != null ? entity.getTable().getId() : null)
-                .tableNo(entity.getTable() != null ? entity.getTable().getTableNo() : null)
-                .tableCapacity(entity.getTable() != null ? entity.getTable().getCapacity() : null)
-                .specialNotes(entity.getSpecialNotes())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .build();
-    }
-
-    // Lấy toàn bộ danh sách bàn phục vụ đặt bàn và xếp chỗ
-    @Transactional(readOnly = true)
-    public List<TableEntity> getAllTables() {
-        return tableRepository.findAll();
-    }
-
-    // Tự động hủy các đơn trễ hẹn quá 30 phút
-    @Transactional
-    public int autoCancelExpiredReservations() {
-        // Mốc thời gian: Thời điểm hiện tại trừ đi 30 phút
-        LocalDateTime threshold = LocalDateTime.now().minusMinutes(30);
-
-        List<ReservationEntity> expiredList = reservationRepository.findExpiredReservations(threshold);
-        if (expiredList.isEmpty()) {
-            return 0;
-        }
-
-        for (ReservationEntity reservation : expiredList) {
-            reservation.setStatus("CANCELLED");
-            String currentNotes = reservation.getSpecialNotes() != null ? reservation.getSpecialNotes() + " | " : "";
-            reservation.setSpecialNotes(currentNotes + "Hệ thống tự động hủy: Quá 30 phút so với giờ hẹn khách chưa tới nhận bàn.");
-        }
-
-        reservationRepository.saveAll(expiredList);
-        return expiredList.size();
     }
 }
 </file>
@@ -9369,1274 +9126,6 @@ export const useClientStore = create<ClientState>((set, get) => ({
 }));
 </file>
 
-<file path="frontend/src/pages/admin/ReservationManagement.css">
-/* ── Container & Header ── */
-.adm-res-container {
-  padding: 24px;
-  max-width: 1380px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  font-family: inherit;
-  color: #1f2937;
-}
-
-.adm-res-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.adm-res-title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #111827;
-  margin: 0;
-}
-
-.adm-res-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.adm-res-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-/* ── Toggle Switcher (Sơ đồ <-> Danh sách) ── */
-.adm-view-toggle {
-  display: inline-flex;
-  background: #f3f4f6;
-  padding: 4px;
-  border-radius: 8px;
-}
-
-.toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border: none;
-  background: transparent;
-  color: #4b5563;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.toggle-btn.active {
-  background: #ffffff;
-  color: #111827;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.adm-refresh-btn {
-  padding: 8px 10px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4b5563;
-  transition: background 0.2s;
-}
-
-.adm-refresh-btn:hover { background: #f9fafb; }
-.spinning { animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.adm-btn-create {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background-color: #059669;
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
-  transition: background 0.2s;
-}
-.adm-btn-create:hover { background-color: #047857; }
-
-/* ── Thống kê tóm tắt ── */
-.adm-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .adm-stats-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-.adm-stat-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: #111827;
-  margin-top: 4px;
-}
-
-.stat-avail .stat-value { color: #059669; }
-.stat-busy .stat-value { color: #dc2626; }
-.stat-pending .stat-value { color: #d97706; }
-
-/* ── Wrapper chung của Khung Nội Dung ── */
-.adm-card-wrapper {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
-}
-
-/* ── Sơ đồ bàn (Floor Map) ── */
-.map-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 24px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.section-heading {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0;
-}
-
-.map-legends {
-  display: flex;
-  gap: 16px;
-  font-size: 0.8rem;
-}
-
-.map-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-.dot-green { background-color: #10b981; }
-.dot-yellow { background-color: #f59e0b; }
-.dot-red { background-color: #ef4444; }
-
-.adm-table-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 18px;
-}
-
-.adm-floor-table {
-  border-radius: 14px;
-  padding: 18px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-  position: relative;
-  user-select: none;
-}
-
-.table-state--free {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-  cursor: pointer;
-}
-.table-state--free:hover {
-  border-color: #10b981;
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.15);
-}
-
-.table-state--busy {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-}
-
-.table-state--reserved {
-  background-color: #fffbeb;
-  border-color: #fde68a;
-}
-
-.floor-table-top {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-bottom: 8px;
-}
-
-.floor-table-no {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #111827;
-}
-
-.floor-table-cap {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #6b7280;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.floor-table-center {
-  margin: 6px 0 10px;
-}
-.table-state--free .floor-table-center { color: #059669; }
-.table-state--busy .floor-table-center { color: #dc2626; }
-.table-state--reserved .floor-table-center { color: #d97706; }
-
-.floor-table-status {
-  margin-bottom: 8px;
-}
-
-.tag-avail { font-size: 0.75rem; font-weight: 700; color: #065f46; }
-.tag-busy { font-size: 0.75rem; font-weight: 700; color: #991b1b; }
-.tag-res { font-size: 0.75rem; font-weight: 700; color: #92400e; }
-
-.floor-guest-info {
-  width: 100%;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.guest-name {
-  font-weight: 700;
-  color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.guest-time {
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-quick-checkin {
-  margin-top: 4px;
-  width: 100%;
-  padding: 5px 8px;
-  background-color: #059669;
-  color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.btn-quick-checkin:hover { background-color: #047857; }
-
-.click-to-book-hint {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #059669;
-  margin-top: 6px;
-}
-
-/* ── Bảng danh sách (List View) ── */
-.list-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.status-tab-group {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-}
-
-.status-tab-btn {
-  padding: 6px 14px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: none;
-  background: transparent;
-  color: #4b5563;
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.status-tab-btn:hover { background-color: #f3f4f6; }
-.status-tab-btn.active {
-  background-color: #111827;
-  color: #ffffff;
-}
-
-.search-field-box {
-  position: relative;
-  width: 280px;
-}
-@media (max-width: 640px) { .search-field-box { width: 100%; } }
-
-.search-icon-inside {
-  position: absolute;
-  left: 10px;
-  top: 9px;
-  color: #9ca3af;
-}
-
-.search-input-field {
-  width: 100%;
-  padding: 8px 12px 8px 34px;
-  font-size: 0.85rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  outline: none;
-  box-sizing: border-box;
-}
-.search-input-field:focus { border-color: #059669; }
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-.adm-data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.875rem;
-}
-
-.adm-data-table th {
-  background: #f9fafb;
-  padding: 12px 16px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #4b5563;
-  text-transform: uppercase;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.adm-data-table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.adm-data-table tr:hover { background-color: #f9fafb; }
-
-.code-font {
-  font-family: monospace;
-  font-weight: 700;
-  color: #111827;
-}
-
-.badge-assigned-table {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background-color: #ecfdf5;
-  color: #047857;
-  font-weight: 700;
-  border-radius: 6px;
-  font-size: 0.8rem;
-}
-
-.badge-unassigned {
-  font-size: 0.75rem;
-  color: #d97706;
-  background-color: #fffbeb;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.status-chip {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-.chip-pending { background-color: #fef3c7; color: #92400e; }
-.chip-confirmed { background-color: #dbeafe; color: #1e40af; }
-.chip-seated { background-color: #d1fae5; color: #065f46; }
-.chip-cancelled { background-color: #fee2e2; color: #991b1b; }
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  margin-left: 6px;
-}
-
-.btn-assign { background-color: #2563eb; color: #ffffff; }
-.btn-assign:hover { background-color: #1d4ed8; }
-.btn-checkin { background-color: #059669; color: #ffffff; }
-.btn-checkin:hover { background-color: #047857; }
-.btn-cancel { background-color: #fef2f2; color: #dc2626; }
-.btn-cancel:hover { background-color: #fee2e2; }
-
-.empty-table-cell {
-  text-align: center;
-  padding: 36px;
-  color: #9ca3af;
-}
-
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-
-/* ── Modal Styles ── */
-.adm-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 999;
-}
-
-.adm-modal-box {
-  background: #ffffff;
-  border-radius: 14px;
-  width: 100%;
-  max-width: 440px;
-  padding: 24px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
-}
-
-.modal-width-lg { max-width: 520px; }
-
-.modal-headline {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 6px;
-}
-
-.modal-subtext {
-  font-size: 0.85rem;
-  color: #6b7280;
-  margin-bottom: 18px;
-}
-
-.modal-styled-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.modal-field-block {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.modal-field-block label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-.modal-input-control,
-.modal-select-control {
-  padding: 9px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-
-.modal-checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.875rem;
-  color: #1f2937;
-  font-weight: 600;
-}
-
-.checkbox-custom {
-  width: 16px;
-  height: 16px;
-  accent-color: #059669;
-}
-
-.modal-footer-btns {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid #f3f4f6;
-}
-
-.btn-secondary {
-  padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.btn-primary-action {
-  padding: 8px 18px;
-  background: #059669;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-</file>
-
-<file path="frontend/src/pages/admin/ReservationManagement.tsx">
-import React, { useState, useEffect } from 'react';
-import { reservationApi } from '../../api/reservationApi';
-import { 
-  Plus, 
-  RefreshCw, 
-  Armchair, 
-  Search, 
-  LayoutGrid, 
-  ListFilter, 
-  Clock, 
-  User 
-} from 'lucide-react';
-import './ReservationManagement.css';
-
-interface TableItem {
-  id: string;
-  tableNo: string;
-  capacity: number;
-  status: string;
-}
-
-interface ReservationItem {
-  id: string;
-  reservationCode: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string | null;
-  partySize: number;
-  reservationTime: string;
-  status: string;
-  tableId?: string | null;
-  tableNo?: string | null;
-  tableCapacity?: number | null;
-  specialNotes?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface AssignModalState {
-  isOpen: boolean;
-  reservation: ReservationItem | null;
-  selectedTableId: string;
-}
-
-interface OfflineFormState {
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  partySize: number;
-  reservationDate: string;
-  reservationTime: string;
-  tableId: string;
-  specialNotes: string;
-  seatedImmediately: boolean;
-}
-
-function extractErrorMessage(err: unknown): string {
-  if (typeof err === 'object' && err !== null && 'response' in err) {
-    const res = (err as { response?: { data?: { message?: string } } }).response;
-    if (res?.data?.message) return res.data.message;
-  }
-  if (err instanceof Error) return err.message;
-  return 'Đã có lỗi xảy ra!';
-}
-
-export default function ReservationManagement(): React.ReactElement {
-  // 'map' (Xem sơ đồ bàn) | 'list' (Xem danh sách bảng dữ liệu)
-  const [activeMode, setActiveMode] = useState<'map' | 'list'>('map');
-
-  const [reservations, setReservations] = useState<ReservationItem[]>([]);
-  const [tables, setTables] = useState<TableItem[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-
-  // Modal Xếp bàn
-  const [assignModal, setAssignModal] = useState<AssignModalState>({
-    isOpen: false,
-    reservation: null,
-    selectedTableId: '',
-  });
-
-  // Modal Đặt bàn Offline
-  const [offlineModal, setOfflineModal] = useState<boolean>(false);
-  const [offlineForm, setOfflineForm] = useState<OfflineFormState>({
-    customerName: '',
-    customerPhone: '',
-    customerEmail: '',
-    partySize: 2,
-    reservationDate: new Date().toISOString().split('T')[0],
-    reservationTime: '19:00',
-    tableId: '',
-    specialNotes: '',
-    seatedImmediately: false,
-  });
-
-  // Tải dữ liệu ban đầu an toàn trong useEffect (Không gọi setState đồng bộ)
-  useEffect(() => {
-    let isCancelled = false;
-
-    const fetchData = async () => {
-      try {
-        const [resData, tablesData] = await Promise.all([
-          reservationApi.getAll(filterStatus),
-          reservationApi.getTables(),
-        ]);
-        if (!isCancelled) {
-          setReservations(resData.data || []);
-          setTables(tablesData.data || []);
-        }
-      } catch (err: unknown) {
-        if (!isCancelled) {
-          console.error('Lỗi nạp dữ liệu:', extractErrorMessage(err));
-        }
-      } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [filterStatus]);
-
-  // Hàm làm mới dữ liệu cho các sự kiện bấm nút
-  const refreshData = async () => {
-    setLoading(true);
-    try {
-      const [resData, tablesData] = await Promise.all([
-        reservationApi.getAll(filterStatus),
-        reservationApi.getTables(),
-      ]);
-      setReservations(resData.data || []);
-      setTables(tablesData.data || []);
-    } catch (err: unknown) {
-      console.error('Lỗi làm mới dữ liệu:', extractErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Khi click vào bàn trên sơ đồ
-  const handleTableClick = (table: TableItem) => {
-    const isAvail = table.status?.toLowerCase() === 'available';
-    if (isAvail) {
-      setOfflineForm((prev) => ({
-        ...prev,
-        tableId: table.id,
-        partySize: Math.min(prev.partySize || 2, table.capacity),
-        seatedImmediately: false,
-      }));
-      setOfflineModal(true);
-    }
-  };
-
-  const handleAssignTable = async () => {
-    if (!assignModal.reservation || !assignModal.selectedTableId) {
-      alert('Vui lòng chọn bàn!');
-      return;
-    }
-    try {
-      await reservationApi.assignTable(assignModal.reservation.id, assignModal.selectedTableId);
-      alert('Xếp bàn thành công!');
-      setAssignModal({ isOpen: false, reservation: null, selectedTableId: '' });
-      await refreshData();
-    } catch (err: unknown) {
-      alert(extractErrorMessage(err));
-    }
-  };
-
-  const handleCheckIn = async (id: string) => {
-    if (!window.confirm('Xác nhận khách đã vào nhận bàn?')) return;
-    try {
-      await reservationApi.checkIn(id);
-      alert('Khách đã vào bàn thành công!');
-      await refreshData();
-    } catch (err: unknown) {
-      alert(extractErrorMessage(err));
-    }
-  };
-
-  const handleCancel = async (id: string) => {
-    const reason = window.prompt('Nhập lý do hủy đặt bàn:');
-    if (reason === null) return;
-    try {
-      await reservationApi.cancel(id, reason);
-      alert('Hủy đơn thành công!');
-      await refreshData();
-    } catch (err: unknown) {
-      alert(extractErrorMessage(err));
-    }
-  };
-
-  const handleCreateOffline = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...offlineForm,
-        partySize: Number(offlineForm.partySize),
-        reservationTime: `${offlineForm.reservationDate}T${offlineForm.reservationTime}:00`,
-      };
-      await reservationApi.createOffline(payload);
-      alert('Tạo đơn đặt bàn offline thành công!');
-      setOfflineModal(false);
-      setOfflineForm({
-        customerName: '',
-        customerPhone: '',
-        customerEmail: '',
-        partySize: 2,
-        reservationDate: new Date().toISOString().split('T')[0],
-        reservationTime: '19:00',
-        tableId: '',
-        specialNotes: '',
-        seatedImmediately: false,
-      });
-      await refreshData();
-    } catch (err: unknown) {
-      alert(extractErrorMessage(err));
-    }
-  };
-
-  // Thống kê nhanh số lượng bàn
-  const totalTables = tables.length;
-  const availTables = tables.filter((t) => t.status?.toLowerCase() === 'available').length;
-  const occupiedTables = tables.filter((t) => t.status?.toLowerCase() === 'occupied').length;
-  const pendingReservations = reservations.filter((r) => r.status === 'PENDING').length;
-
-  const filteredReservations = reservations.filter((r) =>
-    r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.customerPhone.includes(searchTerm) ||
-    r.reservationCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div className="adm-res-container">
-      {/* ── TOP HEADER ── */}
-      <div className="adm-res-header">
-        <div>
-          <h1 className="adm-res-title">Quản Lý Đặt Bàn & Sơ Đồ Phục Vụ</h1>
-          <p className="adm-res-subtitle">Theo dõi trạng thái bàn ăn thời gian thực và quản lý đơn đặt bàn của khách</p>
-        </div>
-
-        <div className="adm-res-actions">
-          {/* Nút chuyển đổi View: Sơ đồ bàn <-> Danh sách bảng */}
-          <div className="adm-view-toggle">
-            <button
-              type="button"
-              onClick={() => setActiveMode('map')}
-              className={`toggle-btn ${activeMode === 'map' ? 'active' : ''}`}
-            >
-              <LayoutGrid size={16} /> Sơ Đồ Bàn
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveMode('list')}
-              className={`toggle-btn ${activeMode === 'list' ? 'active' : ''}`}
-            >
-              <ListFilter size={16} /> Danh Sách Đơn ({reservations.length})
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={refreshData}
-            className="adm-refresh-btn"
-            title="Làm mới dữ liệu"
-          >
-            <RefreshCw size={17} className={loading ? 'spinning' : ''} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setOfflineForm({
-                customerName: '',
-                customerPhone: '',
-                customerEmail: '',
-                partySize: 2,
-                reservationDate: new Date().toISOString().split('T')[0],
-                reservationTime: '19:00',
-                tableId: '',
-                specialNotes: '',
-                seatedImmediately: false,
-              });
-              setOfflineModal(true);
-            }}
-            className="adm-btn-create"
-          >
-            <Plus size={16} /> Đặt Bàn Tại Chỗ / Hotline
-          </button>
-        </div>
-      </div>
-
-      {/* ── THẺ THỐNG KÊ NHANH ── */}
-      <div className="adm-stats-grid">
-        <div className="adm-stat-card">
-          <span className="stat-label">Tổng Bàn Ăn</span>
-          <div className="stat-value">{totalTables}</div>
-        </div>
-        <div className="adm-stat-card stat-avail">
-          <span className="stat-label">Bàn Trống Sẵn Sàng</span>
-          <div className="stat-value">{availTables}</div>
-        </div>
-        <div className="adm-stat-card stat-busy">
-          <span className="stat-label">Bàn Đang Có Khách</span>
-          <div className="stat-value">{occupiedTables}</div>
-        </div>
-        <div className="adm-stat-card stat-pending">
-          <span className="stat-label">Đơn Online Chờ Xếp</span>
-          <div className="stat-value">{pendingReservations}</div>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════
-          CHẾ ĐỘ 1: SƠ ĐỒ BÀN TRỰC QUAN (FLOOR MAP)
-          ══════════════════════════════════════════════════════════════ */}
-      {activeMode === 'map' && (
-        <div className="adm-card-wrapper">
-          <div className="map-toolbar">
-            <h3 className="section-heading">Sơ Đồ Bàn Ăn Trực Quan</h3>
-            <div className="map-legends">
-              <span className="map-legend-item"><span className="legend-dot dot-green"></span> Bàn trống (Bấm để tạo đơn)</span>
-              <span className="map-legend-item"><span className="legend-dot dot-yellow"></span> Đã đặt trước</span>
-              <span className="map-legend-item"><span className="legend-dot dot-red"></span> Đang dùng bữa</span>
-            </div>
-          </div>
-
-          <div className="adm-table-grid">
-            {tables.map((t) => {
-              const isAvailable = t.status?.toLowerCase() === 'available';
-              const isOccupied = t.status?.toLowerCase() === 'occupied';
-
-              // Tìm đơn đặt bàn tương ứng đã xếp cho bàn này (nếu có)
-              const reservedOrder = reservations.find(
-                (r) => r.tableId === t.id && (r.status === 'CONFIRMED' || r.status === 'SEATED')
-              );
-
-              return (
-                <div
-                  key={t.id}
-                  onClick={() => handleTableClick(t)}
-                  className={`adm-floor-table ${
-                    isAvailable ? 'table-state--free' : isOccupied ? 'table-state--busy' : 'table-state--reserved'
-                  }`}
-                >
-                  <div className="floor-table-top">
-                    <span className="floor-table-no">Bàn {t.tableNo}</span>
-                    <span className="floor-table-cap">{t.capacity} chỗ</span>
-                  </div>
-
-                  <div className="floor-table-center">
-                    <Armchair size={36} />
-                  </div>
-
-                  <div className="floor-table-status">
-                    {isAvailable && <span className="tag-avail">🟢 Bàn Trống</span>}
-                    {isOccupied && <span className="tag-busy">🔴 Đang Ăn</span>}
-                    {!isAvailable && !isOccupied && <span className="tag-res">🟡 Đã Đặt</span>}
-                  </div>
-
-                  {/* Thông tin khách nếu bàn đã có người đặt trước */}
-                  {reservedOrder && (
-                    <div className="floor-guest-info">
-                      <div className="guest-name">
-                        <User size={13} /> {reservedOrder.customerName}
-                      </div>
-                      <div className="guest-time">
-                        <Clock size={12} /> {new Date(reservedOrder.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-
-                      {reservedOrder.status === 'CONFIRMED' && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCheckIn(reservedOrder.id);
-                          }}
-                          className="btn-quick-checkin"
-                        >
-                          Nhận Bàn
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {isAvailable && (
-                    <span className="click-to-book-hint">+ Đặt bàn này</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════
-          CHẾ ĐỘ 2: BẢNG DANH SÁCH CHI TIẾT (LIST VIEW)
-          ══════════════════════════════════════════════════════════════ */}
-      {activeMode === 'list' && (
-        <div className="adm-card-wrapper">
-          {/* Thanh công cụ lọc & tìm kiếm */}
-          <div className="list-toolbar">
-            <div className="status-tab-group">
-              {[
-                { label: 'Tất cả', value: '' },
-                { label: 'Chờ xếp bàn', value: 'PENDING' },
-                { label: 'Đã xếp bàn', value: 'CONFIRMED' },
-                { label: 'Đang dùng bữa', value: 'SEATED' },
-                { label: 'Đã hủy', value: 'CANCELLED' },
-              ].map((tab) => (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => setFilterStatus(tab.value)}
-                  className={`status-tab-btn ${filterStatus === tab.value ? 'active' : ''}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="search-field-box">
-              <Search size={16} className="search-icon-inside" />
-              <input
-                type="text"
-                placeholder="Tìm tên khách, SĐT, mã phiếu..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input-field"
-              />
-            </div>
-          </div>
-
-          {/* Bảng dữ liệu */}
-          <div className="table-responsive">
-            <table className="adm-data-table">
-              <thead>
-                <tr>
-                  <th>Mã Phiếu</th>
-                  <th>Khách Hàng</th>
-                  <th>Thời Gian Dùng</th>
-                  <th className="text-center">Số Khách</th>
-                  <th>Bàn Phục Vụ</th>
-                  <th>Trạng Thái</th>
-                  <th className="text-right">Hành Động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReservations.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="empty-table-cell">Không tìm thấy đơn đặt bàn nào</td>
-                  </tr>
-                ) : (
-                  filteredReservations.map((r) => (
-                    <tr key={r.id}>
-                      <td className="code-font">{r.reservationCode}</td>
-                      <td>
-                        <div className="font-semibold text-gray-900">{r.customerName}</div>
-                        <div className="text-xs text-gray-500">{r.customerPhone}</div>
-                      </td>
-                      <td>
-                        <div>{new Date(r.reservationTime).toLocaleDateString('vi-VN')}</div>
-                        <div className="text-xs text-gray-500 font-semibold">
-                          {new Date(r.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </td>
-                      <td className="text-center font-bold">{r.partySize}</td>
-                      <td>
-                        {r.tableNo ? (
-                          <span className="badge-assigned-table">
-                            <Armchair size={13} /> Bàn {r.tableNo}
-                          </span>
-                        ) : (
-                          <span className="badge-unassigned">Chưa gán</span>
-                        )}
-                      </td>
-                      <td>
-                        {r.status === 'PENDING' && <span className="status-chip chip-pending">Chờ xếp bàn</span>}
-                        {r.status === 'CONFIRMED' && <span className="status-chip chip-confirmed">Đã xếp bàn</span>}
-                        {r.status === 'SEATED' && <span className="status-chip chip-seated">Đang ăn</span>}
-                        {r.status === 'CANCELLED' && <span className="status-chip chip-cancelled">Đã hủy</span>}
-                      </td>
-                      <td className="text-right">
-                        {r.status === 'PENDING' && (
-                          <button
-                            type="button"
-                            onClick={() => setAssignModal({ isOpen: true, reservation: r, selectedTableId: '' })}
-                            className="btn-sm btn-assign"
-                          >
-                            Xếp Bàn
-                          </button>
-                        )}
-                        {r.status === 'CONFIRMED' && (
-                          <button
-                            type="button"
-                            onClick={() => handleCheckIn(r.id)}
-                            className="btn-sm btn-checkin"
-                          >
-                            Nhận Bàn
-                          </button>
-                        )}
-                        {r.status !== 'CANCELLED' && r.status !== 'SEATED' && (
-                          <button
-                            type="button"
-                            onClick={() => handleCancel(r.id)}
-                            className="btn-sm btn-cancel"
-                          >
-                            Hủy
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 1: XẾP BÀN ── */}
-      {assignModal.isOpen && assignModal.reservation && (
-        <div className="adm-modal-backdrop">
-          <div className="adm-modal-box">
-            <h3 className="modal-headline">Xếp Bàn Cho Phiếu: {assignModal.reservation.reservationCode}</h3>
-            <p className="modal-subtext">
-              Khách hàng: <strong>{assignModal.reservation.customerName}</strong> ({assignModal.reservation.partySize} người)
-            </p>
-
-            <div className="modal-field-block">
-              <label>Chọn bàn khả dụng:</label>
-              <select
-                value={assignModal.selectedTableId}
-                onChange={(e) => setAssignModal({ ...assignModal, selectedTableId: e.target.value })}
-                className="modal-select-control"
-              >
-                <option value="">-- Bấm để chọn bàn trống --</option>
-                {tables
-                  .filter((t) => t.capacity >= (assignModal.reservation?.partySize || 0))
-                  .map((t) => (
-                    <option key={t.id} value={t.id}>
-                      Bàn {t.tableNo} - Sức chứa: {t.capacity} người ({t.status})
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="modal-footer-btns">
-              <button
-                type="button"
-                onClick={() => setAssignModal({ isOpen: false, reservation: null, selectedTableId: '' })}
-                className="btn-secondary"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                onClick={handleAssignTable}
-                className="btn-primary-action"
-              >
-                Xác Nhận Xếp
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 2: TẠO ĐẶT BÀN OFFLINE ── */}
-      {offlineModal && (
-        <div className="adm-modal-backdrop">
-          <div className="adm-modal-box modal-width-lg">
-            <h3 className="modal-headline">Tạo Đặt Bàn Offline / Hotline</h3>
-            <form onSubmit={handleCreateOffline} className="modal-styled-form">
-              <div className="grid-2col">
-                <div className="modal-field-block">
-                  <label>Tên khách hàng *</label>
-                  <input
-                    type="text"
-                    required
-                    value={offlineForm.customerName}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, customerName: e.target.value })}
-                    className="modal-input-control"
-                  />
-                </div>
-                <div className="modal-field-block">
-                  <label>Số điện thoại *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={offlineForm.customerPhone}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, customerPhone: e.target.value })}
-                    className="modal-input-control"
-                  />
-                </div>
-              </div>
-
-              <div className="grid-3col">
-                <div className="modal-field-block">
-                  <label>Số khách *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={offlineForm.partySize}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, partySize: Number(e.target.value) })}
-                    className="modal-input-control"
-                  />
-                </div>
-                <div className="modal-field-block">
-                  <label>Ngày đến *</label>
-                  <input
-                    type="date"
-                    required
-                    value={offlineForm.reservationDate}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, reservationDate: e.target.value })}
-                    className="modal-input-control"
-                  />
-                </div>
-                <div className="modal-field-block">
-                  <label>Giờ đến *</label>
-                  <input
-                    type="time"
-                    required
-                    value={offlineForm.reservationTime}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, reservationTime: e.target.value })}
-                    className="modal-input-control"
-                  />
-                </div>
-              </div>
-
-              <div className="modal-field-block">
-                <label>Chọn bàn phục vụ (Tùy chọn):</label>
-                <select
-                  value={offlineForm.tableId}
-                  onChange={(e) => setOfflineForm({ ...offlineForm, tableId: e.target.value })}
-                  className="modal-select-control"
-                >
-                  <option value="">-- Chưa gán bàn (Xếp sau) --</option>
-                  {tables
-                    .filter((t) => t.capacity >= offlineForm.partySize)
-                    .map((t) => (
-                      <option key={t.id} value={t.id}>
-                        Bàn {t.tableNo} ({t.capacity} chỗ - {t.status})
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              {offlineForm.tableId && (
-                <div className="modal-checkbox-row">
-                  <input
-                    type="checkbox"
-                    id="seatedImmediately"
-                    checked={offlineForm.seatedImmediately}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, seatedImmediately: e.target.checked })}
-                    className="checkbox-custom"
-                  />
-                  <label htmlFor="seatedImmediately">
-                    Khách vào ngồi ăn ngay (Walk-in check-in luôn)
-                  </label>
-                </div>
-              )}
-
-              <div className="modal-footer-btns">
-                <button
-                  type="button"
-                  onClick={() => setOfflineModal(false)}
-                  className="btn-secondary"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary-action"
-                >
-                  Tạo Đơn
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-</file>
-
 <file path="frontend/src/pages/customer/ReservationPage.css">
 /* ── Reset & Container ── */
 .res-container {
@@ -11184,515 +9673,6 @@ export default function ReservationManagement(): React.ReactElement {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-</file>
-
-<file path="frontend/src/pages/customer/ReservationPage.tsx">
-import React, { useState, useEffect } from 'react';
-import { reservationApi } from '../../api/reservationApi';
-import { 
-  Calendar, Users, Phone, User, Mail, 
-  FileText, Search, CheckCircle2, Clock, AlertCircle,
-  Armchair, ArrowLeft, Utensils
-} from 'lucide-react';
-import './ReservationPage.css';
-
-interface TableItem {
-  id: string;
-  tableNo: string;
-  capacity: number;
-  status: string;
-}
-
-interface ReservationDetail {
-  id: string;
-  reservationCode: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string | null;
-  partySize: number;
-  reservationTime: string;
-  status: string;
-  tableId?: string | null;
-  tableNo?: string | null;
-  tableCapacity?: number | null;
-  specialNotes?: string | null;
-}
-
-interface BookingFormState {
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  partySize: number;
-  reservationDate: string;
-  reservationTime: string;
-  specialNotes: string;
-}
-
-function extractErrorMessage(err: unknown): string {
-  if (typeof err === 'object' && err !== null && 'response' in err) {
-    const res = (err as { response?: { data?: { message?: string } } }).response;
-    if (res?.data?.message) return res.data.message;
-  }
-  if (err instanceof Error) return err.message;
-  return 'Đặt bàn không thành công!';
-}
-
-export default function ReservationPage(): React.ReactElement {
-  // 'tables' (Trang 1: Chọn bàn) | 'form' (Trang 2: Điền thông tin) | 'tracking' (Tra cứu mã)
-  const [currentView, setCurrentView] = useState<'tables' | 'form' | 'tracking'>('tables');
-  
-  const [tablesLoading, setTablesLoading] = useState<boolean>(true);
-  const [tables, setTables] = useState<TableItem[]>([]);
-  const [selectedTable, setSelectedTable] = useState<TableItem | null>(null);
-
-  const [loading, setLoading] = useState<boolean>(false);
-  const [successBooking, setSuccessBooking] = useState<ReservationDetail | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string>('');
-
-  const [formData, setFormData] = useState<BookingFormState>({
-    customerName: '',
-    customerPhone: '',
-    customerEmail: '',
-    partySize: 2,
-    reservationDate: new Date().toISOString().split('T')[0],
-    reservationTime: '19:00',
-    specialNotes: '',
-  });
-
-  const [trackCode, setTrackCode] = useState<string>('');
-  const [trackResult, setTrackResult] = useState<ReservationDetail | null>(null);
-  const [trackError, setTrackError] = useState<string>('');
-
-  // Tải danh sách bàn
-  useEffect(() => {
-    let isCancelled = false;
-    const fetchTables = async () => {
-      setTablesLoading(true);
-      try {
-        const res = await reservationApi.getTables();
-        if (!isCancelled) {
-          setTables(res.data || []);
-        }
-      } catch (err: unknown) {
-        console.error('Không thể tải sơ đồ bàn:', extractErrorMessage(err));
-      } finally {
-        if (!isCancelled) setTablesLoading(false);
-      }
-    };
-    fetchTables();
-    return () => { isCancelled = true; };
-  }, []);
-
-  // 1. Khi khách bấm chọn 1 bàn trống -> Chuyển sang màn hình Form
-  const handleSelectTable = (table: TableItem) => {
-    if (table.status?.toLowerCase() !== 'available') return;
-    setSelectedTable(table);
-    setFormData((prev) => ({
-      ...prev,
-      partySize: Math.min(prev.partySize || 2, table.capacity),
-    }));
-    setErrorMsg('');
-    setCurrentView('form'); // Chuyển sang trang form
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // 2. Gửi form đặt bàn
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTable) return;
-
-    setLoading(true);
-    setErrorMsg('');
-
-    try {
-      const fullDateTime = `${formData.reservationDate}T${formData.reservationTime}:00`;
-      const tableNote = `[Khách chọn: Bàn ${selectedTable.tableNo} (${selectedTable.capacity} chỗ)]`;
-      const combinedNotes = formData.specialNotes ? `${tableNote} - ${formData.specialNotes}` : tableNote;
-
-      const payload = {
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        customerEmail: formData.customerEmail || null,
-        partySize: Number(formData.partySize),
-        reservationTime: fullDateTime,
-        specialNotes: combinedNotes,
-      };
-
-      const res = await reservationApi.createOnline(payload);
-      setSuccessBooking(res.data);
-    } catch (err: unknown) {
-      setErrorMsg(extractErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 3. Tra cứu mã đặt bàn
-  const handleTrackSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackCode.trim()) return;
-    setLoading(true);
-    setTrackError('');
-    setTrackResult(null);
-
-    try {
-      const res = await reservationApi.trackByCode(trackCode.trim());
-      setTrackResult(res.data);
-    } catch (err: unknown) {
-      setTrackError(extractErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const isAvail = (status: string) => status?.toLowerCase() === 'available';
-
-  return (
-    <div className="res-container">
-      {/* ── HEADER ── */}
-      <div className="res-top-header">
-        <h1 className="res-main-title">Đặt Bàn Trực Tuyến</h1>
-        <p className="res-main-subtitle">Thưởng thức ẩm thực trọn vẹn trong không gian ấm cúng tại OmniResto</p>
-
-        {/* Thanh chuyển đổi màn hình */}
-        <div className="res-tab-bar">
-          <button
-            type="button"
-            onClick={() => { setCurrentView('tables'); setSuccessBooking(null); }}
-            className={`res-tab-item ${currentView !== 'tracking' ? 'active' : ''}`}
-          >
-            Sơ Đồ Chọn Bàn
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentView('tracking')}
-            className={`res-tab-item ${currentView === 'tracking' ? 'active' : ''}`}
-          >
-            Tra Cứu Mã Đặt Bàn
-          </button>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════
-          MÀN HÌNH 1: SƠ ĐỒ CHỌN BÀN
-          ══════════════════════════════════════════════════════════════ */}
-      {currentView === 'tables' && (
-        <div className="res-box">
-          <div className="table-selection-header">
-            <div>
-              <h2 className="box-heading">Chọn Bàn Còn Trống</h2>
-              <p className="box-subheading">Bấm vào bàn trống bạn muốn ngồi để tiến hành đăng ký</p>
-            </div>
-            <div className="table-legend">
-              <span className="legend-tag legend-tag--avail">
-                <span className="status-dot dot-green"></span> Bàn trống (Chọn được)
-              </span>
-              <span className="legend-tag legend-tag--busy">
-                <span className="status-dot dot-red"></span> Đang có khách
-              </span>
-            </div>
-          </div>
-
-          {tablesLoading ? (
-            <div className="res-loading-state">
-              <div className="res-spinner"></div>
-              <p>Đang tải sơ đồ bàn ăn...</p>
-            </div>
-          ) : (
-            <div className="tables-layout-grid">
-              {tables.map((t) => {
-                const available = isAvail(t.status);
-                return (
-                  <div
-                    key={t.id}
-                    onClick={() => handleSelectTable(t)}
-                    className={`grid-table-card ${available ? 'is-available' : 'is-occupied'}`}
-                  >
-                    <div className="card-table-icon">
-                      <Armchair size={26} />
-                    </div>
-                    <h3 className="card-table-title">Bàn {t.tableNo}</h3>
-                    <span className="card-table-cap">Sức chứa: {t.capacity} khách</span>
-                    
-                    <div className={`card-table-badge ${available ? 'badge-green' : 'badge-gray'}`}>
-                      {available ? '🟢 Bàn Trống' : '🔴 Có Khách'}
-                    </div>
-
-                    {available && (
-                      <span className="card-table-action">Chọn bàn này →</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════
-          MÀN HÌNH 2: FORM ĐIỀN THÔNG TIN ĐẶT BÀN
-          ══════════════════════════════════════════════════════════════ */}
-      {currentView === 'form' && selectedTable && (
-        <div className="res-box res-form-card">
-          {successBooking ? (
-            <div className="res-success-view">
-              <CheckCircle2 className="success-badge-icon" />
-              <h2 className="success-headline">Đặt Bàn Thành Công!</h2>
-              <p className="success-sub">Mã phiếu đặt bàn của bạn là:</p>
-              
-              <div className="success-code-token">{successBooking.reservationCode}</div>
-
-              <div className="success-details-summary">
-                <span>📍 Bàn đã chọn: <strong>Bàn {selectedTable.tableNo}</strong></span>
-                <span>👥 Số lượng: <strong>{formData.partySize} khách</strong></span>
-                <span>⏰ Thời gian: <strong>{formData.reservationTime} - {formData.reservationDate}</strong></span>
-              </div>
-
-              <p className="success-note-text">
-                Nhân viên nhà hàng sẽ kiểm tra và liên hệ xác nhận bàn cho bạn trong thời gian sớm nhất.
-              </p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSuccessBooking(null);
-                  setSelectedTable(null);
-                  setCurrentView('tables');
-                }}
-                className="res-btn-submit"
-                style={{ maxWidth: '280px', margin: '24px auto 0' }}
-              >
-                Đặt Thêm Bàn Khác
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Thanh điều hướng quay lại & Thông tin bàn đã chọn */}
-              <div className="form-card-topbar">
-                <button
-                  type="button"
-                  onClick={() => setCurrentView('tables')}
-                  className="res-back-btn"
-                >
-                  <ArrowLeft size={16} /> Đổi Bàn Khác
-                </button>
-
-                <div className="chosen-table-pill">
-                  <Utensils size={15} />
-                  <span>Đang đặt: <strong>Bàn {selectedTable.tableNo}</strong> (Tối đa {selectedTable.capacity} khách)</span>
-                </div>
-              </div>
-
-              <div className="form-card-title-group">
-                <h2 className="box-heading">Thông Tin Đặt Bàn</h2>
-                <p className="box-subheading">Vui lòng điền thông tin để chúng tôi chuẩn bị đón tiếp chu đáo nhất</p>
-              </div>
-
-              {errorMsg && (
-                <div className="res-error-banner">
-                  <AlertCircle size={18} />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleBookingSubmit} className="res-styled-form">
-                <div className="res-form-2col">
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <User size={15} /> Họ và tên *
-                    </label>
-                    <input
-                      type="text"
-                      name="customerName"
-                      required
-                      value={formData.customerName}
-                      onChange={handleChange}
-                      placeholder="Nguyễn Văn A"
-                      className="res-field-input"
-                    />
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Phone size={15} /> Số điện thoại *
-                    </label>
-                    <input
-                      type="tel"
-                      name="customerPhone"
-                      required
-                      value={formData.customerPhone}
-                      onChange={handleChange}
-                      placeholder="0988111222"
-                      className="res-field-input"
-                    />
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Mail size={15} /> Email (nếu có)
-                    </label>
-                    <input
-                      type="email"
-                      name="customerEmail"
-                      value={formData.customerEmail}
-                      onChange={handleChange}
-                      placeholder="example@gmail.com"
-                      className="res-field-input"
-                    />
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Users size={15} /> Số lượng khách *
-                    </label>
-                    <input
-                      type="number"
-                      name="partySize"
-                      min="1"
-                      max={selectedTable.capacity}
-                      required
-                      value={formData.partySize}
-                      onChange={handleChange}
-                      className="res-field-input"
-                    />
-                    <small className="field-hint">Tối đa {selectedTable.capacity} người theo sức chứa của bàn</small>
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Calendar size={15} /> Ngày dùng bữa *
-                    </label>
-                    <input
-                      type="date"
-                      name="reservationDate"
-                      required
-                      value={formData.reservationDate}
-                      onChange={handleChange}
-                      className="res-field-input"
-                    />
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Clock size={15} /> Giờ đến *
-                    </label>
-                    <input
-                      type="time"
-                      name="reservationTime"
-                      required
-                      value={formData.reservationTime}
-                      onChange={handleChange}
-                      className="res-field-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="res-field-group">
-                  <label className="res-field-label">
-                    <FileText size={15} /> Yêu cầu đặc biệt (tùy chọn)
-                  </label>
-                  <textarea
-                    name="specialNotes"
-                    rows={3}
-                    value={formData.specialNotes}
-                    onChange={handleChange}
-                    placeholder="Ví dụ: Bàn tiệc sinh nhật, ghế ăn cho trẻ em..."
-                    className="res-field-textarea"
-                  ></textarea>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="res-btn-submit"
-                >
-                  {loading ? 'Đang gửi yêu cầu...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
-                </button>
-              </form>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════
-          MÀN HÌNH 3: TRA CỨU MÃ ĐẶT BÀN
-          ══════════════════════════════════════════════════════════════ */}
-      {currentView === 'tracking' && (
-        <div className="res-box res-form-card">
-          <h2 className="box-heading text-center">Tra Cứu Tiến Độ Đặt Bàn</h2>
-          <p className="box-subheading text-center">Nhập mã phiếu để kiểm tra xem bàn của bạn đã được xác nhận hay chưa</p>
-
-          <form onSubmit={handleTrackSubmit} className="res-track-form">
-            <input
-              type="text"
-              required
-              value={trackCode}
-              onChange={(e) => setTrackCode(e.target.value)}
-              placeholder="Nhập mã phiếu (Ví dụ: RSV-ONL-1562)"
-              className="res-field-input track-input-field"
-            />
-            <button type="submit" disabled={loading} className="res-btn-track">
-              <Search size={16} /> Tra Cứu
-            </button>
-          </form>
-
-          {trackError && <div className="res-error-banner">{trackError}</div>}
-
-          {trackResult && (
-            <div className="res-track-card">
-              <div className="track-head">
-                <div>
-                  <span className="track-lbl">MÃ PHIẾU ĐẶT BÀN</span>
-                  <div className="track-code">{trackResult.reservationCode}</div>
-                </div>
-                <div className={`status-badge-chip badge-${trackResult.status.toLowerCase()}`}>
-                  {trackResult.status === 'PENDING' && 'Chờ xác nhận'}
-                  {trackResult.status === 'CONFIRMED' && 'Đã xếp bàn'}
-                  {trackResult.status === 'SEATED' && 'Đang dùng bữa'}
-                  {trackResult.status === 'CANCELLED' && 'Đã hủy'}
-                </div>
-              </div>
-
-              <div className="track-grid-info">
-                <div>
-                  <label>Khách hàng</label>
-                  <strong>{trackResult.customerName}</strong>
-                </div>
-                <div>
-                  <label>Số điện thoại</label>
-                  <strong>{trackResult.customerPhone}</strong>
-                </div>
-                <div>
-                  <label>Số khách</label>
-                  <strong>{trackResult.partySize} người</strong>
-                </div>
-                <div>
-                  <label>Thời gian dùng bữa</label>
-                  <strong>{new Date(trackResult.reservationTime).toLocaleString('vi-VN')}</strong>
-                </div>
-                <div>
-                  <label>Bàn phục vụ</label>
-                  <strong>{trackResult.tableNo ? `Bàn ${trackResult.tableNo}` : 'Đang sắp xếp'}</strong>
-                </div>
-              </div>
-
-              {trackResult.specialNotes && (
-                <div className="track-note-box">
-                  <label>Ghi chú:</label>
-                  <p>{trackResult.specialNotes}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 </file>
 
@@ -12735,6 +10715,89 @@ public class OrderController {
 }
 </file>
 
+<file path="backend/src/main/java/com/omniresto/backend/controller/ReservationController.java">
+package com.omniresto.backend.controller;
+
+import com.omniresto.backend.model.base.response.ApiResponse;
+import com.omniresto.backend.model.reservation.request.AssignTableRequest;
+import com.omniresto.backend.model.reservation.request.OfflineReservationRequest;
+import com.omniresto.backend.model.reservation.request.OnlineReservationRequest;
+import com.omniresto.backend.model.reservation.response.ReservationResponse;
+import com.omniresto.backend.service.ReservationService;
+import com.omniresto.backend.service.ReservationSseService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/tables/reservations")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
+public class ReservationController {
+
+    private final ReservationService reservationService;
+    private final ReservationSseService sseService;
+
+    // Endpoint nhận stream Realtime SSE cho Admin
+    @GetMapping(value = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribe() {
+        return sseService.createConnection();
+    }
+
+    @PostMapping("/online")
+    public ResponseEntity<ApiResponse<ReservationResponse>> createOnline(@Valid @RequestBody OnlineReservationRequest request) {
+        ReservationResponse res = reservationService.createOnlineReservation(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Đặt bàn trực tuyến thành công!", res));
+    }
+
+    @PostMapping("/offline")
+    public ResponseEntity<ApiResponse<ReservationResponse>> createOffline(@Valid @RequestBody OfflineReservationRequest request) {
+        ReservationResponse res = reservationService.createOfflineReservation(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Tạo đơn đặt bàn thành công!", res));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getAll(@RequestParam(required = false) String status) {
+        return ResponseEntity.ok(ApiResponse.success(reservationService.getAll(status)));
+    }
+
+    @GetMapping("/track/{code}")
+    public ResponseEntity<ApiResponse<ReservationResponse>> getByCode(@PathVariable String code) {
+        return ResponseEntity.ok(ApiResponse.success(reservationService.getByCode(code)));
+    }
+
+    @PutMapping("/{id}/assign-table")
+    public ResponseEntity<ApiResponse<ReservationResponse>> assignTable(
+            @PathVariable String id,
+            @Valid @RequestBody AssignTableRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Xếp bàn thành công!", reservationService.assignTable(id, request)));
+    }
+
+    @PutMapping("/{id}/check-in")
+    public ResponseEntity<ApiResponse<ReservationResponse>> checkIn(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success("Khách đã nhận bàn thành công!", reservationService.checkIn(id)));
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<ReservationResponse>> cancel(
+            @PathVariable String id,
+            @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(ApiResponse.success("Hủy đặt bàn thành công!", reservationService.cancelReservation(id, reason)));
+    }
+
+    @GetMapping("/tables")
+    public ResponseEntity<ApiResponse<List<com.omniresto.backend.domain.TableEntity>>> getTables() {
+        return ResponseEntity.ok(ApiResponse.success(reservationService.getAllTables()));
+    }
+}
+</file>
+
 <file path="backend/src/main/java/com/omniresto/backend/controller/TableController.java">
 package com.omniresto.backend.controller;
 
@@ -12833,6 +10896,96 @@ public enum TableStatus {
     OCCUPIED,
     RESERVED,
     CLEANING
+}
+</file>
+
+<file path="backend/src/main/java/com/omniresto/backend/model/reservation/request/OnlineReservationRequest.java">
+package com.omniresto.backend.model.reservation.request;
+
+import jakarta.validation.constraints.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+public class OnlineReservationRequest {
+
+    @NotBlank(message = "Tên khách hàng không được để trống")
+    @Size(max = 100, message = "Tên khách hàng không vượt quá 100 ký tự")
+    private String customerName;
+
+    @NotBlank(message = "Số điện thoại không được để trống")
+    @Pattern(
+            regexp = "^(0|\\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$",
+            message = "Số điện thoại không đúng định dạng nhà mạng Việt Nam"
+    )
+    private String customerPhone;
+
+    @Email(message = "Email không đúng định dạng")
+    private String customerEmail;
+
+    @NotNull(message = "Số lượng khách không được để trống")
+    @Min(value = 1, message = "Số lượng khách tối thiểu là 1 người")
+    @Max(value = 50, message = "Đoàn trên 50 người vui lòng liên hệ hotline trực tiếp")
+    private Integer partySize;
+
+    @NotNull(message = "Thời gian đặt bàn không được để trống")
+    @Future(message = "Thời gian đặt bàn phải ở tương lai")
+    private LocalDateTime reservationTime;
+
+    private String specialNotes;
+}
+</file>
+
+<file path="backend/src/main/java/com/omniresto/backend/repository/ReservationRepository.java">
+package com.omniresto.backend.repository;
+
+import com.omniresto.backend.domain.ReservationEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface ReservationRepository extends JpaRepository<ReservationEntity, String> {
+
+    Optional<ReservationEntity> findByReservationCode(String reservationCode);
+
+    // 👉 1. Lấy toàn bộ đơn sắp xếp theo thời gian tạo mới nhất lên đầu tiên (F5 không bị trôi)
+    List<ReservationEntity> findAllByOrderByCreatedAtDesc();
+
+    // 👉 2. Lấy đơn theo trạng thái (PENDING, CONFIRMED, ...) sắp xếp mới nhất lên đầu tiên
+    List<ReservationEntity> findByStatusOrderByCreatedAtDesc(String status);
+
+    // [Chống Spam] Tìm các đơn đặt bàn đang còn hiệu lực (PENDING hoặc CONFIRMED) theo số điện thoại
+    @Query("SELECT r FROM ReservationEntity r " +
+            "WHERE r.customerPhone = :phone " +
+            "AND r.status IN ('PENDING', 'CONFIRMED')")
+    List<ReservationEntity> findActiveReservationsByPhone(@Param("phone") String phone);
+
+    // Kiểm tra bàn có bị trùng lịch trong khoảng thời gian [startTime, endTime] hay không
+    @Query("SELECT r FROM ReservationEntity r WHERE r.table.id = :tableId " +
+            "AND r.status IN ('CONFIRMED', 'SEATED') " +
+            "AND r.reservationTime BETWEEN :startTime AND :endTime " +
+            "AND (:excludeReservationId IS NULL OR r.id != :excludeReservationId)")
+    List<ReservationEntity> findConflictingReservations(
+            @Param("tableId") String tableId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("excludeReservationId") String excludeReservationId
+    );
+
+    // Tìm các đơn đặt bàn chưa nhận bàn (PENDING hoặc CONFIRMED) đã quá giờ hẹn
+    @Query("SELECT r FROM ReservationEntity r " +
+            "WHERE r.status IN ('PENDING', 'CONFIRMED') " +
+            "AND r.reservationTime < :threshold")
+    List<ReservationEntity> findExpiredReservations(@Param("threshold") LocalDateTime threshold);
 }
 </file>
 
@@ -13121,6 +11274,308 @@ public class OrderService {
         res.setItems(itemResponses);
         res.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt() : LocalDateTime.now());
         return res;
+    }
+}
+</file>
+
+<file path="backend/src/main/java/com/omniresto/backend/service/ReservationService.java">
+package com.omniresto.backend.service;
+
+import com.omniresto.backend.domain.ReservationEntity;
+import com.omniresto.backend.domain.TableEntity;
+import com.omniresto.backend.domain.enums.OperatingShift;
+import com.omniresto.backend.domain.enums.TableStatus;
+import com.omniresto.backend.model.reservation.request.AssignTableRequest;
+import com.omniresto.backend.model.reservation.request.OfflineReservationRequest;
+import com.omniresto.backend.model.reservation.request.OnlineReservationRequest;
+import com.omniresto.backend.model.reservation.response.ReservationResponse;
+import com.omniresto.backend.repository.ReservationRepository;
+import com.omniresto.backend.repository.TableRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Service
+@RequiredArgsConstructor
+public class ReservationService {
+
+    private final ReservationRepository reservationRepository;
+    private final TableRepository tableRepository;
+    private final ReservationSseService sseService;
+
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
+    private static final Map<String, Object> PHONE_LOCKS = new ConcurrentHashMap<>();
+
+    // 1. Khách đặt bàn trực tuyến
+    @Transactional
+    public ReservationResponse createOnlineReservation(OnlineReservationRequest request) {
+        String cleanPhone = normalizePhoneNumber(request.getCustomerPhone());
+        Object lock = PHONE_LOCKS.computeIfAbsent(cleanPhone, k -> new Object());
+
+        synchronized (lock) {
+            try {
+                // [Kiểm tra 1] Khung giờ nhà hàng hoạt động
+                validateOperatingHours(request.getReservationTime());
+
+                // [Kiểm tra 2] Chặn spam số điện thoại đang có đơn hiệu lực
+                checkDuplicateActiveReservation(cleanPhone);
+
+                String code = generateReservationCode("ONL");
+
+                ReservationEntity reservation = ReservationEntity.builder()
+                        .reservationCode(code)
+                        .customerName(request.getCustomerName().trim())
+                        .customerPhone(cleanPhone)
+                        .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
+                        .partySize(request.getPartySize())
+                        .reservationTime(request.getReservationTime())
+                        .status("PENDING")
+                        .specialNotes(request.getSpecialNotes())
+                        .build();
+
+                ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+                sseService.broadcastNewReservation(response);
+
+                return response;
+            } finally {
+                PHONE_LOCKS.remove(cleanPhone);
+            }
+        }
+    }
+
+    // 2. Nhân viên tạo đặt bàn Offline
+    @Transactional
+    public ReservationResponse createOfflineReservation(OfflineReservationRequest request) {
+        String cleanPhone = normalizePhoneNumber(request.getCustomerPhone());
+
+        // Nếu không phải khách vào ăn ngay, kiểm tra giờ hoạt động và chống trùng số điện thoại
+        if (!request.isSeatedImmediately()) {
+            validateOperatingHours(request.getReservationTime());
+            checkDuplicateActiveReservation(cleanPhone);
+        }
+
+        String code = generateReservationCode("OFF");
+        TableEntity table = null;
+        String status = "PENDING";
+
+        if (request.getTableId() != null && !request.getTableId().isBlank()) {
+            table = validateAndGetAvailableTable(request.getTableId(), request.getPartySize(), request.getReservationTime(), null);
+            status = request.isSeatedImmediately() ? "SEATED" : "CONFIRMED";
+
+            if (request.isSeatedImmediately()) {
+                table.setStatus(TableStatus.occupied);
+                tableRepository.save(table);
+            }
+        }
+
+        ReservationEntity reservation = ReservationEntity.builder()
+                .reservationCode(code)
+                .customerName(request.getCustomerName().trim())
+                .customerPhone(cleanPhone)
+                .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
+                .partySize(request.getPartySize())
+                .reservationTime(request.getReservationTime())
+                .status(status)
+                .table(table)
+                .specialNotes(request.getSpecialNotes())
+                .build();
+
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastNewReservation(response);
+
+        return response;
+    }
+
+    // Kiểm tra giờ đặt bàn có thuộc khung giờ mở cửa hay không
+    private void validateOperatingHours(LocalDateTime reservationDateTime) {
+        LocalTime time = reservationDateTime.toLocalTime();
+        OperatingShift shift = OperatingShift.fromTime(time);
+
+        if (shift == OperatingShift.BREAK) {
+            throw new RuntimeException("Thời gian bạn chọn (" + time + ") nằm trong Giờ Nghỉ Bếp (14:30 - 16:30). " +
+                    "Nhà hàng đang đóng cửa nghỉ ngơi, bạn hãy đặt vào giờ khác!");
+        }
+
+        if (shift == OperatingShift.CLOSED) {
+            throw new RuntimeException("Thời gian bạn chọn (" + time + ") nhà hàng đang đóng cửa (22:00 - 06:00). " +
+                    "Bạn hãy đặt vào giờ khác (06:00 - 14:30 hoặc 16:30 - 22:00)!");
+        }
+    }
+
+    private void checkDuplicateActiveReservation(String phone) {
+        List<ReservationEntity> activeReservations = reservationRepository.findActiveReservationsByPhone(phone);
+        if (!activeReservations.isEmpty()) {
+            ReservationEntity existing = activeReservations.get(0);
+            String formattedTime = existing.getReservationTime().format(TIME_FORMATTER);
+            throw new RuntimeException("Số điện thoại " + phone + " hiện đang có đơn đặt bàn ("
+                    + existing.getReservationCode() + ") vào lúc " + formattedTime
+                    + " chưa hoàn thành. Quý khách vui lòng không đặt nhiều bàn cùng lúc!");
+        }
+    }
+
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null) return "";
+        return phone.trim().replaceAll("[\\s.-]+", "");
+    }
+
+    @Transactional
+    public ReservationResponse assignTable(String reservationId, AssignTableRequest request) {
+        ReservationEntity reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đặt bàn: " + reservationId));
+
+        if ("CANCELLED".equals(reservation.getStatus()) || "COMPLETED".equals(reservation.getStatus())) {
+            throw new RuntimeException("Đơn đặt bàn đã kết thúc hoặc bị hủy, không thể xếp bàn!");
+        }
+
+        TableEntity table = validateAndGetAvailableTable(
+                request.getTableId(),
+                reservation.getPartySize(),
+                reservation.getReservationTime(),
+                reservation.getId()
+        );
+
+        reservation.setTable(table);
+        reservation.setStatus("CONFIRMED");
+
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastReservationUpdated(response);
+
+        return response;
+    }
+
+    @Transactional
+    public ReservationResponse checkIn(String reservationId) {
+        ReservationEntity reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt bàn!"));
+
+        if (reservation.getTable() == null) {
+            throw new RuntimeException("Đơn đặt bàn chưa được xếp bàn, vui lòng gán bàn trước khi nhận khách!");
+        }
+
+        reservation.setStatus("SEATED");
+        TableEntity table = reservation.getTable();
+        table.setStatus(TableStatus.occupied);
+        tableRepository.save(table);
+
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastReservationUpdated(response);
+
+        return response;
+    }
+
+    @Transactional
+    public ReservationResponse cancelReservation(String reservationId, String reason) {
+        ReservationEntity reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt bàn!"));
+
+        reservation.setStatus("CANCELLED");
+        if (reason != null && !reason.isBlank()) {
+            String currentNotes = reservation.getSpecialNotes() != null ? reservation.getSpecialNotes() + " | " : "";
+            reservation.setSpecialNotes(currentNotes + "Lý do hủy: " + reason);
+        }
+
+        ReservationResponse response = mapToResponse(reservationRepository.save(reservation));
+        sseService.broadcastReservationUpdated(response);
+
+        return response;
+    }
+
+    // 👉 Lấy danh sách đặt bàn: Luôn đưa đơn mới tạo nhất lên đầu tiên (CreatedAt DESC)
+    @Transactional
+    public List<ReservationResponse> getAll(String status) {
+        autoCancelExpiredReservations();
+
+        List<ReservationEntity> list = (status != null && !status.isBlank())
+                ? reservationRepository.findByStatusOrderByCreatedAtDesc(status)
+                : reservationRepository.findAllByOrderByCreatedAtDesc();
+        return list.stream().map(this::mapToResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ReservationResponse getByCode(String code) {
+        return reservationRepository.findByReservationCode(code)
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy mã đặt bàn: " + code));
+    }
+
+    private TableEntity validateAndGetAvailableTable(String tableId, int partySize, LocalDateTime reservationTime, String excludeResId) {
+        TableEntity table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new RuntimeException("Bàn không tồn tại!"));
+
+        if (table.getCapacity() < partySize) {
+            throw new RuntimeException("Bàn số " + table.getTableNo() + " chỉ chứa tối đa "
+                    + table.getCapacity() + " người (Yêu cầu: " + partySize + " người)!");
+        }
+
+        LocalDateTime conflictStart = reservationTime.minusHours(2);
+        LocalDateTime conflictEnd = reservationTime.plusHours(2);
+
+        List<ReservationEntity> conflicts = reservationRepository.findConflictingReservations(
+                tableId, conflictStart, conflictEnd, excludeResId
+        );
+
+        if (!conflicts.isEmpty()) {
+            throw new RuntimeException("Bàn " + table.getTableNo() + " đã có khách đặt lúc "
+                    + conflicts.get(0).getReservationTime() + "!");
+        }
+
+        return table;
+    }
+
+    private String generateReservationCode(String prefix) {
+        int randomNum = 1000 + new Random().nextInt(9000);
+        return "RSV-" + prefix + "-" + randomNum;
+    }
+
+    private ReservationResponse mapToResponse(ReservationEntity entity) {
+        return ReservationResponse.builder()
+                .id(entity.getId())
+                .reservationCode(entity.getReservationCode())
+                .customerName(entity.getCustomerName())
+                .customerPhone(entity.getCustomerPhone())
+                .customerEmail(entity.getCustomerEmail())
+                .partySize(entity.getPartySize())
+                .reservationTime(entity.getReservationTime())
+                .status(entity.getStatus())
+                .tableId(entity.getTable() != null ? entity.getTable().getId() : null)
+                .tableNo(entity.getTable() != null ? entity.getTable().getTableNo() : null)
+                .tableCapacity(entity.getTable() != null ? entity.getTable().getCapacity() : null)
+                .specialNotes(entity.getSpecialNotes())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TableEntity> getAllTables() {
+        return tableRepository.findAll();
+    }
+
+    @Transactional
+    public int autoCancelExpiredReservations() {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(30);
+
+        List<ReservationEntity> expiredList = reservationRepository.findExpiredReservations(threshold);
+        if (expiredList.isEmpty()) {
+            return 0;
+        }
+
+        for (ReservationEntity reservation : expiredList) {
+            reservation.setStatus("CANCELLED");
+            String currentNotes = reservation.getSpecialNotes() != null ? reservation.getSpecialNotes() + " | " : "";
+            reservation.setSpecialNotes(currentNotes + "Hệ thống tự động hủy: Quá 30 phút so với giờ hẹn khách chưa tới nhận bàn.");
+        }
+
+        reservationRepository.saveAll(expiredList);
+        return expiredList.size();
     }
 }
 </file>
@@ -13736,6 +12191,2094 @@ export const ClientLayout: React.FC = () => {
     </div>
   );
 };
+</file>
+
+<file path="frontend/src/pages/admin/ReservationManagement.css">
+/* ── Container & Header ── */
+.adm-res-container {
+  padding: 24px;
+  max-width: 1380px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: inherit;
+  color: #1f2937;
+  position: relative;
+}
+
+.adm-res-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.adm-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-res-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+}
+
+.adm-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.adm-live-badge.active {
+  color: #059669;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.adm-live-badge.standby {
+  color: #d97706;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.adm-res-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.adm-res-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Toggle Switcher ── */
+.adm-view-toggle {
+  display: inline-flex;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.adm-refresh-btn {
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  transition: background 0.2s;
+}
+
+.adm-refresh-btn:hover { 
+  background: #f9fafb; 
+}
+
+.spinning { 
+  animation: spin 0.8s linear infinite; 
+}
+
+@keyframes spin { 
+  to { transform: rotate(360deg); } 
+}
+
+.adm-btn-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: #059669;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+  transition: background 0.2s;
+}
+
+.adm-btn-create:hover { 
+  background-color: #047857; 
+}
+
+/* ── Thống kê ── */
+.adm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .adm-stats-grid { 
+    grid-template-columns: repeat(2, 1fr); 
+  }
+}
+
+.adm-stat-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #111827;
+  margin-top: 4px;
+}
+
+.stat-avail .stat-value { color: #059669; }
+.stat-busy .stat-value { color: #dc2626; }
+.stat-pending .stat-value { color: #d97706; }
+
+.adm-card-wrapper {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* ── Sơ đồ bàn ── */
+.map-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.section-heading {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.map-legends {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+}
+
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.dot-green { background-color: #10b981; }
+.dot-yellow { background-color: #f59e0b; }
+.dot-red { background-color: #ef4444; }
+
+.adm-table-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+.adm-floor-table {
+  border-radius: 14px;
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  user-select: none;
+}
+
+.table-state--free {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  cursor: pointer;
+}
+
+.table-state--free:hover {
+  border-color: #10b981;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.15);
+}
+
+.table-state--busy {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.table-state--reserved {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+
+.floor-table-top {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.floor-table-no {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.floor-table-cap {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.floor-table-center {
+  margin: 6px 0 10px;
+}
+.table-state--free .floor-table-center { color: #059669; }
+.table-state--busy .floor-table-center { color: #dc2626; }
+.table-state--reserved .floor-table-center { color: #d97706; }
+
+.floor-table-status {
+  margin-bottom: 8px;
+}
+
+.tag-avail { font-size: 0.75rem; font-weight: 700; color: #065f46; }
+.tag-busy { font-size: 0.75rem; font-weight: 700; color: #991b1b; }
+.tag-res { font-size: 0.75rem; font-weight: 700; color: #92400e; }
+
+.floor-guest-info {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.guest-name {
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.guest-time {
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-quick-checkin {
+  margin-top: 4px;
+  width: 100%;
+  padding: 5px 8px;
+  background-color: #059669;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-quick-checkin:hover { 
+  background-color: #047857; 
+}
+
+.click-to-book-hint {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #059669;
+  margin-top: 6px;
+}
+
+/* ── Bảng danh sách ── */
+.list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.status-tab-group {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.status-tab-btn {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.status-tab-btn:hover { background-color: #f3f4f6; }
+.status-tab-btn.active {
+  background-color: #111827;
+  color: #ffffff;
+}
+
+.search-field-box {
+  position: relative;
+  width: 280px;
+}
+@media (max-width: 640px) { 
+  .search-field-box { width: 100%; } 
+}
+
+.search-icon-inside {
+  position: absolute;
+  left: 10px;
+  top: 9px;
+  color: #9ca3af;
+}
+
+.search-input-field {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  font-size: 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+}
+.search-input-field:focus { 
+  border-color: #059669; 
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.adm-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.adm-data-table th {
+  background: #f9fafb;
+  padding: 12px 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.adm-data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.adm-data-table tr:hover { 
+  background-color: #f9fafb; 
+}
+
+.code-font {
+  font-family: monospace;
+  font-weight: 700;
+  color: #111827;
+}
+
+.badge-assigned-table {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: #ecfdf5;
+  color: #047857;
+  font-weight: 700;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.badge-unassigned {
+  font-size: 0.75rem;
+  color: #d97706;
+  background-color: #fffbeb;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.status-chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.chip-pending { background-color: #fef3c7; color: #92400e; }
+.chip-confirmed { background-color: #dbeafe; color: #1e40af; }
+.chip-seated { background-color: #d1fae5; color: #065f46; }
+.chip-cancelled { background-color: #fee2e2; color: #991b1b; }
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.btn-assign { background-color: #2563eb; color: #ffffff; }
+.btn-assign:hover { background-color: #1d4ed8; }
+.btn-checkin { background-color: #059669; color: #ffffff; }
+.btn-checkin:hover { background-color: #047857; }
+.btn-cancel { background-color: #fef2f2; color: #dc2626; }
+.btn-cancel:hover { background-color: #fee2e2; }
+
+.empty-table-cell {
+  text-align: center;
+  padding: 36px;
+  color: #9ca3af;
+}
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* ── Modal ── */
+.adm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 999;
+}
+
+.adm-modal-box {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 440px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+.modal-width-lg { max-width: 520px; }
+
+.modal-headline {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 6px;
+}
+
+.modal-subtext {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 18px;
+}
+
+.modal-styled-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.modal-field-block label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.modal-input-control,
+.modal-select-control {
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.modal-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.checkbox-custom {
+  width: 16px;
+  height: 16px;
+  accent-color: #059669;
+}
+
+.modal-footer-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.btn-secondary {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btn-primary-action {
+  padding: 8px 18px;
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Toast Notification góc trên bên phải ── */
+.adm-toast-card {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  background-color: #111827;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 380px;
+  border-left: 5px solid #10b981;
+  animation: slideInToast 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.adm-toast-icon-wrap {
+  background-color: #059669;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.adm-toast-body {
+  flex: 1;
+}
+
+.adm-toast-badge {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #10b981;
+  letter-spacing: 0.5px;
+}
+
+.adm-toast-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-top: 3px;
+  color: #ffffff;
+}
+
+.adm-toast-time {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.adm-toast-note {
+  font-size: 0.78rem;
+  color: #fbbf24;
+  margin-top: 5px;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.adm-toast-close-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.adm-toast-close-btn:hover {
+  color: #ffffff;
+}
+
+@keyframes slideInToast {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+</file>
+
+<file path="frontend/src/pages/admin/ReservationManagement.tsx">
+import React, { useState, useEffect, useCallback } from 'react';
+import { reservationApi } from '../../api/reservationApi';
+import { 
+  Plus, 
+  RefreshCw, 
+  Armchair, 
+  Search, 
+  LayoutGrid, 
+  ListFilter, 
+  Clock, 
+  User,
+  Volume2,
+  X
+} from 'lucide-react';
+import './ReservationManagement.css';
+
+interface TableItem {
+  id: string;
+  tableNo: string;
+  capacity: number;
+  status: string;
+}
+
+interface ReservationItem {
+  id: string;
+  reservationCode: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  partySize: number;
+  reservationTime: string;
+  status: string;
+  tableId?: string | null;
+  tableNo?: string | null;
+  tableCapacity?: number | null;
+  specialNotes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface AssignModalState {
+  isOpen: boolean;
+  reservation: ReservationItem | null;
+  selectedTableId: string;
+}
+
+interface OfflineFormState {
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  partySize: number;
+  reservationDate: string;
+  reservationTime: string;
+  tableId: string;
+  specialNotes: string;
+  seatedImmediately: boolean;
+}
+
+function extractErrorMessage(err: unknown): string {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const res = (err as { response?: { data?: { message?: string } } }).response;
+    if (res?.data?.message) return res.data.message;
+  }
+  if (err instanceof Error) return err.message;
+  return 'Đã có lỗi xảy ra!';
+}
+
+// 1. HÀM ĐỌC TIẾNG VIỆT ĐẶT Ở NGOÀI COMPONENT
+// Hàm đọc thông báo tiếng Việt chuẩn phát thanh, rành mạch từng chữ
+function speakReservationAlert(customerName: string, partySize: number, note?: string | null) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+  try {
+    // 1. Ngắt ngay câu đọc cũ (nếu có) để phát thông báo mới
+    window.speechSynthesis.cancel();
+
+    // 2. Xử lý chuẩn hóa tên bàn để đọc đúng ngữ âm tiếng Việt
+    let tableSpeech = '';
+    if (note && note.includes('Khách chọn:')) {
+      const match = note.match(/Khách chọn:\s*(Bàn\s*[A-Za-z0-9_-]+)/i);
+      if (match) {
+        // Đổi "T-09" hoặc "T-10" thành "Tê 9", "Tê 10" để phát âm chuẩn tiếng Việt
+        let rawTable = match[1].trim();
+        rawTable = rawTable.replace(/T-0?/i, 'Tê '); // Chuyển chữ T thành Tê và bỏ số 0 thừa
+        tableSpeech = `. Tại ${rawTable}`;
+      }
+    }
+
+    // 3. Câu đọc có ngắt nghỉ câu bằng dấu chấm, nhịp đọc mạch lạc
+    const textToRead = `Thông báo! Có đơn đặt bàn mới. Khách hàng: ${customerName}. Số lượng: ${partySize} người${tableSpeech}.`;
+
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.88; // Tốc độ vừa phải, dứt khoát, nghe rõ trong môi trường ồn
+    utterance.pitch = 1.02; // Cao độ tự nhiên
+    utterance.volume = 1.0; // Âm lượng tối đa
+
+    // 4. Tìm kiếm và ưu tiên giọng tiếng Việt chuẩn/tự nhiên nhất của máy
+    const voices = window.speechSynthesis.getVoices();
+    const viVoices = voices.filter(
+      (v) =>
+        v.lang.toLowerCase().replace('_', '-').startsWith('vi') ||
+        v.name.toLowerCase().includes('vietnam') ||
+        v.name.toLowerCase().includes('tiếng việt')
+    );
+
+    if (viVoices.length > 0) {
+      // Ưu tiên theo thứ tự: Giọng Natural/Neural -> Microsoft HoaiMy -> Google Tiếng Việt -> Giọng Việt bất kỳ
+      const bestVoice =
+        viVoices.find((v) => v.name.includes('Natural') || v.name.includes('Neural')) ||
+        viVoices.find((v) => v.name.toLowerCase().includes('hoaimy')) ||
+        viVoices.find((v) => v.name.toLowerCase().includes('google')) ||
+        viVoices[0];
+
+      utterance.voice = bestVoice;
+    }
+
+    // 5. Phát giọng nói
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.warn('Speech synthesis error:', e);
+  }
+}
+// 2. COMPONENT CHÍNH
+export default function ReservationManagement(): React.ReactElement {
+  const [activeMode, setActiveMode] = useState<'map' | 'list'>('map');
+
+  const [reservations, setReservations] = useState<ReservationItem[]>([]);
+  const [tables, setTables] = useState<TableItem[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
+  const [toastAlert, setToastAlert] = useState<ReservationItem | null>(null);
+
+  const [assignModal, setAssignModal] = useState<AssignModalState>({
+    isOpen: false,
+    reservation: null,
+    selectedTableId: '',
+  });
+
+  const [offlineModal, setOfflineModal] = useState<boolean>(false);
+  const [offlineForm, setOfflineForm] = useState<OfflineFormState>({
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    partySize: 2,
+    reservationDate: new Date().toISOString().split('T')[0],
+    reservationTime: '19:00',
+    tableId: '',
+    specialNotes: '',
+    seatedImmediately: false,
+  });
+
+  const loadInitialData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [resData, tablesData] = await Promise.all([
+        reservationApi.getAll(filterStatus),
+        reservationApi.getTables(),
+      ]);
+      setReservations(resData.data || []);
+      setTables(tablesData.data || []);
+    } catch (err: unknown) {
+      console.error('Lỗi nạp dữ liệu:', extractErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [filterStatus]);
+
+  const handleIncomingNewReservation = useCallback((incoming: ReservationItem) => {
+    setReservations((prev) => {
+      if (prev.some((r) => r.id === incoming.id)) {
+        return prev;
+      }
+      return [incoming, ...prev];
+    });
+
+    reservationApi.getTables().then((t) => setTables(t.data || []));
+
+    // Đọc thông báo tiếng Việt
+    speakReservationAlert(incoming.customerName, incoming.partySize, incoming.specialNotes);
+
+    // Bật Toast góc phải
+    setToastAlert(incoming);
+    setTimeout(() => {
+      setToastAlert((curr) => (curr?.id === incoming.id ? null : curr));
+    }, 8000);
+  }, []);
+
+  // 👇 ĐÂY LÀ NƠI ĐẶT useEffect (NẰM TRONG THÂN FUNCTION COMPONENT):
+  useEffect(() => {
+    // 1. Nạp sẵn danh sách giọng đọc tiếng Việt vào bộ nhớ trình duyệt
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+
+    // 2. Tải dữ liệu ban đầu
+    loadInitialData();
+
+    // 3. Kênh BroadcastChannel (bắt sóng cùng trình duyệt)
+    let broadcastChannel: BroadcastChannel | null = null;
+    try {
+      broadcastChannel = new BroadcastChannel('omni_reservation_channel');
+      broadcastChannel.onmessage = (event) => {
+        if (event.data?.type === 'NEW_RESERVATION' && event.data?.data) {
+          handleIncomingNewReservation(event.data.data);
+        }
+      };
+    } catch (e) {
+      console.warn('BroadcastChannel error:', e);
+    }
+
+    // 4. Kênh Server-Sent Events (SSE từ Backend)
+    const eventSource = new EventSource('http://localhost:8080/api/tables/reservations/subscribe');
+
+    eventSource.onopen = () => {
+      setIsRealtimeActive(true);
+    };
+
+    eventSource.addEventListener('INIT', () => {
+      setIsRealtimeActive(true);
+    });
+
+    eventSource.addEventListener('NEW_RESERVATION', (event: MessageEvent) => {
+      try {
+        const incoming: ReservationItem = JSON.parse(event.data);
+        handleIncomingNewReservation(incoming);
+      } catch (e) {
+        console.error('Lỗi parse SSE:', e);
+      }
+    });
+
+    eventSource.addEventListener('UPDATE_RESERVATION', (event: MessageEvent) => {
+      try {
+        const updated: ReservationItem = JSON.parse(event.data);
+        setReservations((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+        reservationApi.getTables().then((t) => setTables(t.data || []));
+      } catch (e) {
+        console.error('Lỗi parse SSE update:', e);
+      }
+    });
+
+    eventSource.onerror = () => {
+      setIsRealtimeActive(false);
+    };
+
+    return () => {
+      eventSource.close();
+      if (broadcastChannel) broadcastChannel.close();
+    };
+  }, [loadInitialData, handleIncomingNewReservation]);
+
+  const handleTableClick = (table: TableItem) => {
+    const isAvail = table.status?.toLowerCase() === 'available';
+    if (isAvail) {
+      setOfflineForm((prev) => ({
+        ...prev,
+        tableId: table.id,
+        partySize: Math.min(prev.partySize || 2, table.capacity),
+        seatedImmediately: false,
+      }));
+      setOfflineModal(true);
+    }
+  };
+
+  const handleAssignTable = async () => {
+    if (!assignModal.reservation || !assignModal.selectedTableId) {
+      alert('Vui lòng chọn bàn!');
+      return;
+    }
+    try {
+      await reservationApi.assignTable(assignModal.reservation.id, assignModal.selectedTableId);
+      alert('Xếp bàn thành công!');
+      setAssignModal({ isOpen: false, reservation: null, selectedTableId: '' });
+      loadInitialData();
+    } catch (err: unknown) {
+      alert(extractErrorMessage(err));
+    }
+  };
+
+  const handleCheckIn = async (id: string) => {
+    if (!window.confirm('Xác nhận khách đã vào nhận bàn?')) return;
+    try {
+      await reservationApi.checkIn(id);
+      alert('Khách đã vào bàn thành công!');
+      loadInitialData();
+    } catch (err: unknown) {
+      alert(extractErrorMessage(err));
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    const reason = window.prompt('Nhập lý do hủy đặt bàn:');
+    if (reason === null) return;
+    try {
+      await reservationApi.cancel(id, reason);
+      alert('Hủy đơn thành công!');
+      loadInitialData();
+    } catch (err: unknown) {
+      alert(extractErrorMessage(err));
+    }
+  };
+
+  const handleCreateOffline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        ...offlineForm,
+        partySize: Number(offlineForm.partySize),
+        reservationTime: `${offlineForm.reservationDate}T${offlineForm.reservationTime}:00`,
+      };
+      await reservationApi.createOffline(payload);
+      alert('Tạo đơn đặt bàn offline thành công!');
+      setOfflineModal(false);
+      loadInitialData();
+    } catch (err: unknown) {
+      alert(extractErrorMessage(err));
+    }
+  };
+
+  const totalTables = tables.length;
+  const availTables = tables.filter((t) => t.status?.toLowerCase() === 'available').length;
+  const occupiedTables = tables.filter((t) => t.status?.toLowerCase() === 'occupied').length;
+  const pendingReservations = reservations.filter((r) => r.status === 'PENDING').length;
+
+  const filteredReservations = reservations.filter((r) =>
+    r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.customerPhone.includes(searchTerm) ||
+    r.reservationCode.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="adm-res-container">
+      {/* ── TOAST THÔNG BÁO TĨNH ÊM ÁI GÓC PHẢI MÀN HÌNH ── */}
+      {toastAlert && (
+        <div className="adm-toast-card">
+          <div className="adm-toast-icon-wrap">
+            <Volume2 size={20} color="#ffffff" />
+          </div>
+
+          <div className="adm-toast-body">
+            <div className="adm-toast-badge">
+              ĐƠN ĐẶT BÀN MỚI • {toastAlert.reservationCode}
+            </div>
+            <div className="adm-toast-name">
+              {toastAlert.customerName} ({toastAlert.partySize} khách)
+            </div>
+            <div className="adm-toast-time">
+              Giờ hẹn: {new Date(toastAlert.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            {toastAlert.specialNotes && (
+              <div className="adm-toast-note">
+                {toastAlert.specialNotes}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="adm-toast-close-btn"
+            onClick={() => setToastAlert(null)}
+            title="Đóng thông báo"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* ── TOP HEADER ── */}
+      <div className="adm-res-header">
+        <div>
+          <div className="adm-header-title-row">
+            <h1 className="adm-res-title">Quản Lý Đặt Bàn & Sơ Đồ Phục Vụ</h1>
+            <span className={isRealtimeActive ? "adm-live-badge active" : "adm-live-badge standby"}>
+              ● {isRealtimeActive ? "Realtime Live" : "Realtime Connecting..."}
+            </span>
+          </div>
+          <p className="adm-res-subtitle">Đơn đặt bàn của khách sẽ xuất hiện ngay lập tức mà không cần tải lại trang</p>
+        </div>
+
+        <div className="adm-res-actions">
+          <div className="adm-view-toggle">
+            <button
+              type="button"
+              onClick={() => setActiveMode('map')}
+              className={`toggle-btn ${activeMode === 'map' ? 'active' : ''}`}
+            >
+              <LayoutGrid size={16} /> Sơ Đồ Bàn
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMode('list')}
+              className={`toggle-btn ${activeMode === 'list' ? 'active' : ''}`}
+            >
+              <ListFilter size={16} /> Danh Sách Đơn ({reservations.length})
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadInitialData}
+            className="adm-refresh-btn"
+            title="Làm mới thủ công"
+          >
+            <RefreshCw size={17} className={loading ? 'spinning' : ''} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOfflineForm({
+                customerName: '',
+                customerPhone: '',
+                customerEmail: '',
+                partySize: 2,
+                reservationDate: new Date().toISOString().split('T')[0],
+                reservationTime: '19:00',
+                tableId: '',
+                specialNotes: '',
+                seatedImmediately: false,
+              });
+              setOfflineModal(true);
+            }}
+            className="adm-btn-create"
+          >
+            <Plus size={16} /> Đặt Bàn Tại Chỗ / Hotline
+          </button>
+        </div>
+      </div>
+
+      {/* ── THỐNG KÊ NHANH ── */}
+      <div className="adm-stats-grid">
+        <div className="adm-stat-card">
+          <span className="stat-label">Tổng Bàn Ăn</span>
+          <div className="stat-value">{totalTables}</div>
+        </div>
+        <div className="adm-stat-card stat-avail">
+          <span className="stat-label">Bàn Trống Sẵn Sàng</span>
+          <div className="stat-value">{availTables}</div>
+        </div>
+        <div className="adm-stat-card stat-busy">
+          <span className="stat-label">Bàn Đang Có Khách</span>
+          <div className="stat-value">{occupiedTables}</div>
+        </div>
+        <div className="adm-stat-card stat-pending">
+          <span className="stat-label">Đơn Chờ Xếp Bàn</span>
+          <div className="stat-value">{pendingReservations}</div>
+        </div>
+      </div>
+
+      {/* ── SƠ ĐỒ BÀN ── */}
+      {activeMode === 'map' && (
+        <div className="adm-card-wrapper">
+          <div className="map-toolbar">
+            <h3 className="section-heading">Sơ Đồ Bàn Ăn Trực Quan</h3>
+            <div className="map-legends">
+              <span className="map-legend-item"><span className="legend-dot dot-green"></span> Bàn trống (Bấm để tạo đơn)</span>
+              <span className="map-legend-item"><span className="legend-dot dot-yellow"></span> Đã đặt trước</span>
+              <span className="map-legend-item"><span className="legend-dot dot-red"></span> Đang dùng bữa</span>
+            </div>
+          </div>
+
+          <div className="adm-table-grid">
+            {tables.map((t) => {
+              const isAvailable = t.status?.toLowerCase() === 'available';
+              const isOccupied = t.status?.toLowerCase() === 'occupied';
+
+              const reservedOrder = reservations.find(
+                (r) => r.tableId === t.id && (r.status === 'CONFIRMED' || r.status === 'SEATED')
+              );
+
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => handleTableClick(t)}
+                  className={`adm-floor-table ${
+                    isAvailable ? 'table-state--free' : isOccupied ? 'table-state--busy' : 'table-state--reserved'
+                  }`}
+                >
+                  <div className="floor-table-top">
+                    <span className="floor-table-no">Bàn {t.tableNo}</span>
+                    <span className="floor-table-cap">{t.capacity} chỗ</span>
+                  </div>
+
+                  <div className="floor-table-center">
+                    <Armchair size={36} />
+                  </div>
+
+                  <div className="floor-table-status">
+                    {isAvailable && <span className="tag-avail">🟢 Bàn Trống</span>}
+                    {isOccupied && <span className="tag-busy">🔴 Đang Ăn</span>}
+                    {!isAvailable && !isOccupied && <span className="tag-res">🟡 Đã Đặt</span>}
+                  </div>
+
+                  {reservedOrder && (
+                    <div className="floor-guest-info">
+                      <div className="guest-name">
+                        <User size={13} /> {reservedOrder.customerName}
+                      </div>
+                      <div className="guest-time">
+                        <Clock size={12} /> {new Date(reservedOrder.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+
+                      {reservedOrder.status === 'CONFIRMED' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCheckIn(reservedOrder.id);
+                          }}
+                          className="btn-quick-checkin"
+                        >
+                          Nhận Bàn
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {isAvailable && (
+                    <span className="click-to-book-hint">+ Đặt bàn này</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── BẢNG DANH SÁCH ── */}
+      {activeMode === 'list' && (
+        <div className="adm-card-wrapper">
+          <div className="list-toolbar">
+            <div className="status-tab-group">
+              {[
+                { label: 'Tất cả', value: '' },
+                { label: 'Chờ xếp bàn', value: 'PENDING' },
+                { label: 'Đã xếp bàn', value: 'CONFIRMED' },
+                { label: 'Đang dùng bữa', value: 'SEATED' },
+                { label: 'Đã hủy', value: 'CANCELLED' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setFilterStatus(tab.value)}
+                  className={`status-tab-btn ${filterStatus === tab.value ? 'active' : ''}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="search-field-box">
+              <Search size={16} className="search-icon-inside" />
+              <input
+                type="text"
+                placeholder="Tìm tên khách, SĐT, mã phiếu..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input-field"
+              />
+            </div>
+          </div>
+
+          <div className="table-responsive">
+            <table className="adm-data-table">
+              <thead>
+                <tr>
+                  <th>Mã Phiếu</th>
+                  <th>Khách Hàng</th>
+                  <th>Thời Gian Dùng</th>
+                  <th className="text-center">Số Khách</th>
+                  <th>Bàn Phục Vụ</th>
+                  <th>Trạng Thái</th>
+                  <th className="text-right">Hành Động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredReservations.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="empty-table-cell">Không tìm thấy đơn đặt bàn nào</td>
+                  </tr>
+                ) : (
+                  filteredReservations.map((r) => (
+                    <tr key={r.id}>
+                      <td className="code-font">{r.reservationCode}</td>
+                      <td>
+                        <div style={{ fontWeight: 700, color: '#111827' }}>{r.customerName}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{r.customerPhone}</div>
+                      </td>
+                      <td>
+                        <div>{new Date(r.reservationTime).toLocaleDateString('vi-VN')}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
+                          {new Date(r.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td className="text-center" style={{ fontWeight: 700 }}>{r.partySize}</td>
+                      <td>
+                        {r.tableNo ? (
+                          <span className="badge-assigned-table">
+                            <Armchair size={13} /> Bàn {r.tableNo}
+                          </span>
+                        ) : (
+                          <span className="badge-unassigned">Chưa gán</span>
+                        )}
+                      </td>
+                      <td>
+                        {r.status === 'PENDING' && <span className="status-chip chip-pending">Chờ xếp bàn</span>}
+                        {r.status === 'CONFIRMED' && <span className="status-chip chip-confirmed">Đã xếp bàn</span>}
+                        {r.status === 'SEATED' && <span className="status-chip chip-seated">Đang ăn</span>}
+                        {r.status === 'CANCELLED' && <span className="status-chip chip-cancelled">Đã hủy</span>}
+                      </td>
+                      <td className="text-right">
+                        {r.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            onClick={() => setAssignModal({ isOpen: true, reservation: r, selectedTableId: '' })}
+                            className="btn-sm btn-assign"
+                          >
+                            Xếp Bàn
+                          </button>
+                        )}
+                        {r.status === 'CONFIRMED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleCheckIn(r.id)}
+                            className="btn-sm btn-checkin"
+                          >
+                            Nhận Bàn
+                          </button>
+                        )}
+                        {r.status !== 'CANCELLED' && r.status !== 'SEATED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancel(r.id)}
+                            className="btn-sm btn-cancel"
+                          >
+                            Hủy
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 1: XẾP BÀN ── */}
+      {assignModal.isOpen && assignModal.reservation && (
+        <div className="adm-modal-backdrop">
+          <div className="adm-modal-box">
+            <h3 className="modal-headline">Xếp Bàn Cho Phiếu: {assignModal.reservation.reservationCode}</h3>
+            <p className="modal-subtext">
+              Khách hàng: <strong>{assignModal.reservation.customerName}</strong> ({assignModal.reservation.partySize} người)
+            </p>
+
+            <div className="modal-field-block">
+              <label>Chọn bàn khả dụng:</label>
+              <select
+                className="modal-select-control"
+                value={assignModal.selectedTableId}
+                onChange={(e) => setAssignModal((prev) => ({ ...prev, selectedTableId: e.target.value }))}
+              >
+                <option value="">-- Chọn bàn phù hợp --</option>
+                {tables
+                  .filter((t) => t.capacity >= (assignModal.reservation?.partySize || 0))
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      Bàn {t.tableNo} ({t.capacity} chỗ) - Trạng thái: {t.status}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="modal-footer-btns">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setAssignModal({ isOpen: false, reservation: null, selectedTableId: '' })}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn-primary-action"
+                onClick={handleAssignTable}
+              >
+                Xác Nhận Xếp Bàn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 2: ĐẶT BÀN OFFLINE TẠI QUÁN / HOTLINE ── */}
+      {offlineModal && (
+        <div className="adm-modal-backdrop">
+          <div className="adm-modal-box modal-width-lg">
+            <h3 className="modal-headline">Tạo Đặt Bàn Offline (Tại Chỗ / Hotline)</h3>
+            <p className="modal-subtext">Nhập thông tin khách đặt bàn trực tiếp hoặc qua điện thoại</p>
+
+            <form onSubmit={handleCreateOffline} className="modal-styled-form">
+              <div className="modal-field-block">
+                <label>Tên khách hàng *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Anh Minh"
+                  className="modal-input-control"
+                  value={offlineForm.customerName}
+                  onChange={(e) => setOfflineForm({ ...offlineForm, customerName: e.target.value })}
+                />
+              </div>
+
+              <div className="grid-2col">
+                <div className="modal-field-block">
+                  <label>Số điện thoại *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="VD: 0912345678"
+                    className="modal-input-control"
+                    value={offlineForm.customerPhone}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, customerPhone: e.target.value })}
+                  />
+                </div>
+                <div className="modal-field-block">
+                  <label>Số lượng khách *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    className="modal-input-control"
+                    value={offlineForm.partySize}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, partySize: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid-2col">
+                <div className="modal-field-block">
+                  <label>Ngày dùng bữa *</label>
+                  <input
+                    type="date"
+                    required
+                    className="modal-input-control"
+                    value={offlineForm.reservationDate}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, reservationDate: e.target.value })}
+                  />
+                </div>
+                <div className="modal-field-block">
+                  <label>Giờ đến *</label>
+                  <input
+                    type="time"
+                    required
+                    className="modal-input-control"
+                    value={offlineForm.reservationTime}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, reservationTime: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-field-block">
+                <label>Gán bàn ngay (tùy chọn):</label>
+                <select
+                  className="modal-select-control"
+                  value={offlineForm.tableId}
+                  onChange={(e) => setOfflineForm({ ...offlineForm, tableId: e.target.value })}
+                >
+                  <option value="">-- Xếp bàn sau --</option>
+                  {tables.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      Bàn {t.tableNo} ({t.capacity} chỗ) - [{t.status}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-checkbox-row">
+                <input
+                  type="checkbox"
+                  id="seatedImmediatelyCheck"
+                  className="checkbox-custom"
+                  checked={offlineForm.seatedImmediately}
+                  onChange={(e) => setOfflineForm({ ...offlineForm, seatedImmediately: e.target.checked })}
+                />
+                <label htmlFor="seatedImmediatelyCheck">
+                  Khách nhận bàn ăn ngay (Đổi bàn sang trạng thái Có Khách)
+                </label>
+              </div>
+
+              <div className="modal-field-block">
+                <label>Ghi chú đặc biệt:</label>
+                <input
+                  type="text"
+                  placeholder="VD: Không ăn cay, bàn ngoài trời..."
+                  className="modal-input-control"
+                  value={offlineForm.specialNotes}
+                  onChange={(e) => setOfflineForm({ ...offlineForm, specialNotes: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-footer-btns">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setOfflineModal(false)}
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn-primary-action">
+                  Lưu Đơn Đặt Bàn
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/pages/customer/ReservationPage.tsx">
+import React, { useState, useEffect } from 'react';
+import { reservationApi } from '../../api/reservationApi';
+import { 
+  Calendar, Users, Phone, User, Mail, 
+  FileText, Search, CheckCircle2, Clock, AlertCircle,
+  Armchair, ArrowLeft, Utensils
+} from 'lucide-react';
+import './ReservationPage.css';
+
+interface TableItem {
+  id: string;
+  tableNo: string;
+  capacity: number;
+  status: string;
+}
+
+interface ReservationDetail {
+  id: string;
+  reservationCode: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  partySize: number;
+  reservationTime: string;
+  status: string;
+  tableId?: string | null;
+  tableNo?: string | null;
+  tableCapacity?: number | null;
+  specialNotes?: string | null;
+}
+
+interface BookingFormState {
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  partySize: number;
+  reservationDate: string;
+  reservationTime: string;
+  specialNotes: string;
+}
+
+function extractErrorMessage(err: unknown): string {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const res = (err as { response?: { data?: { message?: string } } }).response;
+    if (res?.data?.message) return res.data.message;
+  }
+  if (err instanceof Error) return err.message;
+  return 'Đặt bàn không thành công!';
+}
+
+// Kiểm tra khung giờ đóng cửa hoặc nghỉ bếp ngay tại client
+function checkOperatingHoursClient(timeStr: string): string | null {
+  const [hStr, mStr] = timeStr.split(':');
+  const totalMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+
+  const morningOpen = 6 * 60;       // 06:00
+  const breakStart = 14 * 60 + 30;  // 14:30
+  const breakEnd = 16 * 60 + 30;    // 16:30
+  const eveningClose = 22 * 60;     // 22:00
+
+  if (totalMinutes >= breakStart && totalMinutes < breakEnd) {
+    return 'Giờ này nhà hàng đang trong Giờ Nghỉ Bếp (14:30 - 16:30), bạn hãy đặt vào giờ khác!';
+  }
+
+  if (totalMinutes < morningOpen || totalMinutes >= eveningClose) {
+    return 'Giờ này nhà hàng đang Đóng Cửa (22:00 - 06:00), bạn hãy đặt vào giờ khác (06:00 - 14:30 hoặc 16:30 - 22:00)!';
+  }
+
+  return null;
+}
+
+export default function ReservationPage(): React.ReactElement {
+  const [currentView, setCurrentView] = useState<'tables' | 'form' | 'tracking'>('tables');
+  
+  const [tablesLoading, setTablesLoading] = useState<boolean>(true);
+  const [tables, setTables] = useState<TableItem[]>([]);
+  const [selectedTable, setSelectedTable] = useState<TableItem | null>(null);
+
+  const [loading, setLoading] = useState<boolean>(false);
+  const [successBooking, setSuccessBooking] = useState<ReservationDetail | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+
+  const [formData, setFormData] = useState<BookingFormState>({
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    partySize: 2,
+    reservationDate: new Date().toISOString().split('T')[0],
+    reservationTime: '19:00',
+    specialNotes: '',
+  });
+
+  const [trackCode, setTrackCode] = useState<string>('');
+  const [trackResult, setTrackResult] = useState<ReservationDetail | null>(null);
+  const [trackError, setTrackError] = useState<string>('');
+
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchTables = async () => {
+      setTablesLoading(true);
+      try {
+        const res = await reservationApi.getTables();
+        if (!isCancelled) {
+          setTables(res.data || []);
+        }
+      } catch (err: unknown) {
+        console.error('Không thể tải sơ đồ bàn:', extractErrorMessage(err));
+      } finally {
+        if (!isCancelled) setTablesLoading(false);
+      }
+    };
+    fetchTables();
+    return () => { isCancelled = true; };
+  }, []);
+
+  const handleSelectTable = (table: TableItem) => {
+    if (table.status?.toLowerCase() !== 'available') return;
+    setSelectedTable(table);
+    setFormData((prev) => ({
+      ...prev,
+      partySize: Math.min(prev.partySize || 2, table.capacity),
+    }));
+    setErrorMsg('');
+    setCurrentView('form');
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Cảnh báo ngay nếu khách chọn giờ đóng cửa/nghỉ bếp
+    if (name === 'reservationTime') {
+      const closedReason = checkOperatingHoursClient(value);
+      if (closedReason) {
+        setErrorMsg(closedReason);
+      } else {
+        setErrorMsg('');
+      }
+    }
+  };
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTable || loading) return;
+
+    setErrorMsg('');
+
+    // Kiểm tra giờ mở cửa
+    const closedReason = checkOperatingHoursClient(formData.reservationTime);
+    if (closedReason) {
+      setErrorMsg(closedReason);
+      return;
+    }
+
+    const cleanPhone = formData.customerPhone.trim().replace(/[\s.-]+/g, '');
+    const vnPhoneRegex = /^(0|\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    if (!vnPhoneRegex.test(cleanPhone)) {
+      setErrorMsg('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động hợp lệ tại Việt Nam (10 chữ số)!');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const fullDateTime = `${formData.reservationDate}T${formData.reservationTime}:00`;
+      const tableNote = `[Khách chọn: Bàn ${selectedTable.tableNo} (${selectedTable.capacity} chỗ)]`;
+      const combinedNotes = formData.specialNotes ? `${tableNote} - ${formData.specialNotes.trim()}` : tableNote;
+
+      const payload = {
+        customerName: formData.customerName.trim(),
+        customerPhone: cleanPhone,
+        customerEmail: formData.customerEmail ? formData.customerEmail.trim() : null,
+        partySize: Number(formData.partySize),
+        reservationTime: fullDateTime,
+        specialNotes: combinedNotes,
+      };
+
+      const res = await reservationApi.createOnline(payload);
+      setSuccessBooking(res.data);
+
+      try {
+        const channel = new BroadcastChannel('omni_reservation_channel');
+        channel.postMessage({ type: 'NEW_RESERVATION', data: res.data });
+        channel.close();
+      } catch (e) {
+        console.warn('BroadcastChannel error:', e);
+      }
+    } catch (err: unknown) {
+      setErrorMsg(extractErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTrackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackCode.trim() || loading) return;
+    setLoading(true);
+    setTrackError('');
+    setTrackResult(null);
+
+    try {
+      const res = await reservationApi.trackByCode(trackCode.trim());
+      setTrackResult(res.data);
+    } catch (err: unknown) {
+      setTrackError(extractErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isAvail = (status: string) => status?.toLowerCase() === 'available';
+
+  return (
+    <div className="res-container">
+      <div className="res-top-header">
+        <h1 className="res-main-title">Đặt Bàn Trực Tuyến</h1>
+        <p className="res-main-subtitle">Thưởng thức ẩm thực trọn vẹn trong không gian ấm cúng tại OmniResto</p>
+
+        <div className="res-tab-bar">
+          <button
+            type="button"
+            onClick={() => { setCurrentView('tables'); setSuccessBooking(null); }}
+            className={`res-tab-item ${currentView !== 'tracking' ? 'active' : ''}`}
+          >
+            Sơ Đồ Chọn Bàn
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentView('tracking')}
+            className={`res-tab-item ${currentView === 'tracking' ? 'active' : ''}`}
+          >
+            Tra Cứu Mã Đặt Bàn
+          </button>
+        </div>
+      </div>
+
+      {currentView === 'tables' && (
+        <div className="res-box">
+          <div className="table-selection-header">
+            <div>
+              <h2 className="box-heading">Chọn Bàn Còn Trống</h2>
+              <p className="box-subheading">Bấm vào bàn trống bạn muốn ngồi để tiến hành đăng ký</p>
+            </div>
+            <div className="table-legend">
+              <span className="legend-tag legend-tag--avail">
+                <span className="status-dot dot-green"></span> Bàn trống (Chọn được)
+              </span>
+              <span className="legend-tag legend-tag--busy">
+                <span className="status-dot dot-red"></span> Đang có khách
+              </span>
+            </div>
+          </div>
+
+          {tablesLoading ? (
+            <div className="res-loading-state">
+              <div className="res-spinner"></div>
+              <p>Đang tải sơ đồ bàn ăn...</p>
+            </div>
+          ) : (
+            <div className="tables-layout-grid">
+              {tables.map((t) => {
+                const available = isAvail(t.status);
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => handleSelectTable(t)}
+                    className={`grid-table-card ${available ? 'is-available' : 'is-occupied'}`}
+                  >
+                    <div className="card-table-icon">
+                      <Armchair size={26} />
+                    </div>
+                    <h3 className="card-table-title">Bàn {t.tableNo}</h3>
+                    <span className="card-table-cap">Sức chứa: {t.capacity} khách</span>
+                    
+                    <div className={`card-table-badge ${available ? 'badge-green' : 'badge-gray'}`}>
+                      {available ? '🟢 Bàn Trống' : '🔴 Có Khách'}
+                    </div>
+
+                    {available && (
+                      <span className="card-table-action">Chọn bàn này →</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {currentView === 'form' && selectedTable && (
+        <div className="res-box res-form-card">
+          {successBooking ? (
+            <div className="res-success-view">
+              <CheckCircle2 className="success-badge-icon" />
+              <h2 className="success-headline">Đặt Bàn Thành Công!</h2>
+              <p className="success-sub">Mã phiếu đặt bàn của bạn là:</p>
+              
+              <div className="success-code-token">{successBooking.reservationCode}</div>
+
+              <div className="success-details-summary">
+                <span>📍 Bàn đã chọn: <strong>Bàn {selectedTable.tableNo}</strong></span>
+                <span>👥 Số lượng: <strong>{formData.partySize} khách</strong></span>
+                <span>⏰ Thời gian: <strong>{formData.reservationTime} - {formData.reservationDate}</strong></span>
+              </div>
+
+              <p className="success-note-text">
+                Nhân viên nhà hàng sẽ kiểm tra và liên hệ xác nhận bàn cho bạn trong thời gian sớm nhất.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="form-card-topbar">
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('tables')}
+                  className="res-back-btn"
+                >
+                  <ArrowLeft size={16} /> Đổi Bàn Khác
+                </button>
+
+                <div className="chosen-table-pill">
+                  <Utensils size={15} />
+                  <span>Đang đặt: <strong>Bàn {selectedTable.tableNo}</strong> (Tối đa {selectedTable.capacity} khách)</span>
+                </div>
+              </div>
+
+              <div className="form-card-title-group">
+                <h2 className="box-heading">Thông Tin Đặt Bàn</h2>
+                <p className="box-subheading">Vui lòng điền thông tin để chúng tôi chuẩn bị đón tiếp chu đáo nhất</p>
+              </div>
+
+              {errorMsg && (
+                <div className="res-error-banner">
+                  <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span>{errorMsg}</span>
+                    {errorMsg.includes('đang có đơn đặt bàn') && (
+                      <span 
+                        onClick={() => setCurrentView('tracking')}
+                        style={{ textDecoration: 'underline', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        Bấm vào đây để chuyển sang tra cứu đơn hiện tại →
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleBookingSubmit} className="res-styled-form">
+                <div className="res-form-2col">
+                  <div className="res-field-group">
+                    <label className="res-field-label">
+                      <User size={15} /> Họ và tên *
+                    </label>
+                    <input
+                      type="text"
+                      name="customerName"
+                      required
+                      value={formData.customerName}
+                      onChange={handleChange}
+                      placeholder="Nguyễn Văn A"
+                      className="res-field-input"
+                    />
+                  </div>
+
+                  <div className="res-field-group">
+                    <label className="res-field-label">
+                      <Phone size={15} /> Số điện thoại *
+                    </label>
+                    <input
+                      type="tel"
+                      name="customerPhone"
+                      required
+                      value={formData.customerPhone}
+                      onChange={handleChange}
+                      placeholder="0988111222"
+                      className="res-field-input"
+                    />
+                  </div>
+
+                  <div className="res-field-group">
+                    <label className="res-field-label">
+                      <Mail size={15} /> Email (nếu có)
+                    </label>
+                    <input
+                      type="email"
+                      name="customerEmail"
+                      value={formData.customerEmail}
+                      onChange={handleChange}
+                      placeholder="example@gmail.com"
+                      className="res-field-input"
+                    />
+                  </div>
+
+                  <div className="res-field-group">
+                    <label className="res-field-label">
+                      <Users size={15} /> Số lượng khách *
+                    </label>
+                    <input
+                      type="number"
+                      name="partySize"
+                      min="1"
+                      max={selectedTable.capacity}
+                      required
+                      value={formData.partySize}
+                      onChange={handleChange}
+                      className="res-field-input"
+                    />
+                    <small className="field-hint">Tối đa {selectedTable.capacity} người theo sức chứa của bàn</small>
+                  </div>
+
+                  <div className="res-field-group">
+                    <label className="res-field-label">
+                      <Calendar size={15} /> Ngày dùng bữa *
+                    </label>
+                    <input
+                      type="date"
+                      name="reservationDate"
+                      required
+                      value={formData.reservationDate}
+                      onChange={handleChange}
+                      className="res-field-input"
+                    />
+                  </div>
+
+                  <div className="res-field-group">
+                    <label className="res-field-label">
+                      <Clock size={15} /> Giờ đến (Mở: 06:00-14:30 & 16:30-22:00) *
+                    </label>
+                    <input
+                      type="time"
+                      name="reservationTime"
+                      required
+                      value={formData.reservationTime}
+                      onChange={handleChange}
+                      className="res-field-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="res-field-group">
+                  <label className="res-field-label">
+                    <FileText size={15} /> Yêu cầu đặc biệt (tùy chọn)
+                  </label>
+                  <textarea
+                    name="specialNotes"
+                    rows={3}
+                    value={formData.specialNotes}
+                    onChange={handleChange}
+                    placeholder="Ví dụ: Bàn tiệc sinh nhật, ghế ăn cho trẻ em..."
+                    className="res-field-textarea"
+                  ></textarea>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="res-btn-submit"
+                >
+                  {loading ? 'Đang kiểm tra & xử lý...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      )}
+
+      {currentView === 'tracking' && (
+        <div className="res-box res-form-card">
+          <h2 className="box-heading text-center">Tra Cứu Tiến Độ Đặt Bàn</h2>
+          <p className="box-subheading text-center">Nhập mã phiếu để kiểm tra xem bàn của bạn đã được xác nhận hay chưa</p>
+
+          <form onSubmit={handleTrackSubmit} className="res-track-form">
+            <input
+              type="text"
+              required
+              value={trackCode}
+              onChange={(e) => setTrackCode(e.target.value)}
+              placeholder="Nhập mã phiếu (Ví dụ: RSV-ONL-1562)"
+              className="res-field-input track-input-field"
+            />
+            <button type="submit" disabled={loading} className="res-btn-track">
+              <Search size={16} /> {loading ? 'Đang tìm...' : 'Tra Cứu'}
+            </button>
+          </form>
+
+          {trackError && <div className="res-error-banner">{trackError}</div>}
+
+          {trackResult && (
+            <div className="res-track-card">
+              <div className="track-head">
+                <div>
+                  <span className="track-lbl">MÃ PHIẾU ĐẶT BÀN</span>
+                  <div className="track-code">{trackResult.reservationCode}</div>
+                </div>
+                <div className={`status-badge-chip badge-${trackResult.status.toLowerCase()}`}>
+                  {trackResult.status === 'PENDING' && 'Chờ xác nhận'}
+                  {trackResult.status === 'CONFIRMED' && 'Đã xếp bàn'}
+                  {trackResult.status === 'SEATED' && 'Đang dùng bữa'}
+                  {trackResult.status === 'CANCELLED' && 'Đã hủy'}
+                </div>
+              </div>
+
+              <div className="track-grid-info">
+                <div>
+                  <label>Khách hàng</label>
+                  <strong>{trackResult.customerName}</strong>
+                </div>
+                <div>
+                  <label>Số điện thoại</label>
+                  <strong>{trackResult.customerPhone}</strong>
+                </div>
+                <div>
+                  <label>Số khách</label>
+                  <strong>{trackResult.partySize} người</strong>
+                </div>
+                <div>
+                  <label>Thời gian dùng bữa</label>
+                  <strong>{new Date(trackResult.reservationTime).toLocaleString('vi-VN')}</strong>
+                </div>
+                <div>
+                  <label>Bàn phục vụ</label>
+                  <strong>{trackResult.tableNo ? `Bàn ${trackResult.tableNo}` : 'Đang sắp xếp'}</strong>
+                </div>
+              </div>
+
+              {trackResult.specialNotes && (
+                <div className="track-note-box">
+                  <label>Ghi chú:</label>
+                  <p>{trackResult.specialNotes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 </file>
 
 <file path="frontend/index.html">
