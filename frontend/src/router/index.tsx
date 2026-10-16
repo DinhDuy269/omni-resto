@@ -10,7 +10,7 @@ import { ChainOrdersManagement } from '../admin/pages/order/ChainOrdersManagemen
 import { StaffManagement } from '../admin/pages/auth/StaffManagement';
 import { TableManagement } from '../admin/pages/table/TableManagement';
 
-// @ts-expect-error JSX component file without TypeScript declaration
+
 import ReservationManagement from '../pages/admin/ReservationManagement';
 
 // ── Client imports ────────────────────────────────────────────────────────────
@@ -20,7 +20,6 @@ import ClientMenu from '../client/pages/menu/ClientMenu';
 import ClientCart from '../client/pages/cart/ClientCart';
 import ClientOrderTracking from '../client/pages/order/ClientOrderTracking';
 
-// @ts-expect-error JSX component file without TypeScript declaration
 import ReservationPage from '../pages/customer/ReservationPage';
 
 export const AppRouter: React.FC = () => {

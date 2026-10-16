@@ -3,7 +3,7 @@ import { reservationApi } from '../../api/reservationApi';
 import { 
   Calendar, Users, Phone, User, Mail, 
   FileText, CheckCircle2, Clock, AlertCircle,
-  Armchair, ArrowLeft, Utensils, PhoneCall
+  Armchair, ArrowLeft, Utensils
 } from 'lucide-react';
 import './ReservationPage.css';
 
@@ -89,23 +89,47 @@ export default function ReservationPage(): React.ReactElement {
     specialNotes: '',
   });
 
+  const fetchTables = async () => {
+    try {
+      const res = await reservationApi.getTables();
+      setTables(res.data || []);
+    } catch (err: unknown) {
+      console.error('Không thể tải sơ đồ bàn:', extractErrorMessage(err));
+    } finally {
+      setTablesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let isCancelled = false;
-    const fetchTables = async () => {
-      setTablesLoading(true);
-      try {
-        const res = await reservationApi.getTables();
-        if (!isCancelled) {
-          setTables(res.data || []);
-        }
-      } catch (err: unknown) {
-        console.error('Không thể tải sơ đồ bàn:', extractErrorMessage(err));
-      } finally {
-        if (!isCancelled) setTablesLoading(false);
-      }
+    const initTimer = setTimeout(() => {
+      fetchTables();
+    }, 0);
+
+    let broadcastChannel: BroadcastChannel | null = null;
+    try {
+      broadcastChannel = new BroadcastChannel('omni_reservation_channel');
+      broadcastChannel.onmessage = () => {
+        fetchTables();
+      };
+    } catch (e) {
+      console.warn('BroadcastChannel error:', e);
+    }
+
+    const eventSource = new EventSource('http://localhost:8080/api/tables/reservations/subscribe');
+
+    eventSource.addEventListener('NEW_RESERVATION', () => {
+      fetchTables();
+    });
+
+    eventSource.addEventListener('UPDATE_RESERVATION', () => {
+      fetchTables();
+    });
+
+    return () => {
+      clearTimeout(initTimer);
+      eventSource.close();
+      if (broadcastChannel) broadcastChannel.close();
     };
-    fetchTables();
-    return () => { isCancelled = true; };
   }, []);
 
   const handleSelectTable = (table: TableItem) => {
@@ -133,11 +157,9 @@ export default function ReservationPage(): React.ReactElement {
     }
   };
 
-  const isGroupOver10 = Number(formData.partySize) > 10;
-
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTable || loading || isGroupOver10) return;
+    if (!selectedTable || loading) return;
 
     setErrorMsg('');
 
@@ -167,12 +189,14 @@ export default function ReservationPage(): React.ReactElement {
         customerEmail: formData.customerEmail ? formData.customerEmail.trim() : null,
         partySize: Number(formData.partySize),
         reservationTime: fullDateTime,
-        tableId: selectedTable.id, // Gửi chính xác ID của Bàn T-07 lên Backend
+        tableId: selectedTable.id,
         specialNotes: combinedNotes,
       };
 
       const res = await reservationApi.createOnline(payload);
       setSuccessBooking(res.data);
+
+      fetchTables();
 
       try {
         const channel = new BroadcastChannel('omni_reservation_channel');
@@ -183,6 +207,7 @@ export default function ReservationPage(): React.ReactElement {
       }
     } catch (err: unknown) {
       setErrorMsg(extractErrorMessage(err));
+      fetchTables();
     } finally {
       setLoading(false);
     }
@@ -199,28 +224,10 @@ export default function ReservationPage(): React.ReactElement {
 
       {currentView === 'tables' && (
         <div className="res-box">
-          {/* Banner hướng dẫn đoàn trên 10 người gọi hotline ghép bàn */}
-          <div className="res-large-group-banner">
-            <div className="banner-left">
-              <div className="banner-icon-circle">
-                <Users size={22} />
-              </div>
-              <div>
-                <h4 className="banner-title">Bạn muốn đặt tiệc đoàn đông trên 10 người?</h4>
-                <p className="banner-desc">
-                  Để đảm bảo không gian và hỗ trợ <strong>ghép các bàn liền kề</strong> tốt nhất, xin vui lòng liên hệ hotline trực tiếp.
-                </p>
-              </div>
-            </div>
-            <a href="tel:02438259999" className="banner-hotline-btn">
-              <PhoneCall size={16} /> Hotline: 024 3825 9999
-            </a>
-          </div>
-
           <div className="table-selection-header">
             <div>
-              <h2 className="box-heading">Chọn Bàn Còn Trống (Dưới 10 Người)</h2>
-              <p className="box-subheading">Bấm vào bàn trống bạn muốn ngồi để tiến hành đăng ký thông tin</p>
+              <h2 className="box-heading">Chọn Bàn Còn Trống</h2>
+              <p className="box-subheading">Bấm vào bàn trống bạn muốn ngồi để tiến hành đăng ký</p>
             </div>
             <div className="table-legend">
               <span className="legend-tag legend-tag--avail">
@@ -291,7 +298,7 @@ export default function ReservationPage(): React.ReactElement {
               <button
                 type="button"
                 className="res-btn-submit"
-                style={{ marginTop: 24 }}
+                style={{ marginTop: 20 }}
                 onClick={() => {
                   setSuccessBooking(null);
                   setSelectedTable(null);
@@ -305,6 +312,7 @@ export default function ReservationPage(): React.ReactElement {
                     reservationTime: '19:00',
                     specialNotes: '',
                   });
+                  fetchTables();
                 }}
               >
                 ← Quay lại đặt thêm bàn khác
@@ -323,7 +331,7 @@ export default function ReservationPage(): React.ReactElement {
 
                 <div className="chosen-table-pill">
                   <Utensils size={15} />
-                  <span>Đang đặt: <strong>Bàn {selectedTable.tableNo}</strong> (Sức chứa {selectedTable.capacity} khách)</span>
+                  <span>Đang đặt: <strong>Bàn {selectedTable.tableNo}</strong> (Tối đa {selectedTable.capacity} khách)</span>
                 </div>
               </div>
 
@@ -395,13 +403,13 @@ export default function ReservationPage(): React.ReactElement {
                       type="number"
                       name="partySize"
                       min="1"
-                      max="30"
+                      max={selectedTable.capacity}
                       required
                       value={formData.partySize}
                       onChange={handleChange}
                       className="res-field-input"
                     />
-                    <small className="field-hint">Hệ thống hỗ trợ đặt trực tuyến tối đa 10 người</small>
+                    <small className="field-hint">Tối đa {selectedTable.capacity} người theo sức chứa của bàn</small>
                   </div>
 
                   <div className="res-field-group">
@@ -447,30 +455,13 @@ export default function ReservationPage(): React.ReactElement {
                   ></textarea>
                 </div>
 
-                {/* Khi khách nhập > 10 người -> chặn nút đặt và hiện banner gọi hotline */}
-                {isGroupOver10 ? (
-                  <div className="res-hotline-notice-card">
-                    <div className="notice-header">
-                      <AlertCircle size={22} color="#b45309" />
-                      <strong>Đoàn trên 10 người cần ghép bàn</strong>
-                    </div>
-                    <p className="notice-text">
-                      Các bàn đơn hiện tại không đủ sức chứa cho đoàn {formData.partySize} người. 
-                      Vui lòng gọi hotline để nhân viên sắp xếp và ghép nhiều bàn liền kề cho đoàn của bạn.
-                    </p>
-                    <a href="tel:02438259999" className="res-hotline-call-btn">
-                      <PhoneCall size={18} /> Gọi Hotline Ghép Bàn: 024 3825 9999
-                    </a>
-                  </div>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="res-btn-submit"
-                  >
-                    {loading ? 'Đang kiểm tra & xử lý...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
-                  </button>
-                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="res-btn-submit"
+                >
+                  {loading ? 'Đang kiểm tra & xử lý...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
+                </button>
               </form>
             </>
           )}

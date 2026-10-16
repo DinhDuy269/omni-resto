@@ -32,8 +32,6 @@ public class ReservationService {
     private static final Pattern MERGED_PATTERN = Pattern.compile("\\[MERGED:([^\\]]+)\\]");
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    // ================= HELPER METHODS =================
-
     private List<String> extractAllTableIds(ReservationEntity res) {
         Set<String> ids = new LinkedHashSet<>();
         if (res.getTable() != null) {
@@ -69,28 +67,24 @@ public class ReservationService {
 
     // ================= BUSINESS METHODS =================
 
+    /**
+     * 1. Khách đặt bàn trực tuyến:
+     * Gán bàn khách chọn vào đơn để Admin thấy lịch, nhưng TUYỆT ĐỐI KHÔNG KHÓA BÀN trong database.
+     * Bàn vật lý vẫn là AVAILABLE 100% để người khác vẫn chọn được!
+     */
     @Transactional
     public ReservationResponse createOnlineReservation(OnlineReservationRequest request) {
         TableEntity assignedTable = null;
         String initialStatus = "PENDING";
 
-        // Khách tự chọn bàn trên sơ đồ web (VD: Bàn T-07)
         if (request.getTableId() != null && !request.getTableId().isBlank()) {
-            TableEntity table = tableRepository.findById(request.getTableId())
+            assignedTable = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new RuntimeException("Bàn bạn chọn không tồn tại!"));
 
-            // Kiểm tra bàn có đang trống không
-            if (table.getStatus() != TableStatus.available && table.getStatus() != TableStatus.AVAILABLE) {
-                throw new RuntimeException("Bàn " + table.getTableNo() + " vừa có người khác đặt hoặc đang có khách, vui lòng chọn bàn khác!");
-            }
-
-            // 1. Khóa bàn sang RESERVED ngay lập tức
-            table.setStatus(TableStatus.RESERVED);
-            tableRepository.save(table);
-
-            // 2. Gán bàn và tự động chuyển đơn thành CONFIRMED (Đã xếp bàn)
-            assignedTable = table;
+            // Tự động chuyển đơn thành CONFIRMED để Admin có sẵn nút "Nhận Bàn"
             initialStatus = "CONFIRMED";
+
+            // LƯU Ý: KHÔNG gọi table.setStatus(...) và KHÔNG save table tại đây!
         }
 
         ReservationEntity entity = ReservationEntity.builder()
@@ -110,6 +104,11 @@ public class ReservationService {
         sseService.broadcastNewReservation(response);
         return response;
     }
+
+    /**
+     * 2. Đặt bàn Hotline / Offline:
+     * Chỉ khóa bàn khi khách đang có mặt ăn ngay (seatedImmediately = true).
+     */
     @Transactional
     public ReservationResponse createOfflineReservation(OfflineReservationRequest request) {
         List<String> targetTableIds = new ArrayList<>();
@@ -124,16 +123,6 @@ public class ReservationService {
 
         if (!targetTableIds.isEmpty()) {
             List<TableEntity> selectedTables = tableRepository.findAllById(targetTableIds);
-            if (selectedTables.size() != targetTableIds.size()) {
-                throw new RuntimeException("Một số bàn được chọn để ghép không tồn tại!");
-            }
-
-            for (TableEntity t : selectedTables) {
-                if (t.getStatus() != TableStatus.available && t.getStatus() != TableStatus.AVAILABLE) {
-                    throw new RuntimeException("Bàn " + t.getTableNo() + " hiện không trống để xếp/ghép!");
-                }
-            }
-
             primaryTable = selectedTables.get(0);
 
             if (selectedTables.size() > 1) {
@@ -141,8 +130,10 @@ public class ReservationService {
                 notes = (mergedTag + " " + notes).trim();
             }
 
-            TableStatus newTableStatus = request.isSeatedImmediately() ? TableStatus.OCCUPIED : TableStatus.RESERVED;
-            updateTablesStatus(targetTableIds, newTableStatus);
+            // CHỈ KHÓA BÀN NẾU KHÁCH ĂN NGAY TẠI CHỖ
+            if (request.isSeatedImmediately()) {
+                updateTablesStatus(targetTableIds, TableStatus.OCCUPIED);
+            }
         }
 
         String initialStatus = request.isSeatedImmediately() ? "SEATED" : (!targetTableIds.isEmpty() ? "CONFIRMED" : "PENDING");
@@ -188,6 +179,9 @@ public class ReservationService {
         return toResponse(entity);
     }
 
+    /**
+     * 3. Admin xếp / ghép bàn: Chỉ lưu bàn vào đơn, KHÔNG KHÓA BÀN trước giờ hẹn.
+     */
     @Transactional
     public ReservationResponse assignTable(String reservationId, AssignTableRequest request) {
         ReservationEntity res = reservationRepository.findById(reservationId)
@@ -199,22 +193,6 @@ public class ReservationService {
         }
 
         List<TableEntity> selectedTables = tableRepository.findAllById(newTableIds);
-        if (selectedTables.size() != newTableIds.size()) {
-            throw new RuntimeException("Một số bàn được chọn không tồn tại trong hệ thống!");
-        }
-
-        List<String> currentHoldingTables = extractAllTableIds(res);
-        for (TableEntity t : selectedTables) {
-            if (t.getStatus() != TableStatus.AVAILABLE && t.getStatus() != TableStatus.available) {
-                if (!currentHoldingTables.contains(t.getId())) {
-                    throw new RuntimeException("Bàn " + t.getTableNo() + " hiện không sẵn sàng!");
-                }
-            }
-        }
-
-        currentHoldingTables.removeAll(newTableIds);
-        updateTablesStatus(currentHoldingTables, TableStatus.AVAILABLE);
-
         TableEntity primaryTable = selectedTables.get(0);
         res.setTable(primaryTable);
 
@@ -228,8 +206,6 @@ public class ReservationService {
             res.setSpecialNotes(currentNotes);
         }
 
-        updateTablesStatus(newTableIds, TableStatus.RESERVED);
-
         res.setStatus("CONFIRMED");
         reservationRepository.save(res);
 
@@ -238,6 +214,10 @@ public class ReservationService {
         return response;
     }
 
+    /**
+     * 4. ĐÂY LÀ NƠI DUY NHẤT KHÓA BÀN:
+     * Khi Admin bấm "Nhận Bàn" -> Khách đã tới quán ăn thực tế -> Chuyển bàn sang OCCUPIED!
+     */
     @Transactional
     public ReservationResponse checkIn(String reservationId) {
         ReservationEntity res = reservationRepository.findById(reservationId)
@@ -245,9 +225,10 @@ public class ReservationService {
 
         List<String> tableIds = extractAllTableIds(res);
         if (tableIds.isEmpty()) {
-            throw new RuntimeException("Đơn đặt bàn chưa được xếp bàn, vui lòng gán bàn trước khi Check-in!");
+            throw new RuntimeException("Đơn đặt bàn chưa được gán bàn, vui lòng xếp bàn trước khi Check-in!");
         }
 
+        // LÚC NÀY MỚI CHÍNH THỨC KHÓA BÀN SANG OCCUPIED TRONG DATABASE
         updateTablesStatus(tableIds, TableStatus.OCCUPIED);
         res.setStatus("SEATED");
         reservationRepository.save(res);
@@ -257,6 +238,9 @@ public class ReservationService {
         return response;
     }
 
+    /**
+     * 5. Khi Hủy đơn -> Trả bàn về AVAILABLE
+     */
     @Transactional
     public ReservationResponse cancelReservation(String reservationId, String reason) {
         ReservationEntity res = reservationRepository.findById(reservationId)
@@ -303,13 +287,10 @@ public class ReservationService {
         return tableRepository.findAll();
     }
 
-    /**
-     * Chuyển đổi Entity sang Response an toàn tuyệt đối, không unbox null
-     */
     public ReservationResponse toResponse(ReservationEntity entity) {
         List<String> tableIds = extractAllTableIds(entity);
         String displayTableNo = null;
-        Integer totalCapacity = null; // Dùng Integer Object, KHÔNG dùng primitive int
+        Integer totalCapacity = null;
 
         if (!tableIds.isEmpty()) {
             List<TableEntity> tables = tableRepository.findAllById(tableIds);

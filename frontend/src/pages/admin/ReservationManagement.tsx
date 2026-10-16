@@ -146,6 +146,17 @@ export default function ReservationManagement(): React.ReactElement {
     seatedImmediately: false,
   });
 
+  // Phát sóng sang các tab Client để cập nhật tức thì 0ms
+  const notifyClientTabs = useCallback(() => {
+    try {
+      const channel = new BroadcastChannel('omni_reservation_channel');
+      channel.postMessage({ type: 'TABLE_STATUS_UPDATED' });
+      channel.close();
+    } catch (e) {
+      console.warn('BroadcastChannel error:', e);
+    }
+  }, []);
+
   // Không gọi setState đồng bộ trước await trong hàm này
   const loadData = useCallback(async () => {
     try {
@@ -188,7 +199,7 @@ export default function ReservationManagement(): React.ReactElement {
       };
     }
 
-    // Sử dụng setTimeout để đưa lệnh load vào micro/macro task, giải quyết triệt để lỗi cascading renders
+    // Đưa lệnh gọi loadData vào microtask để tránh cảnh báo cascading renders
     const initTimer = setTimeout(() => {
       loadData();
     }, 0);
@@ -277,6 +288,7 @@ export default function ReservationManagement(): React.ReactElement {
     try {
       await reservationApi.assignTable(assignModal.reservation.id, assignModal.selectedTableIds);
       alert(`Đã xếp thành công ${assignModal.selectedTableIds.length} bàn cho khách!`);
+      notifyClientTabs();
       setAssignModal({ isOpen: false, reservation: null, selectedTableIds: [] });
       setLoading(true);
       loadData();
@@ -290,6 +302,7 @@ export default function ReservationManagement(): React.ReactElement {
     try {
       await reservationApi.checkIn(id);
       alert('Khách đã vào bàn thành công!');
+      notifyClientTabs();
       setLoading(true);
       loadData();
     } catch (err: unknown) {
@@ -303,6 +316,7 @@ export default function ReservationManagement(): React.ReactElement {
     try {
       await reservationApi.cancel(id, reason);
       alert('Hủy đơn thành công!');
+      notifyClientTabs();
       setLoading(true);
       loadData();
     } catch (err: unknown) {
@@ -320,6 +334,7 @@ export default function ReservationManagement(): React.ReactElement {
       };
       await reservationApi.createOffline(payload);
       alert('Tạo đơn đặt bàn hotline / offline thành công!');
+      notifyClientTabs();
       setOfflineModal(false);
       setLoading(true);
       loadData();
@@ -499,8 +514,9 @@ export default function ReservationManagement(): React.ReactElement {
                 <div
                   key={t.id}
                   onClick={() => handleTableClick(t)}
-                  className={`adm-floor-table ${isAvailable ? 'table-state--free' : isOccupied ? 'table-state--busy' : 'table-state--reserved'
-                    }`}
+                  className={`adm-floor-table ${
+                    isAvailable ? 'table-state--free' : isOccupied ? 'table-state--busy' : 'table-state--reserved'
+                  }`}
                 >
                   {isMerged && (
                     <span className="tag-merged-badge">Bàn Ghép</span>
@@ -646,11 +662,10 @@ export default function ReservationManagement(): React.ReactElement {
                           {r.status === 'PENDING' && (
                             <button
                               type="button"
-                              // 👉 ĐẶT CHÍNH XÁC VÀO ĐÂY:
                               onClick={() => setAssignModal({
                                 isOpen: true,
                                 reservation: r,
-                                selectedTableIds: r.tableId ? [r.tableId] : [] // Tự động tick chọn sẵn bàn khách đã đặt
+                                selectedTableIds: r.tableId ? [r.tableId] : []
                               })}
                               className="btn-sm btn-assign"
                             >
