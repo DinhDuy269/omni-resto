@@ -67,11 +67,6 @@ export const menuApi = {
 
   createMenuItem: async (request: Partial<MenuItem>): Promise<MenuItem> => {
     try {
-<<<<<<< HEAD
-      const res = await apiClient.post<MenuItem | MenuItemResponse>('/menu-items', request);
-      if ('menu_item' in res.data && res.data.menu_item) return res.data.menu_item;
-      return res.data as MenuItem;
-=======
       const payload = {
         code: request.code,
         name: request.name,
@@ -88,7 +83,6 @@ export const menuApi = {
       const res = await apiClient.post<any>('/menu-items', payload);
       const raw = res.data.menu_item || res.data;
       return transformMenuItem(raw);
->>>>>>> main
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }

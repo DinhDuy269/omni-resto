@@ -161,19 +161,11 @@ export const MasterMenuManagement: React.FC = () => {
       code: dish.code,
       name: dish.name,
       category: dish.category as MenuCategory,
-<<<<<<< HEAD
-      basePrice: dish.base_price,
-      mealPeriods: dish.meal_periods || 'ALL_DAY',
-      description: dish.description || '',
-      ingredients: dish.ingredients || '',
-      isBestSeller: dish.is_best_seller,
-=======
       base_price: dish.base_price,
       meal_periods: dish.meal_periods || 'ALL_DAY',
       description: dish.description || '',
       ingredients: dish.ingredients || '',
       is_best_seller: Boolean(dish.is_best_seller),
->>>>>>> main
       image: dish.image,
     });
   };
@@ -186,21 +178,12 @@ export const MasterMenuManagement: React.FC = () => {
       code: dishFormData.code,
       name: dishFormData.name,
       category: dishFormData.category,
-<<<<<<< HEAD
-      base_price: Number(dishFormData.basePrice),
-      meal_periods: dishFormData.mealPeriods,
-      description: dishFormData.description,
-      ingredients: dishFormData.ingredients.trim() || undefined,
-      status: 'AVAILABLE',
-      is_best_seller: dishFormData.isBestSeller,
-=======
       base_price: Number(dishFormData.base_price),
       meal_periods: dishFormData.meal_periods,
       description: dishFormData.description,
       ingredients: dishFormData.ingredients.trim() || undefined,
       status: 'AVAILABLE',
       is_best_seller: dishFormData.is_best_seller,
->>>>>>> main
       image: dishFormData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
     });
 
@@ -216,19 +199,11 @@ export const MasterMenuManagement: React.FC = () => {
       code: dishFormData.code,
       name: dishFormData.name,
       category: dishFormData.category,
-<<<<<<< HEAD
-      base_price: Number(dishFormData.basePrice),
-      meal_periods: dishFormData.mealPeriods,
-      description: dishFormData.description,
-      ingredients: dishFormData.ingredients.trim() || undefined,
-      is_best_seller: dishFormData.isBestSeller,
-=======
       base_price: Number(dishFormData.base_price),
       meal_periods: dishFormData.meal_periods,
       description: dishFormData.description,
       ingredients: dishFormData.ingredients.trim() || undefined,
       is_best_seller: dishFormData.is_best_seller,
->>>>>>> main
       image: dishFormData.image,
     });
 
@@ -256,15 +231,9 @@ export const MasterMenuManagement: React.FC = () => {
   const handleOpenEditOption = (option: CategoryOption) => {
     setEditingOption(option);
     setOptionFormData({
-<<<<<<< HEAD
-      categoryId: option.category_id,
-      name: option.name,
-      optionType: option.option_type,
-=======
       category_id: option.category_id || 'cat-pho',
       name: option.name,
       option_type: option.option_type || 'TOPPING',
->>>>>>> main
       price: option.price,
       status: option.status,
     });
@@ -275,15 +244,9 @@ export const MasterMenuManagement: React.FC = () => {
     if (!optionFormData.name) return;
 
     addCategoryOption({
-<<<<<<< HEAD
-      category_id: optionFormData.categoryId,
-      name: optionFormData.name,
-      option_type: optionFormData.optionType,
-=======
       category_id: optionFormData.category_id,
       name: optionFormData.name,
       option_type: optionFormData.option_type,
->>>>>>> main
       price: Number(optionFormData.price),
       status: optionFormData.status,
     });
@@ -297,15 +260,9 @@ export const MasterMenuManagement: React.FC = () => {
 
     updateCategoryOption({
       ...editingOption,
-<<<<<<< HEAD
-      category_id: optionFormData.categoryId,
-      name: optionFormData.name,
-      option_type: optionFormData.optionType,
-=======
       category_id: optionFormData.category_id,
       name: optionFormData.name,
       option_type: optionFormData.option_type,
->>>>>>> main
       price: Number(optionFormData.price),
       status: optionFormData.status,
     });
@@ -485,11 +442,7 @@ export const MasterMenuManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Món bán chạy</span>
                 <strong style={{ fontSize: '1.35rem', color: '#d97706', lineHeight: 1.2 }}>
-<<<<<<< HEAD
-                  {menuItems.filter((m) => m.is_best_seller).length} món
-=======
                   {menu_items.filter((m) => m.is_best_seller).length} món
->>>>>>> main
                 </strong>
               </div>
             </div>
@@ -851,11 +804,7 @@ export const MasterMenuManagement: React.FC = () => {
                             {/* Giá bán */}
                             <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                               <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
-<<<<<<< HEAD
-                                {dish.base_price.toLocaleString('vi-VN')} đ
-=======
                                 {(dish.base_price || 0).toLocaleString('vi-VN')} đ
->>>>>>> main
                               </span>
                             </td>
 
@@ -1036,11 +985,7 @@ export const MasterMenuManagement: React.FC = () => {
                             {dish.name}
                           </h4>
                           <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)' }}>
-<<<<<<< HEAD
-                            {dish.base_price.toLocaleString('vi-VN')} đ
-=======
                             {(dish.base_price || 0).toLocaleString('vi-VN')} đ
->>>>>>> main
                           </span>
                         </div>
 
@@ -1148,11 +1093,7 @@ export const MasterMenuManagement: React.FC = () => {
                 Tất Cả Kiểu Món ({category_options.length})
               </button>
               {DISH_CATEGORIES.map((cat) => {
-<<<<<<< HEAD
-                const count = categoryOptions.filter((o) => o.category_id === cat.id).length;
-=======
                 const count = category_options.filter((o) => o.category_id === cat.id).length;
->>>>>>> main
                 return (
                   <button
                     key={cat.id}
