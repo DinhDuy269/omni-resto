@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
-import { ShoppingCart, UtensilsCrossed, CheckCircle } from 'lucide-react';
+import { ShoppingCart, UtensilsCrossed, CheckCircle, CalendarDays } from 'lucide-react';
 import { useClientStore, selectTotalItems, selectTotalAmount, selectHasActiveOrders } from '../store/clientStore';
 import { CartDrawer } from '../components/CartDrawer';
 import { ClientActiveOrderBar } from '../components/ClientActiveOrderBar';
@@ -13,6 +13,7 @@ import './ClientLayout.css';
 const NAV_LINKS = [
   { to: '/client/menu',        label: 'Thực đơn' },
   { to: '/client/orders',      label: 'Đơn hàng' },
+  { to: '/client/reservation', label: 'Đặt bàn' },
   { to: '/client/events',      label: 'Sự kiện'  },
   { to: '/client/about',       label: 'Giới thiệu' },
 ];
@@ -168,7 +169,29 @@ export const ClientLayout: React.FC = () => {
               </div>
             )}
 
-            {/* Cart */}
+            {/* Nút Đặt Bàn Trực Tuyến */}
+            <Link
+              to="/client/reservation"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                backgroundColor: '#10b981',
+                color: '#ffffff',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '0.84rem',
+                textDecoration: 'none',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+            >
+              <CalendarDays size={16} />
+              <span>Đặt Bàn</span>
+            </Link>
             <button
               id="client-cart-button"
               className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}

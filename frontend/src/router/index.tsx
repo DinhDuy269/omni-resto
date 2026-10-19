@@ -10,6 +10,9 @@ import { StaffManagement } from '../admin/pages/auth/StaffManagement';
 import { TableManagement } from '../admin/pages/table/TableManagement';
 import { KitchenDisplaySystem } from '../admin/pages/kds/KitchenDisplaySystem';
 
+// @ts-expect-error JSX component file without TypeScript declaration
+import ReservationManagement from '../pages/admin/ReservationManagement';
+
 // ── Client imports ────────────────────────────────────────────────────────────
 import { ClientLayout } from '../client/layouts/ClientLayout';
 import ClientHome from '../client/pages/home/ClientHome';
@@ -33,6 +36,9 @@ const PathCaseNormalizer: React.FC = () => {
   return null;
 };
 
+// @ts-expect-error JSX component file without TypeScript declaration
+import ReservationPage from '../pages/customer/ReservationPage';
+
 export const AppRouter: React.FC = () => {
   return (
     <BrowserRouter>
@@ -50,6 +56,7 @@ export const AppRouter: React.FC = () => {
           <Route path="orders" element={<ChainOrdersManagement />} />
           <Route path="staff" element={<StaffManagement />} />
           <Route path="tables" element={<TableManagement />} />
+          <Route path="reservations" element={<ReservationManagement />} />
           <Route path="kds" element={<KitchenDisplaySystem />} />
           <Route path="vouchers" element={<VoucherManagement />} />
           <Route
@@ -85,6 +92,9 @@ export const AppRouter: React.FC = () => {
           <Route path="cart" element={<ClientCart />} />
           <Route path="orders" element={<ClientOrdersPage />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
+          {/* Route Khách hàng đặt bàn trực tuyến */}
+          <Route path="reservation" element={<ReservationPage />} />
+          <Route path="dat-ban" element={<ReservationPage />} />
           <Route path="events" element={<ClientEvents />} />
           <Route path="about" element={<ClientAbout />} />
           <Route path="scan" element={<ClientCheckIn />} />
