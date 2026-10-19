@@ -82,7 +82,7 @@ const NewsletterMini: React.FC = () => {
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 export const ClientLayout: React.FC = () => {
-  const { isCartOpen, openCart, closeCart, tableSession, handleServerOrderEvent } = useClientStore();
+  const { is_cart_open, openCart, closeCart, table_session, handleServerOrderEvent } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
   const hasActiveOrder = useClientStore(selectHasActiveOrders);
@@ -146,7 +146,7 @@ export const ClientLayout: React.FC = () => {
 
           {/* Header Right Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {tableSession && (
+            {table_session && (
               <div
                 style={{
                   display: 'inline-flex',
@@ -161,10 +161,10 @@ export const ClientLayout: React.FC = () => {
                   fontWeight: 700,
                   whiteSpace: 'nowrap',
                 }}
-                title={`Đang dùng tại Bàn ${tableSession.tableNo || tableSession.table_no}`}
+                title={`Đang dùng tại Bàn ${table_session.table_no}`}
               >
                 <span>📍</span>
-                <span>Bàn {tableSession.tableNo || tableSession.table_no}</span>
+                <span>Bàn {table_session.table_no}</span>
               </div>
             )}
 
@@ -291,7 +291,7 @@ export const ClientLayout: React.FC = () => {
       </footer>
 
       {/* ── Cart Drawer ── */}
-      <CartDrawer isOpen={isCartOpen} onClose={closeCart} />
+      <CartDrawer isOpen={is_cart_open} onClose={closeCart} />
 
       {/* ── Floating Live-Tracker Pill ── */}
       <ClientActiveOrderBar />

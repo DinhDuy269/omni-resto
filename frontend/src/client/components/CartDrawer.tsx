@@ -158,9 +158,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               </button>
             </div>
           ) : (
-            cart.map((item) => (
+            cart.map((item) => {
+              const itemKey = item.id || item.menu_item_id || '';
+              return (
               <div
-                key={item.menuItemId}
+                key={itemKey}
                 style={{
                   display: 'flex', gap: 12, padding: '12px 20px',
                   borderBottom: '1px solid var(--c-border-light)',
@@ -200,7 +202,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
                   {/* Remove */}
                   <button
-                    onClick={() => removeFromCart(item.menuItemId)}
+                    onClick={() => removeFromCart(itemKey)}
                     aria-label={`Xóa ${item.name}`}
                     style={{
                       width: 28, height: 28, borderRadius: 6,
@@ -229,7 +231,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     border: '1.5px solid var(--c-primary)', borderRadius: 8, overflow: 'hidden',
                   }}>
                     <button
-                      onClick={() => updateQuantity(item.menuItemId, -1)}
+                      onClick={() => updateQuantity(itemKey, -1)}
                       aria-label="Giảm"
                       style={{
                         width: 30, height: 30, display: 'flex', alignItems: 'center',
@@ -246,7 +248,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => updateQuantity(item.menuItemId, +1)}
+                      onClick={() => updateQuantity(itemKey, +1)}
                       aria-label="Tăng"
                       style={{
                         width: 30, height: 30, display: 'flex', alignItems: 'center',
@@ -259,7 +261,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   </div>
                 </div>
               </div>
-            ))
+            );
+          })
           )}
         </div>
 

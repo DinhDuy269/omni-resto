@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import type { Order } from '../types/admin';
 
 export interface OrderEventMessage {
-  event_type?: string;
-  eventType?: string;
+  event_type: string;
+  eventType: string;
   order: Order;
 }
 
 export const useWebSocket = (
-  onOrderEvent?: (event: OrderEventMessage & { eventType: string; order: Order }) => void
+  onOrderEvent?: (event: OrderEventMessage) => void
 ) => {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
@@ -37,11 +37,11 @@ export const useWebSocket = (
           if (isMounted && onOrderEvent) {
             try {
               const data = JSON.parse(event.data);
-              const eventType = data.eventType || data.event_type || 'ORDER_STATUS_CHANGED';
+              const event_type = data.event_type || data.eventType || 'ORDER_STATUS_CHANGED';
               onOrderEvent({
                 ...data,
-                eventType,
-                event_type: eventType,
+                event_type,
+                eventType: event_type,
                 order: data.order,
               });
             } catch (err) {

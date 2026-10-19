@@ -5,8 +5,8 @@ import { useClientStore } from '../store/clientStore';
 interface ServiceRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  orderId?: string;
-  tableNo?: string;
+  order_id?: string;
+  table_no?: string;
 }
 
 const SERVICE_PRESETS = [
@@ -20,8 +20,8 @@ const SERVICE_PRESETS = [
 export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   isOpen,
   onClose,
-  orderId,
-  tableNo,
+  order_id,
+  table_no,
 }) => {
   const { sendServiceRequest } = useClientStore();
   const [selectedPreset, setSelectedPreset] = useState<string>('ice');
@@ -37,7 +37,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       ? `${preset?.label || 'Yêu cầu'}: ${customNote.trim()}`
       : preset?.label || 'Yêu cầu hỗ trợ';
 
-    await sendServiceRequest(orderId || 'table-service', requestText);
+    await sendServiceRequest(order_id || 'table-service', requestText);
     setIsSuccess(true);
     setTimeout(() => {
       setIsSuccess(false);
@@ -98,7 +98,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                 Gọi Nhân Viên / Hỗ Trợ
               </h3>
               <span style={{ fontSize: '0.8rem', color: 'var(--c-text-muted, #64748b)' }}>
-                {tableNo ? `Phục vụ tại Bàn: ${tableNo}` : 'Yêu cầu phục vụ nhanh'}
+                {table_no ? `Phục vụ tại Bàn: ${table_no}` : 'Yêu cầu phục vụ nhanh'}
               </span>
             </div>
           </div>

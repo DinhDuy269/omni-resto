@@ -19,7 +19,6 @@ public class MenuItemResponse {
     private String categoryId;
     private String category;
     private BigDecimal basePrice;
-    private BigDecimal price;
     private String description;
     private String ingredients;
     private MenuStatus status;
@@ -27,7 +26,6 @@ public class MenuItemResponse {
     private String mealPeriods;
     private Boolean isAvailableNow;
     private String mealPeriodNote;
-    private String image;
     private String imageUrl;
     private List<CategoryOptionResponse> options;
     private LocalDateTime createdAt;

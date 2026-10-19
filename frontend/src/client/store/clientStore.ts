@@ -56,49 +56,42 @@ const saveTableSessionToStorage = (session: TableSession | null) => {
 
 export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?: PlacedOrder | null): PlacedOrder => {
   const mappedItems: CartItem[] = (serverOrderData.items || []).map((it: any) => {
-    const existingItem = existingOrder?.items?.find((c) => c.menuItemId === it.menuItemId || c.id === it.id);
+    const existingItem = existingOrder?.items?.find((c) => (c.menu_item_id || c.id) === (it.menu_item_id || it.id));
     return {
       id: it.id,
-      menuItemId: it.menuItemId,
+      menu_item_id: it.menu_item_id || it.id,
       name: it.name,
       category: existingItem?.category || 'Món chính',
       price: Number(it.price || 0),
       quantity: it.quantity || 1,
-      image: existingItem?.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop',
+      image: existingItem?.image || '/images/food-placeholder.svg',
       notes: it.notes,
-      roundNo: it.roundNo || 1,
+      round_no: it.round_no || 1,
       status: (it.status?.toUpperCase() as any) || 'CONFIRMED',
-      addedAt: it.addedAt,
+      added_at: it.added_at,
     };
   });
 
-  const rawMode = (serverOrderData.orderType || serverOrderData.order_type || existingOrder?.orderMode || 'dine_in').toLowerCase();
+  const rawMode = (serverOrderData.order_mode || serverOrderData.order_type || existingOrder?.order_mode || 'dine_in').toLowerCase();
   const orderMode: OrderMode = rawMode === 'takeaway' ? 'TAKEAWAY' : rawMode === 'delivery' ? 'DELIVERY' : 'DINE_IN';
 
   const rawStatus = (serverOrderData.status || existingOrder?.status || 'PENDING').toUpperCase() as PlacedOrderStatus;
 
   return {
     id: serverOrderData.id,
-    orderNumber: serverOrderData.orderNumber || serverOrderData.order_number,
-    order_number: serverOrderData.orderNumber || serverOrderData.order_number,
-    tableSessionId: serverOrderData.tableSessionId || serverOrderData.table_session_id,
-    orderMode,
+    order_number: serverOrderData.order_number || '',
+    table_session_id: serverOrderData.table_session_id,
     order_mode: orderMode,
-    tableNo: serverOrderData.tableNo || serverOrderData.table_no,
-    table_no: serverOrderData.tableNo || serverOrderData.table_no,
-    customerName: serverOrderData.customerName || serverOrderData.customer_name,
-    customer_name: serverOrderData.customerName || serverOrderData.customer_name,
+    table_no: serverOrderData.table_no,
+    session_token: serverOrderData.session_token,
+    customer_name: serverOrderData.customer_name,
     items: mappedItems,
-    totalAmount: Number(serverOrderData.totalAmount || serverOrderData.total_amount || 0),
-    total_amount: Number(serverOrderData.totalAmount || serverOrderData.total_amount || 0),
+    total_amount: Number(serverOrderData.total_amount ?? 0),
     status: rawStatus,
-    paymentStatus: (serverOrderData.paymentStatus?.toUpperCase() as any) || 'UNPAID',
-    placedAt: existingOrder?.placedAt || new Date(serverOrderData.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-    placed_at: existingOrder?.placed_at || new Date(serverOrderData.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-    estimatedMinutes: existingOrder?.estimatedMinutes || (orderMode === 'DELIVERY' ? 35 : orderMode === 'TAKEAWAY' ? 20 : 15),
+    payment_status: serverOrderData.payment_status?.toUpperCase() as any || 'UNPAID',
+    placed_at: existingOrder?.placed_at || new Date(serverOrderData.created_at || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
     estimated_minutes: existingOrder?.estimated_minutes || (orderMode === 'DELIVERY' ? 35 : orderMode === 'TAKEAWAY' ? 20 : 15),
-    paymentMethod: serverOrderData.paymentMethod || serverOrderData.payment_method || existingOrder?.paymentMethod,
-    payment_method: serverOrderData.paymentMethod || serverOrderData.payment_method || existingOrder?.payment_method,
+    payment_method: serverOrderData.payment_method || existingOrder?.payment_method,
   };
 };
 
@@ -108,14 +101,16 @@ interface ClientState {
   // Cart management
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
-  removeFromCart: (menuItemId: string) => void;
-  updateQuantity: (menuItemId: string, delta: number) => void;
+  removeFromCart: (key: string) => void;
+  updateQuantity: (key: string, delta: number) => void;
   clearCart: () => void;
 
   // Table Session (QR Security & Lifecycle)
-  tableSession: TableSession | null;
+  table_session: TableSession | null;
   setTableSession: (session: TableSession | null) => void;
+  set_table_session: (session: TableSession | null) => void;
   clearTableSession: () => void;
+  clear_table_session: () => void;
   checkInWithQrToken: (qrSecretToken: string) => Promise<TableSession>;
   refreshTableSession: () => Promise<TableSession | null>;
   requestPayment: () => Promise<TableSession | null>;
@@ -124,28 +119,32 @@ interface ClientState {
   confirmPaymentDemo: (method?: ClientPaymentMethod) => Promise<TableSession | null>;
 
   // Order mode & draft
-  orderMode: OrderMode;
+  order_mode: OrderMode;
   setOrderMode: (mode: OrderMode) => void;
-  orderDraft: Partial<ClientOrderDraft>;
+  set_order_mode: (mode: OrderMode) => void;
+  order_draft: Partial<ClientOrderDraft>;
   setOrderDraft: (patch: Partial<ClientOrderDraft>) => void;
+  set_order_draft: (patch: Partial<ClientOrderDraft>) => void;
 
   // Orders history & tracking
   orders: PlacedOrder[];
-  placedOrder: PlacedOrder | null;
+  placed_order: PlacedOrder | null;
   setPlacedOrder: (order: PlacedOrder | null) => void;
+  set_placed_order: (order: PlacedOrder | null) => void;
   placeOrder: (draft: ClientOrderDraft) => Promise<PlacedOrder | null>;
   clearPlacedOrder: () => void;
+  clear_placed_order: () => void;
   syncOrderStatus: (id: string, status: PlacedOrderStatus) => void;
   fetchOrderById: (orderId: string) => Promise<PlacedOrder | null>;
   fetchOrdersFromServer: () => Promise<PlacedOrder[]>;
   handleServerOrderEvent: (serverOrder: any) => void;
 
   // Table service requests (e.g. xin đá, đũa muỗng, gọi thanh toán)
-  serviceRequests: Record<string, string[]>;
+  service_requests: Record<string, string[]>;
   sendServiceRequest: (orderId: string, requestText: string) => Promise<void>;
 
   // Cart drawer open/close
-  isCartOpen: boolean;
+  is_cart_open: boolean;
   openCart: () => void;
   closeCart: () => void;
 
@@ -157,18 +156,23 @@ interface ClientState {
 
 export const selectTotalItems = (s: ClientState) =>
   s.cart.reduce((sum, item) => sum + item.quantity, 0);
+export const select_total_items = selectTotalItems;
 
 export const selectTotalAmount = (s: ClientState) =>
   s.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+export const select_total_amount = selectTotalAmount;
 
 export const selectHasActiveOrders = (s: ClientState) =>
   s.orders.some((o) => o.status !== 'COMPLETED');
+export const select_has_active_orders = selectHasActiveOrders;
 
 export const selectActiveOrders = (s: ClientState) =>
   s.orders;
+export const select_active_orders = selectActiveOrders;
 
 export const selectLatestActiveOrder = (s: ClientState) =>
   s.orders.find((o) => o.status !== 'COMPLETED') || null;
+export const select_latest_active_order = selectLatestActiveOrder;
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -182,12 +186,12 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   addToCart: (item, quantity = 1) =>
     set((state) => {
-      const itemKey = item.id || item.menuItemId;
-      const existing = state.cart.find((c) => (c.id || c.menuItemId) === itemKey);
+      const itemKey = item.id || item.menu_item_id;
+      const existing = state.cart.find((c) => (c.id || c.menu_item_id) === itemKey);
       if (existing) {
         return {
           cart: state.cart.map((c) =>
-            (c.id || c.menuItemId) === itemKey
+            (c.id || c.menu_item_id) === itemKey
               ? { ...c, quantity: c.quantity + quantity }
               : c
           ),
@@ -198,20 +202,20 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   removeFromCart: (key) =>
     set((state) => ({
-      cart: state.cart.filter((c) => (c.id || c.menuItemId) !== key),
+      cart: state.cart.filter((c) => (c.id || c.menu_item_id) !== key),
     })),
 
   updateQuantity: (key, delta) =>
     set((state) => {
-      const item = state.cart.find((c) => (c.id || c.menuItemId) === key);
+      const item = state.cart.find((c) => (c.id || c.menu_item_id) === key);
       if (!item) return state;
       const newQty = item.quantity + delta;
       if (newQty <= 0) {
-        return { cart: state.cart.filter((c) => (c.id || c.menuItemId) !== key) };
+        return { cart: state.cart.filter((c) => (c.id || c.menu_item_id) !== key) };
       }
       return {
         cart: state.cart.map((c) =>
-          (c.id || c.menuItemId) === key ? { ...c, quantity: newQty } : c
+          (c.id || c.menu_item_id) === key ? { ...c, quantity: newQty } : c
         ),
       };
     }),
@@ -219,16 +223,24 @@ export const useClientStore = create<ClientState>((set, get) => ({
   clearCart: () => set({ cart: [] }),
 
   // Table Session
-  tableSession: initialSavedTableSession,
+  table_session: initialSavedTableSession,
 
   setTableSession: (session) => {
     saveTableSessionToStorage(session);
-    set({ tableSession: session });
+    set({ table_session: session });
+  },
+  set_table_session: (session) => {
+    saveTableSessionToStorage(session);
+    set({ table_session: session });
   },
 
   clearTableSession: () => {
     saveTableSessionToStorage(null);
-    set({ tableSession: null });
+    set({ table_session: null });
+  },
+  clear_table_session: () => {
+    saveTableSessionToStorage(null);
+    set({ table_session: null });
   },
 
   checkInWithQrToken: async (qrSecretToken: string) => {
@@ -244,8 +256,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          qrSecretToken: trimmed,
-          deviceToken,
+          qr_secret_token: trimmed,
+          device_token: deviceToken,
           mode: 'pay_after',
         }),
       });
@@ -253,8 +265,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
         const sessionData: TableSession = await res.json();
         saveTableSessionToStorage(sessionData);
         set({
-          tableSession: sessionData,
-          orderMode: 'DINE_IN',
+          table_session: sessionData,
+          order_mode: 'DINE_IN',
         });
         return sessionData;
       }
@@ -340,19 +352,19 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
       const simSession: TableSession = {
         id: `sess-tbl-${tableNum}-${Date.now()}`,
-        tableId: `tbl-${tableNum}`,
-        tableNo: `Bàn ${pad}`,
-        sessionToken: `sess-sim-tbl-${tableNum}-${Math.random().toString(36).substring(2, 9)}`,
-        deviceToken,
-        isDeviceMaster: true,
+        table_id: `tbl-${tableNum}`,
+        table_no: `Bàn ${pad}`,
+        session_token: `sess-sim-tbl-${tableNum}-${Math.random().toString(36).substring(2, 9)}`,
+        device_token: deviceToken,
+        is_device_master: true,
         status: 'ACTIVE',
         mode: 'PAY_AFTER',
-        expiresAt: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
       };
       saveTableSessionToStorage(simSession);
       set({
-        tableSession: simSession,
-        orderMode: 'DINE_IN',
+        table_session: simSession,
+        order_mode: 'DINE_IN',
       });
       return simSession;
     }
@@ -361,21 +373,21 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   refreshTableSession: async () => {
-    const currentSession = get().tableSession;
-    if (!currentSession?.sessionToken) return null;
+    const currentSession = get().table_session;
+    if (!currentSession?.session_token) return null;
     try {
       const res = await fetch('/api/table-sessions/current', {
-        headers: { 'X-Table-Session': currentSession.sessionToken },
+        headers: { 'X-Table-Session': currentSession.session_token },
       });
       if (res.ok) {
         const data: TableSession = await res.json();
         saveTableSessionToStorage(data);
-        set({ tableSession: data });
+        set({ table_session: data });
         return data;
       } else if (res.status === 404) {
         // Token cũ không còn tồn tại trên server (phiên hết hạn hoặc DB mới)
         saveTableSessionToStorage(null);
-        set({ tableSession: null });
+        set({ table_session: null });
         return null;
       }
     } catch (err) {
@@ -385,13 +397,13 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   requestPayment: async () => {
-    const currentSession = get().tableSession;
-    if (!currentSession?.sessionToken) return null;
+    const currentSession = get().table_session;
+    if (!currentSession?.session_token) return null;
     let finalSession: TableSession;
     try {
       const res = await fetch('/api/table-sessions/request-payment', {
         method: 'POST',
-        headers: { 'X-Table-Session': currentSession.sessionToken },
+        headers: { 'X-Table-Session': currentSession.session_token },
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -403,8 +415,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
       // Fallback local simulation
       const orders = get().orders;
       const activeOrder = orders.find((o) => o.status !== 'COMPLETED');
-      const totalAmount = activeOrder ? activeOrder.totalAmount : 0;
-      const orderNumber = activeOrder ? activeOrder.orderNumber : 'ORD-LOCAL';
+      const totalAmount = activeOrder ? activeOrder.total_amount : 0;
+      const orderNumber = activeOrder ? activeOrder.order_number : 'ORD-LOCAL';
 
       const transferContent = `OMNIRESTO ${orderNumber}`;
       const qrUrl = generateVietQRUrl(totalAmount, transferContent);
@@ -412,31 +424,31 @@ export const useClientStore = create<ClientState>((set, get) => ({
       finalSession = {
         ...currentSession,
         status: 'PAYMENT_REQUESTED',
-        activeOrderId: activeOrder?.id,
-        activeOrderNumber: orderNumber,
-        totalAmount,
-        vietQr: {
-          qrImageUrl: qrUrl,
+        active_order_id: activeOrder?.id,
+        active_order_number: orderNumber,
+        total_amount: totalAmount,
+        viet_qr: {
+          qr_image_url: qrUrl,
           amount: totalAmount,
-          bankId: PAYMENT_CONFIG.bankId,
-          accountNumber: PAYMENT_CONFIG.accountNumber,
-          accountName: PAYMENT_CONFIG.accountName,
-          transferContent,
+          bank_id: PAYMENT_CONFIG.bankId,
+          account_number: PAYMENT_CONFIG.accountNumber,
+          account_name: PAYMENT_CONFIG.accountName,
+          transfer_content: transferContent,
         },
       };
     }
 
     saveTableSessionToStorage(finalSession);
-    set({ tableSession: finalSession });
+    set({ table_session: finalSession });
 
     // Broadcast payment requested to Admin / POS
-    if (typeof window !== 'undefined' && finalSession.tableNo) {
+    if (typeof window !== 'undefined' && finalSession.table_no) {
       window.dispatchEvent(
         new CustomEvent('omniresto:payment_requested', {
           detail: {
-            tableNo: finalSession.tableNo,
-            orderNumber: finalSession.activeOrderNumber,
-            totalAmount: finalSession.totalAmount,
+            tableNo: finalSession.table_no,
+            orderNumber: finalSession.active_order_number,
+            totalAmount: finalSession.total_amount,
           },
         })
       );
@@ -445,13 +457,13 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   cancelPaymentRequest: async () => {
-    const currentSession = get().tableSession;
-    if (!currentSession?.sessionToken) return null;
+    const currentSession = get().table_session;
+    if (!currentSession?.session_token) return null;
     let finalSession: TableSession;
     try {
       const res = await fetch('/api/table-sessions/cancel-payment-request', {
         method: 'POST',
-        headers: { 'X-Table-Session': currentSession.sessionToken },
+        headers: { 'X-Table-Session': currentSession.session_token },
       });
       if (res.ok) {
         finalSession = await res.json();
@@ -463,17 +475,17 @@ export const useClientStore = create<ClientState>((set, get) => ({
       finalSession = {
         ...currentSession,
         status: 'ACTIVE',
-        vietQr: undefined,
+        viet_qr: undefined,
       };
     }
 
     saveTableSessionToStorage(finalSession);
-    set({ tableSession: finalSession });
+    set({ table_session: finalSession });
 
-    if (typeof window !== 'undefined' && finalSession.tableNo) {
+    if (typeof window !== 'undefined' && finalSession.table_no) {
       window.dispatchEvent(
         new CustomEvent('omniresto:payment_request_cancelled', {
-          detail: { tableNo: finalSession.tableNo },
+          detail: { tableNo: finalSession.table_no },
         })
       );
     }
@@ -481,11 +493,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   verifySessionDemo: async (staffId = 'STAFF-POS') => {
-    const currentSession = get().tableSession;
-    if (!currentSession?.sessionToken) return null;
+    const currentSession = get().table_session;
+    if (!currentSession?.session_token) return null;
     let finalSession: TableSession;
     try {
-      const res = await fetch(`/api/table-sessions/verify?sessionToken=${encodeURIComponent(currentSession.sessionToken)}&staffId=${encodeURIComponent(staffId)}`, {
+      const res = await fetch(`/api/table-sessions/verify?sessionToken=${encodeURIComponent(currentSession.session_token)}&staffId=${encodeURIComponent(staffId)}`, {
         method: 'POST',
       });
       if (res.ok) {
@@ -497,9 +509,9 @@ export const useClientStore = create<ClientState>((set, get) => ({
       console.warn('verifySession on backend failed, simulating locally:', err);
       finalSession = {
         ...currentSession,
-        isVerified: true,
-        verifiedAt: new Date().toISOString(),
-        verifiedByStaffId: staffId,
+        is_verified: true,
+        verified_at: new Date().toISOString(),
+        verified_by_staff_id: staffId,
       };
     }
 
@@ -516,12 +528,12 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
     saveTableSessionToStorage(finalSession);
     saveOrdersToStorage(updatedOrders);
-    set({ tableSession: finalSession, orders: updatedOrders });
+    set({ table_session: finalSession, orders: updatedOrders });
 
-    if (typeof window !== 'undefined' && finalSession.tableNo) {
+    if (typeof window !== 'undefined' && finalSession.table_no) {
       window.dispatchEvent(
         new CustomEvent('omniresto:table_session_verified', {
-          detail: { tableNo: finalSession.tableNo },
+          detail: { tableNo: finalSession.table_no },
         })
       );
     }
@@ -529,16 +541,16 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   confirmPaymentDemo: async (method: ClientPaymentMethod = 'QR_CODE') => {
-    const currentSession = get().tableSession;
-    if (!currentSession?.sessionToken) return null;
+    const currentSession = get().table_session;
+    if (!currentSession?.session_token) return null;
     try {
-      await fetch(`/api/table-sessions/confirm-payment?sessionToken=${encodeURIComponent(currentSession.sessionToken)}&staffId=STAFF-POS&method=${encodeURIComponent(method)}`, {
+      await fetch(`/api/table-sessions/confirm-payment?sessionToken=${encodeURIComponent(currentSession.session_token)}&staffId=STAFF-POS&method=${encodeURIComponent(method)}`, {
         method: 'POST',
       });
     } catch { }
     // Xóa demo lock nếu có
-    if (currentSession.tableId) {
-      const match = currentSession.tableId.match(/\d+/);
+    if (currentSession.table_id) {
+      const match = currentSession.table_id.match(/\d+/);
       if (match) {
         localStorage.removeItem(`omniresto_demo_lock_tbl_${parseInt(match[0], 10)}`);
       }
@@ -547,22 +559,22 @@ export const useClientStore = create<ClientState>((set, get) => ({
     const updatedOrders = get().orders.map((o) => ({
       ...o,
       status: 'COMPLETED' as const,
-      paymentStatus: 'PAID' as const,
+      payment_status: 'PAID' as const,
     }));
 
     // Khi thanh toán xong -> Hủy phiên bàn, giải phóng bàn và chuyển về chế độ giao hàng
     saveTableSessionToStorage(null);
     saveOrdersToStorage(updatedOrders);
     set({
-      tableSession: null,
-      orderMode: 'DELIVERY',
+      table_session: null,
+      order_mode: 'DELIVERY',
       orders: updatedOrders,
     });
 
-    if (typeof window !== 'undefined' && currentSession.tableId) {
+    if (typeof window !== 'undefined' && currentSession.table_id) {
       window.dispatchEvent(
         new CustomEvent('omniresto:table_session_closed', {
-          detail: { tableId: currentSession.tableId, reason: 'CLIENT_PAYMENT_CONFIRMED' },
+          detail: { tableId: currentSession.table_id, reason: 'CLIENT_PAYMENT_CONFIRMED' },
         })
       );
     }
@@ -570,29 +582,35 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   // Order
-  orderMode: initialSavedTableSession ? 'DINE_IN' : 'DELIVERY',
-  setOrderMode: (mode) => set({ orderMode: mode }),
-  orderDraft: {},
+  order_mode: initialSavedTableSession ? 'DINE_IN' : 'DELIVERY',
+  setOrderMode: (mode) => set({ order_mode: mode }),
+  set_order_mode: (mode) => set({ order_mode: mode }),
+  order_draft: {},
   setOrderDraft: (patch) =>
-    set((state) => ({ orderDraft: { ...state.orderDraft, ...patch } })),
+    set((state) => ({ order_draft: { ...state.order_draft, ...patch } })),
+  set_order_draft: (patch) =>
+    set((state) => ({ order_draft: { ...state.order_draft, ...patch } })),
 
   // Orders collection & active order
   orders: initialSavedOrders,
-  placedOrder: initialSavedOrders.length > 0 ? initialSavedOrders[0] : null,
+  placed_order: initialSavedOrders.length > 0 ? initialSavedOrders[0] : null,
 
-  setPlacedOrder: (order) => set({ placedOrder: order }),
+  setPlacedOrder: (order) => set({ placed_order: order }),
+  set_placed_order: (order) => set({ placed_order: order }),
+  clearPlacedOrder: () => set({ placed_order: null }),
+  clear_placed_order: () => set({ placed_order: null }),
 
   placeOrder: async (draft) => {
     orderCounter += 1;
     const state = get();
 
-    if (draft.orderMode === 'DINE_IN' && !state.tableSession?.sessionToken) {
+    if (draft.order_mode === 'DINE_IN' && !state.table_session?.session_token) {
       alert('Chưa có phiên bàn hợp lệ! Quý khách vui lòng quét mã QR tại bàn để gọi món.');
       return null;
     }
 
     // Chặn đặt món nếu hóa đơn đang đóng băng để thanh toán (chỉ áp dụng khi gọi món ăn tại bàn)
-    if (draft.orderMode === 'DINE_IN' && state.tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED') {
+    if (draft.order_mode === 'DINE_IN' && state.table_session?.status?.toUpperCase() === 'PAYMENT_REQUESTED') {
       alert('Hóa đơn của bàn đang được đóng băng để thanh toán. Quý khách vui lòng bấm "Hủy yêu cầu thanh toán" trên ứng dụng nếu muốn tiếp tục gọi thêm món tại bàn!');
       return null;
     }
@@ -602,16 +620,16 @@ export const useClientStore = create<ClientState>((set, get) => ({
       return null;
     }
 
-    const session = state.tableSession as any;
-    const effectiveTableNo = draft.orderMode === 'DINE_IN'
-      ? (session?.tableNo || session?.table_no)
-      : (draft.orderMode === 'TAKEAWAY' && session ? (session?.tableNo || session?.table_no) : draft.tableNo);
+    const session = state.table_session;
+    const effectiveTableNo = draft.order_mode === 'DINE_IN'
+      ? session?.table_no
+      : (draft.order_mode === 'TAKEAWAY' && session ? session?.table_no : draft.table_no);
 
-    const effectiveSessionToken = draft.orderMode === 'DINE_IN'
-      ? (session?.sessionToken || session?.session_token)
+    const effectiveSessionToken = draft.order_mode === 'DINE_IN'
+      ? session?.session_token
       : undefined;
 
-    if (draft.orderMode === 'DINE_IN' && !effectiveSessionToken) {
+    if (draft.order_mode === 'DINE_IN' && !effectiveSessionToken) {
       alert('Chưa có thông tin bàn ăn! Quý khách vui lòng quét mã QR tại bàn trước khi đặt món.');
       return null;
     }
@@ -626,31 +644,25 @@ export const useClientStore = create<ClientState>((set, get) => ({
       if (effectiveSessionToken) {
         headers['X-Table-Session'] = effectiveSessionToken;
       }
-      const rawMethod = (draft.paymentMethod || 'cash').toLowerCase();
+      const rawMethod = (draft.payment_method || 'cash').toLowerCase();
       const normalizedPaymentMethod = rawMethod === 'cash' ? 'cash' : rawMethod === 'card' ? 'card' : 'qr_code';
 
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          orderType: draft.orderMode === 'DINE_IN' ? 'dine_in' : draft.orderMode === 'TAKEAWAY' ? 'takeaway' : 'delivery',
-          tableNo: effectiveTableNo,
-          customerName: draft.customerName,
-          paymentMethod: normalizedPaymentMethod,
-          items: state.cart.map((it) => {
-            let realId = it.menuItemId || (it as any).menu_item_id || '';
-            if (!realId && it.id) {
-              realId = it.id;
-            }
-            return {
-              menuItemId: realId,
-              name: it.name,
-              quantity: it.quantity,
-              price: it.price,
-              notes: it.notes,
-              optionIds: (it as any).optionIds || (it as any).selectedOptionIds || [],
-            };
-          }),
+          order_type: draft.order_mode === 'DINE_IN' ? 'dine_in' : draft.order_mode === 'TAKEAWAY' ? 'takeaway' : 'delivery',
+          table_no: effectiveTableNo,
+          customer_name: draft.customer_name,
+          payment_method: normalizedPaymentMethod,
+          items: state.cart.map((it) => ({
+            menu_item_id: it.menu_item_id || it.id || '',
+            name: it.name,
+            quantity: it.quantity,
+            price: it.price,
+            notes: it.notes,
+            option_ids: (it as any).option_ids || [],
+          })),
         }),
       });
 
@@ -670,21 +682,21 @@ export const useClientStore = create<ClientState>((set, get) => ({
       const simOrderNum = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
       serverOrderData = {
         id: `ord-sim-${Date.now()}`,
-        orderNumber: simOrderNum,
-        tableNo: effectiveTableNo,
-        orderType: draft.orderMode === 'DINE_IN' ? 'dine_in' : draft.orderMode === 'TAKEAWAY' ? 'takeaway' : 'delivery',
+        order_number: simOrderNum,
+        table_no: effectiveTableNo,
+        order_mode: draft.order_mode === 'DINE_IN' ? 'DINE_IN' : draft.order_mode === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY',
         status: 'pending',
-        paymentStatus: 'unpaid',
-        totalAmount: state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        payment_status: 'unpaid',
+        total_amount: state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
         items: state.cart.map((it, idx) => ({
           id: `line-${Date.now()}-${idx}`,
-          menuItemId: it.menuItemId,
+          menu_item_id: it.menu_item_id,
           name: it.name,
           quantity: it.quantity,
           price: it.price,
           status: 'PENDING',
         })),
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       };
     }
 
@@ -692,10 +704,10 @@ export const useClientStore = create<ClientState>((set, get) => ({
       return null;
     }
 
-    const existingOrder = state.orders.find((o) => o.id === serverOrderData.id || o.orderNumber === serverOrderData.orderNumber);
+    const existingOrder = state.orders.find((o) => o.id === serverOrderData.id || o.order_number === (serverOrderData.order_number || serverOrderData.orderNumber));
     const finalOrder = mapServerOrderToPlacedOrder(serverOrderData, existingOrder || {
-      orderMode: draft.orderMode,
-      paymentMethod: draft.paymentMethod,
+      order_mode: draft.order_mode,
+      payment_method: draft.payment_method,
     } as any);
 
     // Cập nhật danh sách đơn
@@ -712,41 +724,39 @@ export const useClientStore = create<ClientState>((set, get) => ({
     // Đồng bộ với Admin Store
     useAdminStore.getState().addOrderFromClient({
       id: finalOrder.id,
-      order_number: finalOrder.orderNumber || finalOrder.id,
-      order_type: finalOrder.orderMode,
-      table_no: finalOrder.tableNo,
+      order_number: finalOrder.order_number || finalOrder.id,
+      order_type: finalOrder.order_mode,
+      table_no: finalOrder.table_no,
       status: (finalOrder.status as any) || 'CONFIRMED',
       items: finalOrder.items.map((it, i) => ({
         id: String(i + 1),
-        name: `${it.name}${it.roundNo && it.roundNo > 1 ? ` (Đợt ${it.roundNo})` : ''}`,
+        name: `${it.name}${it.round_no && it.round_no > 1 ? ` (Đợt ${it.round_no})` : ''}`,
         quantity: it.quantity,
         price: it.price,
         notes: it.notes,
       })),
-      total_amount: finalOrder.totalAmount || 0,
+      total_amount: finalOrder.total_amount || 0,
       created_at: 'Vừa xong',
-      customer_name: finalOrder.customerName,
-      payment_method: finalOrder.paymentMethod as any,
+      customer_name: finalOrder.customer_name,
+      payment_method: finalOrder.payment_method as any,
     });
 
     // Chỉ clear giỏ hàng khi backend đã ghi nhận tạo/cộng dồn đơn thành công
     set({
       orders: updatedOrders,
-      placedOrder: finalOrder,
+      placed_order: finalOrder,
       cart: [],
-      orderDraft: {},
+      order_draft: {},
     });
     return finalOrder;
   },
-
-  clearPlacedOrder: () => set({ placedOrder: null }),
 
   syncOrderStatus: (id, status) =>
     set((state) => {
       const normStatus = (status || 'PENDING').toUpperCase() as PlacedOrderStatus;
       let changed = false;
       const updatedOrders = state.orders.map((o) => {
-        if (o.id === id || o.orderNumber === id || o.order_number === id) {
+        if (o.id === id || o.order_number === id) {
           changed = true;
           return {
             ...o,
@@ -763,18 +773,18 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
       saveOrdersToStorage(updatedOrders);
       const updatedPlaced =
-        state.placedOrder && (state.placedOrder.id === id || state.placedOrder.orderNumber === id || state.placedOrder.order_number === id)
+        state.placed_order && (state.placed_order.id === id || state.placed_order.order_number === id)
           ? {
-            ...state.placedOrder,
+            ...state.placed_order,
             status: normStatus,
-            items: state.placedOrder.items.map((it) => ({
+            items: state.placed_order.items.map((it) => ({
               ...it,
               status: (normStatus === 'COMPLETED' ? 'READY' : normStatus) as any,
             })),
           }
-          : state.placedOrder;
+          : state.placed_order;
 
-      return { orders: updatedOrders, placedOrder: updatedPlaced };
+      return { orders: updatedOrders, placed_order: updatedPlaced };
     }),
 
   fetchOrderById: async (orderId: string) => {
@@ -783,11 +793,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
       const res = await fetch(`/api/orders/${orderId}`);
       if (!res.ok) return null;
       const data = await res.json();
-      const existing = get().orders.find((o) => o.id === data.id || o.orderNumber === data.orderNumber || o.order_number === data.orderNumber);
+      const existing = get().orders.find((o) => o.id === data.id || o.order_number === data.order_number);
       const updated = mapServerOrderToPlacedOrder(data, existing);
 
       set((state) => {
-        const idx = state.orders.findIndex((o) => o.id === updated.id || o.orderNumber === updated.orderNumber);
+        const idx = state.orders.findIndex((o) => o.id === updated.id || o.order_number === updated.order_number);
         const newOrders = [...state.orders];
         if (idx !== -1) {
           newOrders[idx] = updated;
@@ -796,11 +806,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
         }
         saveOrdersToStorage(newOrders);
 
-        const newPlaced = state.placedOrder && (state.placedOrder.id === updated.id || state.placedOrder.orderNumber === updated.orderNumber || state.placedOrder.order_number === updated.orderNumber)
+        const newPlaced = state.placed_order && (state.placed_order.id === updated.id || state.placed_order.order_number === updated.order_number)
           ? updated
-          : state.placedOrder;
+          : state.placed_order;
 
-        return { orders: newOrders, placedOrder: newPlaced };
+        return { orders: newOrders, placed_order: newPlaced };
       });
       return updated;
     } catch (err) {
@@ -810,7 +820,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   fetchOrdersFromServer: async () => {
-    const sessionToken = get().tableSession?.sessionToken;
+    const sessionToken = get().table_session?.session_token;
     try {
       const headers: Record<string, string> = {};
       if (sessionToken) headers['X-Table-Session'] = sessionToken;
@@ -821,7 +831,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
       const currentOrders = get().orders;
       const updatedList = data.map((d: any) => {
-        const existing = currentOrders.find((o) => o.id === d.id || o.orderNumber === d.orderNumber || o.order_number === d.orderNumber);
+        const existing = currentOrders.find((o) => o.id === d.id || o.order_number === d.order_number);
         return mapServerOrderToPlacedOrder(d, existing);
       });
 
@@ -841,21 +851,21 @@ export const useClientStore = create<ClientState>((set, get) => ({
   handleServerOrderEvent: (serverOrder: any) => {
     if (!serverOrder?.id) return;
     const currentOrders = get().orders;
-    const currentSession = get().tableSession;
+    const currentSession = get().table_session;
 
     // Kiểm tra xem đơn hàng này có thuộc về thiết bị/phiên của khách này không
-    const matchesSession = currentSession?.id && (serverOrder.tableSessionId === currentSession.id || serverOrder.table_session_id === currentSession.id);
-    const matchesExisting = currentOrders.some((o) => o.id === serverOrder.id || o.orderNumber === serverOrder.orderNumber || o.order_number === serverOrder.orderNumber);
+    const matchesSession = currentSession?.id && serverOrder.table_session_id === currentSession.id;
+    const matchesExisting = currentOrders.some((o) => o.id === serverOrder.id || o.order_number === serverOrder.order_number);
 
     if (!matchesSession && !matchesExisting) {
       return;
     }
 
-    const existing = currentOrders.find((o) => o.id === serverOrder.id || o.orderNumber === serverOrder.orderNumber || o.order_number === serverOrder.orderNumber);
+    const existing = currentOrders.find((o) => o.id === serverOrder.id || o.order_number === serverOrder.order_number);
     const updated = mapServerOrderToPlacedOrder(serverOrder, existing);
 
     set((state) => {
-      const idx = state.orders.findIndex((o) => o.id === updated.id || o.orderNumber === updated.orderNumber);
+      const idx = state.orders.findIndex((o) => o.id === updated.id || o.order_number === updated.order_number);
       const newOrders = [...state.orders];
       if (idx !== -1) {
         newOrders[idx] = updated;
@@ -864,20 +874,20 @@ export const useClientStore = create<ClientState>((set, get) => ({
       }
       saveOrdersToStorage(newOrders);
 
-      const newPlaced = state.placedOrder && (state.placedOrder.id === updated.id || state.placedOrder.orderNumber === updated.orderNumber || state.placedOrder.order_number === updated.orderNumber)
+      const newPlaced = state.placed_order && (state.placed_order.id === updated.id || state.placed_order.order_number === updated.order_number)
         ? updated
-        : state.placedOrder;
+        : state.placed_order;
 
-      return { orders: newOrders, placedOrder: newPlaced };
+      return { orders: newOrders, placed_order: newPlaced };
     });
   },
 
   // Table service requests (kết nối API backend với rate limiting)
-  serviceRequests: {},
+  service_requests: {},
   sendServiceRequest: async (orderId, requestText) => {
     const state = get();
-    const currentSession = state.tableSession;
-    if (!currentSession?.sessionToken) {
+    const currentSession = state.table_session;
+    if (!currentSession?.session_token) {
       alert('Chưa có phiên bàn hợp lệ để gọi phục vụ! Vui lòng quét mã QR tại bàn.');
       return;
     }
@@ -902,10 +912,10 @@ export const useClientStore = create<ClientState>((set, get) => ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Table-Session': currentSession.sessionToken,
+          'X-Table-Session': currentSession.session_token,
         },
         body: JSON.stringify({
-          requestType,
+          request_type: requestType,
           note: requestText,
         }),
       });
@@ -916,10 +926,10 @@ export const useClientStore = create<ClientState>((set, get) => ({
         return;
       }
 
-      const tableNo = currentSession.tableNo || state.placedOrder?.tableNo || 'Bàn';
-      const current = state.serviceRequests[orderId] || [];
+      const tableNo = currentSession.table_no || state.placed_order?.table_no || 'Bàn';
+      const current = state.service_requests[orderId] || [];
       const updated = {
-        ...state.serviceRequests,
+        ...state.service_requests,
         [orderId]: [...current, `${requestText} (${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })})`],
       };
 
@@ -935,7 +945,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
         );
       }
 
-      set({ serviceRequests: updated });
+      set({ service_requests: updated });
       alert(`🔔 Đã gửi yêu cầu: "${requestText}". Nhân viên phục vụ sẽ đến hỗ trợ bàn ${tableNo} ngay!`);
     } catch (e) {
       console.error('Lỗi khi gửi yêu cầu phục vụ:', e);
@@ -944,9 +954,9 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   // Cart drawer
-  isCartOpen: false,
-  openCart: () => set({ isCartOpen: true }),
-  closeCart: () => set({ isCartOpen: false }),
+  is_cart_open: false,
+  openCart: () => set({ is_cart_open: true }),
+  closeCart: () => set({ is_cart_open: false }),
 
   // Reset all client data (orders, table session, cart)
   resetClientData: () => {
@@ -956,11 +966,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
     } catch { }
     set({
       orders: [],
-      placedOrder: null,
+      placed_order: null,
       cart: [],
-      tableSession: null,
-      orderDraft: {},
-      serviceRequests: {},
+      table_session: null,
+      order_draft: {},
+      service_requests: {},
     });
   },
 }));
@@ -982,17 +992,17 @@ if (typeof window !== 'undefined') {
   }) as EventListener);
 
   window.addEventListener('omniresto:table_session_verified', ((e: CustomEvent<{ tableNo: string }>) => {
-    const current = useClientStore.getState().tableSession;
-    if (current && (!e.detail?.tableNo || current.tableNo.toLowerCase() === e.detail.tableNo.toLowerCase())) {
+    const current = useClientStore.getState().table_session;
+    if (current && (!e.detail?.tableNo || (current.table_no && current.table_no.toLowerCase() === e.detail.tableNo.toLowerCase()))) {
       useClientStore.getState().verifySessionDemo();
     }
   }) as EventListener);
 
   window.addEventListener('omniresto:table_session_closed', ((e: CustomEvent<{ tableId: string; reason: string }>) => {
-    const current = useClientStore.getState().tableSession;
-    if (current && (!e.detail?.tableId || current.tableId === e.detail.tableId)) {
+    const current = useClientStore.getState().table_session;
+    if (current && (!e.detail?.tableId || current.table_id === e.detail.tableId)) {
       useClientStore.getState().clearTableSession();
-      useClientStore.setState({ orderMode: 'DELIVERY' });
+      useClientStore.setState({ order_mode: 'DELIVERY' });
       alert('🔔 Bàn của quý khách đã hoàn tất thanh toán hoặc kết thúc phiên. Cảm ơn quý khách đã dùng bữa tại OmniResto!');
     }
   }) as EventListener);

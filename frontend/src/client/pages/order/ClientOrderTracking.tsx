@@ -30,15 +30,15 @@ const STEPS: { key: PlacedOrderStatus; label: string; icon: React.FC<{ size?: nu
 export const ClientOrderTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const { orders, placedOrder, tableSession, fetchOrderById } = useClientStore();
+  const { orders, placed_order, table_session, fetchOrderById } = useClientStore();
 
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isQrAccordionOpen, setIsQrAccordionOpen] = useState(false);
 
-  // Tìm đơn hàng theo ID hoặc orderNumber
+  // Tìm đơn hàng theo ID hoặc order_number
   const matchedOrder = orders.find(
-    (o) => o.id === orderId || o.order_number === orderId || o.orderNumber === orderId
-  ) || (placedOrder?.id === orderId || placedOrder?.orderNumber === orderId ? placedOrder : null);
+    (o) => o.id === orderId || o.order_number === orderId
+  ) || (placed_order?.id === orderId || placed_order?.order_number === orderId ? placed_order : null);
 
   const currentStatus: PlacedOrderStatus = ((matchedOrder?.status ?? 'PENDING').toUpperCase() as PlacedOrderStatus);
 
@@ -48,7 +48,7 @@ export const ClientOrderTracking: React.FC = () => {
     fetchOrderById(orderId);
 
     const interval = setInterval(() => {
-      const current = useClientStore.getState().orders.find((o) => o.id === orderId || o.order_number === orderId || o.orderNumber === orderId);
+      const current = useClientStore.getState().orders.find((o) => o.id === orderId || o.order_number === orderId);
       if (!current || (current.status !== 'COMPLETED' && current.status !== 'CANCELLED')) {
         fetchOrderById(orderId);
       }
@@ -84,10 +84,10 @@ export const ClientOrderTracking: React.FC = () => {
   const currentOrder = matchedOrder;
   const isCompleted = currentStatus === 'COMPLETED';
 
-  const orderMode = currentOrder.order_mode || (currentOrder as any).orderMode || (currentOrder.table_no ? 'DINE_IN' : 'TAKEAWAY');
+  const orderMode = currentOrder.order_mode || (currentOrder.table_no ? 'DINE_IN' : 'TAKEAWAY');
   let orderModeBadge = {
     icon: '🍽️',
-    label: currentOrder.table_no || tableSession?.table_no ? `Bàn ${currentOrder.table_no || tableSession?.table_no}` : 'Tại bàn',
+    label: currentOrder.table_no || table_session?.table_no ? `Bàn ${currentOrder.table_no || table_session?.table_no}` : 'Tại bàn',
     bg: '#ecfdf5',
     color: '#047857',
     border: '#a7f3d0'
@@ -482,8 +482,8 @@ export const ClientOrderTracking: React.FC = () => {
       <ServiceRequestModal
         isOpen={isServiceModalOpen}
         onClose={() => setIsServiceModalOpen(false)}
-        orderId={currentOrder.id}
-        tableNo={currentOrder.table_no}
+        order_id={currentOrder.id}
+        table_no={currentOrder.table_no}
       />
     </div>
   );

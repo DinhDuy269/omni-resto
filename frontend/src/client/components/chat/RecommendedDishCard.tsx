@@ -14,11 +14,11 @@ export const RecommendedDishCard: React.FC<Props> = ({ dish }) => {
   const handleAddToCart = () => {
     addToCart(
       {
-        menuItemId: dish.id,
+        menu_item_id: dish.id,
         name: dish.name,
         category: dish.category,
         price: dish.price,
-        image: dish.imageUrl || '',
+        image: dish.image_url || '',
       },
       1
     );
@@ -43,10 +43,15 @@ export const RecommendedDishCard: React.FC<Props> = ({ dish }) => {
       }}
     >
       {/* Ảnh món */}
-      {dish.imageUrl ? (
+      {dish.image_url ? (
         <img
-          src={dish.imageUrl}
+          src={dish.image_url}
           alt={dish.name}
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.onerror = null;
+            target.src = '/images/food-placeholder.svg';
+          }}
           style={{
             width: 60,
             height: 60,
@@ -95,7 +100,7 @@ export const RecommendedDishCard: React.FC<Props> = ({ dish }) => {
             {dish.price.toLocaleString('vi-VN')} đ
           </span>
 
-          {dish.isVegetarian && (
+          {dish.is_vegetarian && (
             <span
               style={{
                 fontSize: '0.6875rem',
@@ -110,7 +115,7 @@ export const RecommendedDishCard: React.FC<Props> = ({ dish }) => {
             </span>
           )}
 
-          {dish.spicyLevel && dish.spicyLevel > 0 ? (
+          {dish.spicy_level && dish.spicy_level > 0 ? (
             <span
               style={{
                 fontSize: '0.6875rem',

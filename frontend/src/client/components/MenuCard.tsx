@@ -26,7 +26,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
   const { cart, updateQuantity } = useClientStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const cartItem = cart.find((c) => c.menuItemId === item.id);
+  const cartItem = cart.find((c) => (c.menu_item_id || c.id) === item.id);
   const qty = cartItem?.quantity ?? 0;
   const isStatusAvailable = item.status === 'AVAILABLE' || item.status === 'available';
   const isTimeAvailable = item.is_available_now !== false;
@@ -57,8 +57,9 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
             className="menu-card__img"
             loading="lazy"
             onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop';
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = '/images/food-placeholder.svg';
             }}
           />
 

@@ -8,7 +8,7 @@ export const ClientCheckIn: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const checkInWithQrToken = useClientStore((s) => s.checkInWithQrToken);
-  const existingSession = useClientStore((s) => s.tableSession);
+  const existingSession = useClientStore((s) => s.table_session);
 
   const isChangeMode = searchParams.get('change') === 'true';
   const tokenParam = searchParams.get('token');
@@ -25,7 +25,7 @@ export const ClientCheckIn: React.FC = () => {
       setError(null);
       const sess = await checkInWithQrToken(token);
       setSession(sess);
-      if (fromTableNo && fromTableNo !== sess.tableNo) {
+      if (fromTableNo && fromTableNo !== sess.table_no) {
         setSwitchedFrom(fromTableNo);
       } else {
         setSwitchedFrom(null);
@@ -43,7 +43,7 @@ export const ClientCheckIn: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     if (tokenParam) {
-      const prev = existingSession?.tableNo;
+      const prev = existingSession?.table_no;
       executeCheckIn(tokenParam, isChangeMode || (prev && prev !== '') ? prev : undefined);
     } else {
       const timer = setTimeout(() => {
@@ -117,12 +117,12 @@ export const ClientCheckIn: React.FC = () => {
 
             <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#111', margin: '0 0 6px' }}>
               {switchedFrom
-                ? `Quý khách đã chuyển sang ${session.tableNo}!`
-                : `Chào mừng quý khách đến ${session.tableNo}!`}
+                ? `Quý khách đã chuyển sang ${session.table_no}!`
+                : `Chào mừng quý khách đến ${session.table_no}!`}
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#666', margin: '0 0 24px' }}>
               {switchedFrom
-                ? `Hệ thống đã cập nhật phiên từ ${switchedFrom} sang ${session.tableNo}. Mọi món trong giỏ hàng đã được bảo lưu an toàn.`
+                ? `Hệ thống đã cập nhật phiên từ ${switchedFrom} sang ${session.table_no}. Mọi món trong giỏ hàng đã được bảo lưu an toàn.`
                 : 'Quý khách có thể tự do chọn món trong thực đơn. Đơn đặt sẽ được tự động gửi thẳng về bếp của bàn này.'}
             </p>
 
@@ -133,7 +133,7 @@ export const ClientCheckIn: React.FC = () => {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#888' }}>Vị trí bàn mới:</span>
-                <strong style={{ color: '#047857' }}>{session.tableNo}</strong>
+                <strong style={{ color: '#047857' }}>{session.table_no}</strong>
               </div>
               {switchedFrom && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -215,7 +215,7 @@ export const ClientCheckIn: React.FC = () => {
                 borderRadius: 10, padding: '10px 14px', marginBottom: 18,
                 fontSize: '0.85rem', color: '#475569',
               }}>
-                Bàn hiện tại của bạn: <strong style={{ color: '#0f172a' }}>{existingSession.tableNo}</strong>
+                Bàn hiện tại của bạn: <strong style={{ color: '#0f172a' }}>{existingSession.table_no}</strong>
               </div>
             )}
 
@@ -255,7 +255,7 @@ export const ClientCheckIn: React.FC = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (manualToken.trim()) {
-                  executeCheckIn(manualToken.trim(), existingSession?.tableNo);
+                  executeCheckIn(manualToken.trim(), existingSession?.table_no);
                 }
               }}
               style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}
@@ -303,7 +303,7 @@ export const ClientCheckIn: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setManualToken(demo.token);
-                      executeCheckIn(demo.token, existingSession?.tableNo);
+                      executeCheckIn(demo.token, existingSession?.table_no);
                     }}
                     style={{
                       background: '#fff', border: '1px solid #cbd5e1',
@@ -329,7 +329,7 @@ export const ClientCheckIn: React.FC = () => {
               }}
             >
               <RotateCcw size={16} />
-              <span>Hủy đổi bàn & Giữ nguyên {existingSession?.tableNo || 'bàn hiện tại'}</span>
+              <span>Hủy đổi bàn & Giữ nguyên {existingSession?.table_no || 'bàn hiện tại'}</span>
             </button>
           </div>
         ) : (

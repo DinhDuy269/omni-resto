@@ -7,13 +7,13 @@ export const staffApi = {
       const res = await apiClient.get<any[]>('/users');
             return res.data.map((u)=>({
         id: u.id,
-        full_name: u.fullName || u.full_name || '',
+        full_name: u.full_name || '',
         email: u.email,
         phone: u.phone,
         role: u.role,
         status: u.status || 'active',
         avatar: u.avatar || undefined,
-        created_at: u.createdAt || u.created_at || new Date().toISOString(),
+        created_at: u.created_at || new Date().toISOString(),
       }));
     } catch (error) {
       throw transformAxiosErrorResponse(error);
@@ -26,13 +26,13 @@ export const staffApi = {
       const u = res.data;
       return {
         id: u.id,
-        full_name: u.fullName || u.full_name || '',
+        full_name: u.full_name || '',
         email: u.email,
         phone: u.phone,
         role: u.role,
         status: u.status || 'active',
         avatar: u.avatar || undefined,
-        created_at: u.createdAt || u.created_at || new Date().toISOString(),
+        created_at: u.created_at || new Date().toISOString(),
       };
     } catch (error) {
       throw transformAxiosErrorResponse(error);

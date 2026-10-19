@@ -51,8 +51,8 @@ export async function checkPaymentStatus(orderId: string): Promise<{ is_paid: bo
   }
   const data = await res.json();
   return {
-    is_paid: Boolean(data.isPaid ?? data.is_paid),
-    order_status: data.orderStatus ?? data.order_status ?? 'pending',
-    total_amount: data.totalAmount ?? data.total_amount,
+    is_paid: Boolean(data.is_paid),
+    order_status: data.order_status ?? 'pending',
+    total_amount: data.total_amount,
   };
 }

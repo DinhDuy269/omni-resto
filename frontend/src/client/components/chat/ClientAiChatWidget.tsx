@@ -132,12 +132,12 @@ export const ClientAiChatWidget: React.FC = () => {
                 <div style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
 
                 {/* Render Thẻ Món Ăn Tương Tác */}
-                {msg.recommendedDishes && msg.recommendedDishes.length > 0 && (
+                {msg.recommended_dishes && msg.recommended_dishes.length > 0 && (
                   <div style={{ marginTop: '8px' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                       ✨ Món ăn gợi ý dành cho bạn:
                     </div>
-                    {msg.recommendedDishes.map((dish) => (
+                    {msg.recommended_dishes.map((dish) => (
                       <RecommendedDishCard key={dish.id} dish={dish} />
                     ))}
                   </div>

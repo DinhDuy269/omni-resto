@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Plus,
   Search,
@@ -15,9 +15,13 @@ import {
   List,
   Clock,
   RotateCcw,
+  UploadCloud,
+  Loader2,
 } from 'lucide-react';
 import { useAdminStore, DISH_CATEGORIES } from '../../store/adminStore';
 import { Modal } from '../../../shared/components/Modal';
+import { uploadApi } from '../../../shared/api/uploadApi';
+import { getOptimizedImageUrl } from '../../../shared/utils/cloudinaryUtils';
 import type { MenuCategory, MenuStatus, MenuItem, CategoryOption } from '../../../shared/types/admin';
 
 const CATEGORIES: MenuCategory[] = [
@@ -39,6 +43,7 @@ export const MasterMenuManagement: React.FC = () => {
   const {
     menu_items,
     category_options,
+    fetchInitialData,
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
@@ -48,6 +53,14 @@ export const MasterMenuManagement: React.FC = () => {
     deleteCategoryOption,
     toggleCategoryOptionStatus,
   } = useAdminStore();
+
+  // Cloudinary / Cloud Sync states
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<string | null>(null);
+  const [isUploadingImg, setIsUploadingImg] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputAddRef = useRef<HTMLInputElement | null>(null);
+  const fileInputEditRef = useRef<HTMLInputElement | null>(null);
 
   // Active top-level sub-view: 'DISHES' or 'OPTIONS'
   const [activeTab, setActiveTab] = useState<'DISHES' | 'OPTIONS'>('DISHES');
@@ -78,7 +91,7 @@ export const MasterMenuManagement: React.FC = () => {
     description: '',
     ingredients: '',
     is_best_seller: false,
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
+    image: '/images/food-placeholder.svg',
   });
 
   // Option Modals State
@@ -139,6 +152,66 @@ export const MasterMenuManagement: React.FC = () => {
     return matchesSearch && matchesCat && matchesType;
   });
 
+  // Handlers for Cloudinary Upload & Migration
+  const handleUploadImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. Kiểm tra kích thước file tối đa 5MB
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setUploadError(`Kích thước file (${(file.size / (1024 * 1024)).toFixed(1)}MB) vượt quá giới hạn 5MB!`);
+      e.target.value = '';
+      return;
+    }
+
+    // 2. Kiểm tra định dạng ảnh hợp lệ
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setUploadError('Định dạng file không hợp lệ! Vui lòng chọn ảnh JPG, PNG, WEBP hoặc GIF.');
+      e.target.value = '';
+      return;
+    }
+
+    // 3. Tạo preview cục bộ tức thì và giải phóng bộ nhớ khi hoàn tất
+    const previewUrl = URL.createObjectURL(file);
+    setDishFormData((prev) => ({ ...prev, image: previewUrl }));
+
+    try {
+      setIsUploadingImg(true);
+      setUploadError(null);
+      const res = await uploadApi.uploadImage(file);
+      setDishFormData((prev) => ({ ...prev, image: res.url }));
+    } catch (err: any) {
+      setUploadError(err?.error_description || 'Không thể tải ảnh lên hệ thống lưu trữ.');
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      setIsUploadingImg(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleMigrateCloudImages = async () => {
+    if (!window.confirm('Hệ thống sẽ quét toàn bộ món ăn và đồng bộ các ảnh sang Cloud Storage / Cloudinary để bảo toàn dữ liệu vĩnh viễn. Tiếp tục?')) {
+      return;
+    }
+
+    try {
+      setIsMigrating(true);
+      setMigrationStatus('Đang đồng bộ ảnh món ăn sang Cloudinary...');
+      const res = await uploadApi.migrateMenuImages();
+      setMigrationStatus(
+        res.message ||
+        `Hoàn tất đồng bộ Cloud! Đã xử lý ${res.total_processed} món (Thành công: ${res.successful}, Bỏ qua: ${res.skipped}, Thất bại: ${res.failed}).`
+      );
+      await fetchInitialData();
+    } catch (err: any) {
+      setMigrationStatus(`Đồng bộ thất bại: ${err?.error_description || 'Lỗi kết nối máy chủ.'}`);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   // Handlers for Dish
   const handleOpenAddDish = () => {
     setDishFormData({
@@ -150,7 +223,7 @@ export const MasterMenuManagement: React.FC = () => {
       description: '',
       ingredients: '',
       is_best_seller: false,
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
+      image: '/images/food-placeholder.svg',
     });
     setIsAddDishModalOpen(true);
   };
@@ -184,7 +257,7 @@ export const MasterMenuManagement: React.FC = () => {
       ingredients: dishFormData.ingredients.trim() || undefined,
       status: 'AVAILABLE',
       is_best_seller: dishFormData.is_best_seller,
-      image: dishFormData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
+      image: dishFormData.image || '/images/food-placeholder.svg',
     });
 
     setIsAddDishModalOpen(false);
@@ -319,7 +392,17 @@ export const MasterMenuManagement: React.FC = () => {
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={handleMigrateCloudImages}
+              disabled={isMigrating}
+              title="Quét và đồng bộ tất cả ảnh món ăn sang Cloudinary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {isMigrating ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+              <span>{isMigrating ? 'Đang đồng bộ...' : 'Đồng Bộ Ảnh Cloud'}</span>
+            </button>
             <button
               className={`btn ${activeTab === 'DISHES' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => {
@@ -342,6 +425,31 @@ export const MasterMenuManagement: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {migrationStatus && (
+          <div
+            style={{
+              marginTop: '12px',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              backgroundColor: migrationStatus.includes('thất bại') ? '#fee2e2' : '#f0fdf4',
+              color: migrationStatus.includes('thất bại') ? '#dc2626' : '#16a34a',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+            }}
+          >
+            <span>{migrationStatus}</span>
+            <button
+              onClick={() => setMigrationStatus(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: 'inherit' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
@@ -680,7 +788,7 @@ export const MasterMenuManagement: React.FC = () => {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ position: 'relative', width: '46px', height: '46px', flexShrink: 0 }}>
                                   <img
-                                    src={dish.image}
+                                    src={getOptimizedImageUrl(dish.image, { width: 100, height: 100 })}
                                     alt={dish.name}
                                     style={{
                                       width: '100%',
@@ -691,8 +799,9 @@ export const MasterMenuManagement: React.FC = () => {
                                       opacity: isAvailable ? 1 : 0.6,
                                     }}
                                     onError={(e) => {
-                                      (e.target as HTMLImageElement).src =
-                                        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop';
+                                      const target = e.target as HTMLImageElement;
+                                      target.onerror = null;
+                                      target.src = '/images/food-placeholder.svg';
                                     }}
                                   />
                                   {dish.is_best_seller && (
@@ -907,7 +1016,7 @@ export const MasterMenuManagement: React.FC = () => {
                       {/* Thumbnail */}
                       <div style={{ position: 'relative', width: '92px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden' }}>
                         <img
-                          src={dish.image}
+                          src={getOptimizedImageUrl(dish.image, { width: 200, height: 200 })}
                           alt={dish.name}
                           style={{
                             width: '100%',
@@ -916,8 +1025,9 @@ export const MasterMenuManagement: React.FC = () => {
                             opacity: isAvailable ? 1 : 0.6,
                           }}
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop';
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = '/images/food-placeholder.svg';
                           }}
                         />
                         {dish.is_best_seller && (
@@ -1321,13 +1431,61 @@ export const MasterMenuManagement: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">URL Hình Ảnh Món Ăn</label>
+            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Hình Ảnh Món Ăn</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Hỗ trợ Cloudinary & Local</span>
+            </label>
+            
+            <input
+              type="file"
+              ref={fileInputAddRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleUploadImageFile}
+            />
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+              <img
+                src={dishFormData.image}
+                alt="Preview"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '8px',
+                  objectFit: 'cover',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#0f172a',
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = '/images/food-placeholder.svg';
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => fileInputAddRef.current?.click()}
+                disabled={isUploadingImg}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {isUploadingImg ? <Loader2 size={15} className="animate-spin" /> : <UploadCloud size={15} />}
+                <span>{isUploadingImg ? 'Đang tải lên Cloud...' : 'Tải Ảnh Lên Cloud'}</span>
+              </button>
+            </div>
+
             <input
               type="url"
               className="form-input"
+              placeholder="Hoặc dán URL hình ảnh trực tiếp..."
               value={dishFormData.image}
               onChange={(e) => setDishFormData({ ...dishFormData, image: e.target.value })}
             />
+            {uploadError && (
+              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                {uploadError}
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '16px 0' }}>
@@ -1446,13 +1604,61 @@ export const MasterMenuManagement: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">URL Hình Ảnh Món Ăn</label>
+            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Hình Ảnh Món Ăn</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Hỗ trợ Cloudinary & Local</span>
+            </label>
+
+            <input
+              type="file"
+              ref={fileInputEditRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleUploadImageFile}
+            />
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+              <img
+                src={dishFormData.image}
+                alt="Preview"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '8px',
+                  objectFit: 'cover',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#0f172a',
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = '/images/food-placeholder.svg';
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => fileInputEditRef.current?.click()}
+                disabled={isUploadingImg}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {isUploadingImg ? <Loader2 size={15} className="animate-spin" /> : <UploadCloud size={15} />}
+                <span>{isUploadingImg ? 'Đang tải lên Cloud...' : 'Tải Ảnh Lên Cloud'}</span>
+              </button>
+            </div>
+
             <input
               type="url"
               className="form-input"
+              placeholder="Hoặc dán URL hình ảnh trực tiếp..."
               value={dishFormData.image}
               onChange={(e) => setDishFormData({ ...dishFormData, image: e.target.value })}
             />
+            {uploadError && (
+              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                {uploadError}
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '16px 0' }}>

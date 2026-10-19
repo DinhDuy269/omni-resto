@@ -33,6 +33,7 @@ public class MenuItemService {
 
     private final MenuItemRepository menuItemRepository;
     private final CategoryRepository categoryRepository;
+    private final CloudStorageService cloudStorageService;
 
     public List<MenuItemResponse> getAllMenuItems(String period) {
         List<MenuItemEntity> items;
@@ -126,7 +127,28 @@ public class MenuItemService {
             entity.setIsBestSeller(actual.getIsBestSeller());
         }
         if (actual.getEffectiveImageUrl() != null) {
-            entity.setImageUrl(actual.getEffectiveImageUrl());
+            String oldImageUrl = entity.getImageUrl();
+            String newImageUrl = actual.getEffectiveImageUrl().trim();
+            if (oldImageUrl != null && !oldImageUrl.equals(newImageUrl)) {
+                String oldPublicId = cloudStorageService.extractPublicId(oldImageUrl);
+                String newPublicId = cloudStorageService.extractPublicId(newImageUrl);
+
+                // CHỐNG XÓA NHẦM: Chỉ xóa nếu oldPublicId khác newPublicId (tránh xóa chính ảnh vừa ghi đè)
+                if (oldPublicId != null && !oldPublicId.equals(newPublicId)) {
+                    // CHỐNG XÓA ẢNH DÙNG CHUNG: Kiểm tra xem còn món ăn nào khác đang sử dụng URL cũ không
+                    long otherReferences = menuItemRepository.countByImageUrlAndIdNot(oldImageUrl, entity.getId());
+                    if (otherReferences == 0) {
+                        try {
+                            cloudStorageService.deleteImage(oldPublicId);
+                        } catch (Exception e) {
+                            log.warn("Không thể xóa ảnh cũ trên Cloudinary: {}", e.getMessage());
+                        }
+                    } else {
+                        log.info("Giữ lại ảnh cũ {} vì còn {} món ăn khác đang sử dụng.", oldPublicId, otherReferences);
+                    }
+                }
+            }
+            entity.setImageUrl(newImageUrl);
         }
 
         if (actual.getCategoryId() != null && !actual.getCategoryId().isBlank()) {
@@ -150,7 +172,25 @@ public class MenuItemService {
     @Transactional
     public void deleteMenuItem(String id) {
         MenuItemEntity entity = findMenuItemById(id);
+        String imageUrl = entity.getImageUrl();
         menuItemRepository.delete(entity);
+
+        // Chỉ xóa tài nguyên trên Cloudinary sau khi đã xóa thành công trong DB và không còn món nào khác dùng chung
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            long remaining = menuItemRepository.countByImageUrl(imageUrl);
+            if (remaining == 0) {
+                String publicId = cloudStorageService.extractPublicId(imageUrl);
+                if (publicId != null) {
+                    try {
+                        cloudStorageService.deleteImage(publicId);
+                    } catch (Exception e) {
+                        log.warn("Không thể xóa ảnh món ăn trên Cloudinary: {}", e.getMessage());
+                    }
+                }
+            } else {
+                log.info("Giữ lại ảnh {} trên Cloudinary vì còn {} món khác cùng sử dụng.", imageUrl, remaining);
+            }
+        }
     }
 
     public MealPeriodInfoResponse getCurrentMealPeriodInfo() {
@@ -202,7 +242,6 @@ public class MenuItemService {
         }
 
         res.setBasePrice(entity.getBasePrice());
-        res.setPrice(entity.getBasePrice());
         res.setDescription(entity.getDescription());
         res.setIngredients(entity.getIngredients());
         res.setMealPeriods(entity.getMealPeriods());
@@ -214,7 +253,6 @@ public class MenuItemService {
 
         res.setStatus(entity.getStatus());
         res.setIsBestSeller(Boolean.TRUE.equals(entity.getIsBestSeller()));
-        res.setImage(entity.getImageUrl());
         res.setImageUrl(entity.getImageUrl());
         res.setCreatedAt(entity.getCreatedAt());
         res.setUpdatedAt(entity.getUpdatedAt());

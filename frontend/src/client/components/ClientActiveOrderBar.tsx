@@ -7,7 +7,7 @@ export const ClientActiveOrderBar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const orders = useClientStore((s) => s.orders);
-  const tableSession = useClientStore((s) => s.tableSession);
+  const table_session = useClientStore((s) => s.table_session);
   const [isDismissed, setIsDismissed] = useState(false);
 
   // Lọc tất cả đơn hàng đang hoạt động (chưa hoàn thành)
@@ -23,7 +23,7 @@ export const ClientActiveOrderBar: React.FC = () => {
     0
   );
   const roundsCount = activeOrders.length;
-  const currentTable = tableSession?.tableNo || activeOrders[0]?.tableNo;
+  const currentTable = table_session?.table_no || activeOrders[0]?.table_no;
 
   // Xác định trạng thái tổng thể của các món
   const hasReady = activeOrders.some((o) => o.status === 'READY');

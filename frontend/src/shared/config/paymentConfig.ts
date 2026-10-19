@@ -38,9 +38,9 @@ export const generateVietQRUrl = (
   const config = { ...PAYMENT_CONFIG, ...customConfig };
   const safeAmount = Math.max(0, Math.round(Number(amount) || 0));
   const encodedContent = encodeURIComponent(transferContent.trim());
-  const effectiveName = config.accountName || config.account_name || '';
-  const effectiveBankId = config.bankId || config.bank_id || 'MB';
-  const effectiveAccountNo = config.accountNumber || config.account_number || '';
+  const effectiveName = config.account_name || config.accountName || '';
+  const effectiveBankId = config.bank_id || config.bankId || 'MB';
+  const effectiveAccountNo = config.account_number || config.accountNumber || '';
   const encodedName = encodeURIComponent(effectiveName.trim());
 
   return `https://img.vietqr.io/image/${effectiveBankId}-${effectiveAccountNo}-${config.template}.png?amount=${safeAmount}&addInfo=${encodedContent}&accountName=${encodedName}`;

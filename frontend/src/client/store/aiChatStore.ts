@@ -31,9 +31,24 @@ const INITIAL_GREETING: ChatMessage = {
 };
 
 const getStorageKey = (): string => {
-  const session = useClientStore.getState().tableSession;
-  const sessionId = session?.id || session?.tableNo || 'default';
+  const session = useClientStore.getState().table_session;
+  const sessionId = session?.id || session?.table_no || 'default';
   return `${STORAGE_PREFIX}${sessionId}`;
+};
+
+const getClientId = (): string => {
+  try {
+    let cid = sessionStorage.getItem('omni_client_uuid');
+    if (!cid) {
+      cid = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `client-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      sessionStorage.setItem('omni_client_uuid', cid);
+    }
+    return cid;
+  } catch {
+    return 'anon-client';
+  }
 };
 
 const loadSavedMessages = (): ChatMessage[] => {
@@ -112,13 +127,13 @@ export const useAiChatStore = create<AiChatState>((set, get) => ({
       content: m.text,
     }));
 
-    const session = useClientStore.getState().tableSession;
-    const sessionToken = session?.sessionToken;
+    const session = useClientStore.getState().table_session;
+    const sessionToken = session?.session_token;
 
     try {
       const res = await apiClient.post<{
         reply: string;
-        recommendedDishes?: ChatRecommendedDish[];
+        recommended_dishes?: ChatRecommendedDish[];
       }>(
         '/ai/chat',
         {
@@ -126,7 +141,10 @@ export const useAiChatStore = create<AiChatState>((set, get) => ({
           history,
         },
         {
-          headers: sessionToken ? { 'X-Table-Session': sessionToken } : {},
+          headers: {
+            ...(sessionToken ? { 'X-Table-Session': sessionToken } : {}),
+            'X-Client-Id': getClientId(),
+          },
           timeout: 25000,
         }
       );
@@ -141,7 +159,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => ({
           sender: 'bot',
           text: res.data.reply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          recommendedDishes: res.data.recommendedDishes || [],
+          recommended_dishes: res.data.recommended_dishes || [],
         };
         const updated = [...get().messages, botMsg];
         set({ messages: updated, isLoading: false });
@@ -177,7 +195,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => ({
         sender: 'bot',
         text: fallbackText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        recommendedDishes: [],
+        recommended_dishes: [],
       };
       const updated = [...get().messages, botMsg];
       set({ messages: updated, isLoading: false });

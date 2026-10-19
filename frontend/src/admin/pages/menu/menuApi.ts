@@ -3,12 +3,12 @@ import type { MenuItem, MenuStatus, CategoryOption } from '../../../shared/types
 
 export const transformCategoryOption = (opt: any): CategoryOption => ({
   id: opt.id,
-  category_id: opt.categoryId || opt.category_id,
+  category_id: opt.category_id,
   name: opt.name,
-  option_type: opt.optionType || opt.option_type || 'TOPPING',
+  option_type: opt.option_type || 'TOPPING',
   price: Number(opt.price || 0),
   status: opt.status || 'AVAILABLE',
-  display_order: opt.displayOrder ?? opt.display_order,
+  display_order: opt.display_order,
 });
 
 export const transformMenuItem = (raw: any): MenuItem => ({
@@ -16,21 +16,19 @@ export const transformMenuItem = (raw: any): MenuItem => ({
   code: raw.code || '',
   name: raw.name || '',
   category: raw.category || '',
-  category_id: raw.categoryId || raw.category_id,
-  base_price: Number(raw.basePrice ?? raw.base_price ?? raw.price ?? 0),
-  price: Number(raw.price ?? raw.basePrice ?? raw.base_price ?? 0),
+  category_id: raw.category_id,
+  base_price: Number(raw.base_price ?? 0),
   description: raw.description || '',
   ingredients: raw.ingredients || '',
   status: (raw.status?.toUpperCase() || 'AVAILABLE') as MenuStatus,
-  is_best_seller: Boolean(raw.isBestSeller ?? raw.is_best_seller),
-  meal_periods: raw.mealPeriods || raw.meal_periods || 'ALL_DAY',
-  is_available_now: raw.isAvailableNow !== undefined ? raw.isAvailableNow : raw.is_available_now,
-  meal_period_note: raw.mealPeriodNote || raw.meal_period_note || '',
-  image: raw.image || raw.imageUrl || raw.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
-  image_url: raw.imageUrl || raw.image_url || raw.image,
+  is_best_seller: Boolean(raw.is_best_seller),
+  meal_periods: raw.meal_periods || 'ALL_DAY',
+  is_available_now: raw.is_available_now,
+  meal_period_note: raw.meal_period_note || '',
+  image: raw.image || raw.image_url || '/images/food-placeholder.svg',
   options: Array.isArray(raw.options) ? raw.options.map(transformCategoryOption) : [],
-  is_vegetarian: Boolean(raw.isVegetarian ?? raw.is_vegetarian),
-  spicy_level: raw.spicyLevel ?? raw.spicy_level,
+  is_vegetarian: Boolean(raw.is_vegetarian),
+  spicy_level: raw.spicy_level,
   allergens: raw.allergens,
 });
 
@@ -70,15 +68,15 @@ export const menuApi = {
       const payload = {
         code: request.code,
         name: request.name,
-        categoryId: request.category_id || 'cat-01',
-        categoryName: request.category,
-        basePrice: request.base_price,
-        mealPeriods: request.meal_periods || 'ALL_DAY',
+        category_id: request.category_id || 'cat-01',
+        category_name: request.category,
+        base_price: request.base_price,
+        meal_periods: request.meal_periods || 'ALL_DAY',
         description: request.description,
         ingredients: request.ingredients,
-        isBestSeller: request.is_best_seller,
+        is_best_seller: request.is_best_seller,
         image: request.image,
-        imageUrl: request.image_url || request.image,
+        image_url: request.image,
       };
       const res = await apiClient.post<any>('/menu-items', payload);
       const raw = res.data.menu_item || res.data;

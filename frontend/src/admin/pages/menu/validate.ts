@@ -15,7 +15,7 @@ export const getValidateMenuItemSchema = () => {
       .nullable()
       .required('Tên món không được để trống')
       .max(255, 'Tên món không được vượt quá 255 ký tự'),
-    basePrice: yup
+    base_price: yup
       .number()
       .required('Giá bán không được để trống')
       .min(1000, 'Giá bán phải lớn hơn 1,000 đ'),

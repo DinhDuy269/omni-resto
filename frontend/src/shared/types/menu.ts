@@ -28,7 +28,6 @@ export interface MenuItem {
   category: string;
   category_id?: string;
   base_price: number;
-  price?: number;
   description: string;
   ingredients?: string;
   status: MenuStatus;
@@ -37,7 +36,6 @@ export interface MenuItem {
   is_available_now?: boolean;
   meal_period_note?: string;
   image: string;
-  image_url?: string;
   options?: CategoryOption[];
   is_vegetarian?: boolean;
   spicy_level?: number;
@@ -50,12 +48,10 @@ export interface MenuItemRequest {
   category_id?: string;
   category?: string;
   base_price?: number;
-  price?: number;
   description?: string;
   ingredients?: string;
   meal_periods?: string;
   image?: string;
-  image_url?: string;
 }
 
 export interface MenuItemResponse {

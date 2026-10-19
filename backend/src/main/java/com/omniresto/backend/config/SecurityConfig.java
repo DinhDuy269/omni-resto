@@ -19,13 +19,19 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
-   
+
+    private final StaffKeyAuthenticationFilter staffKeyAuthenticationFilter;
+
     @Bean //nghĩa là Spring gọi hàm này một lần khi khởi động, giữ kết quả để dùng chung.
     
     public PasswordEncoder passwordEncoder() {
@@ -53,9 +59,10 @@ public class SecurityConfig {
     //Chuỗi lọc bảo mật
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))//Gọi hàm cho phép truy cập từ domain khác(Cors)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))//Gọi hàm cho phép truy cập từ domain khác(Cors)
             .csrf(AbstractHttpConfigurer::disable)//Tắt bảo vệ CSRF(Cross-Site Request Forgery)
             .authorizeHttpRequests(this::configureAuthorizeHttpRequests)//Cấu hình quyền truy cập vào các API
+            .addFilterBefore(staffKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(exceptionHandling -> exceptionHandling
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -76,6 +83,8 @@ public class SecurityConfig {
 
     private void configureAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
         authorizeRequests
+            .requestMatchers(new AntPathRequestMatcher("/api/upload/**")).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+            .requestMatchers(new AntPathRequestMatcher("/uploads/**")).permitAll()
             .requestMatchers(menuApiPatterns()).permitAll()
             .requestMatchers(orderApiPatterns()).permitAll()
             .requestMatchers(userApiPatterns()).permitAll()

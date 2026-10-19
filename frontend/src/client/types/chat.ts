@@ -5,9 +5,9 @@ export interface ChatRecommendedDish {
   category: string;
   price: number;
   description: string;
-  imageUrl?: string;
-  isVegetarian?: boolean;
-  spicyLevel?: number;
+  image_url?: string;
+  is_vegetarian?: boolean;
+  spicy_level?: number;
   allergens?: string[] | string;
 }
 
@@ -16,7 +16,7 @@ export interface ChatMessage {
   sender: 'user' | 'bot';
   text: string;
   timestamp: string;
-  recommendedDishes?: ChatRecommendedDish[];
+  recommended_dishes?: ChatRecommendedDish[];
 }
 
 export interface ChatPromptChip {

@@ -8,12 +8,12 @@ export const tableApi = {
 
       return res.data.map((t) => ({
         id: t.id,
-        table_no: t.tableNo || t.table_no || '',
+        table_no: t.table_no || '',
         capacity: t.capacity || 4,
         status: (t.status?.toUpperCase() || 'AVAILABLE') as TableStatus,
-        qr_secret_token: t.qrSecretToken || t.qr_secret_token || '',
-        current_order_amount: t.currentOrderAmount ?? t.current_order_amount,
-        occupied_since: t.occupiedSince ?? t.occupied_since,
+        qr_secret_token: t.qr_secret_token || '',
+        current_order_amount: t.current_order_amount,
+        occupied_since: t.occupied_since,
       }));
     } catch (error) {
       throw transformAxiosErrorResponse(error);
@@ -31,7 +31,7 @@ export const tableApi = {
     regenerateQr: async (id: string): Promise<string> => {
         try {
             const res = await apiClient.post<any>(`/tables/${id}/regenerate-qr`);
-            return res.data.qrSecretToken || res.data.qr_secret_token || '';
+            return res.data.qr_secret_token || '';
         } catch (error) {
             throw transformAxiosErrorResponse(error);
         }

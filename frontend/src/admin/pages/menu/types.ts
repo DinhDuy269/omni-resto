@@ -5,8 +5,8 @@ export interface MenuItemFormData {
   code: string;
   name: string;
   category: MenuCategory;
-  basePrice: number;
+  base_price: number;
   description: string;
-  isBestSeller: boolean;
+  is_best_seller: boolean;
   image: string;
 }

@@ -28,12 +28,16 @@ public class AiChatbotController {
     @PostMapping("/chat")
     public ResponseEntity<AiChatResponse> chat(
             @RequestHeader(value = "X-Table-Session", required = false) String sessionToken,
+            @RequestHeader(value = "X-Client-Id", required = false) String clientId,
             @RequestBody(required = false) AiChatRequest request,
             HttpServletRequest servletRequest) {
 
         // 1. Xác thực phiên bàn hoặc phân định khách xem menu online
         String sessionKey;
         boolean sessionInvalid = false;
+        String clientIp = extractClientIp(servletRequest);
+        String effectiveClientId = (clientId != null && !clientId.trim().isEmpty()) ? clientId.trim() : "anon";
+
         if (sessionToken != null && !sessionToken.trim().isEmpty()) {
             try {
                 tableSessionService.validateAndTouchSession(sessionToken.trim());
@@ -41,20 +45,18 @@ public class AiChatbotController {
             } catch (Exception e) {
                 log.info("Session token '{}' invalid or expired ({}), falling back to guest mode", sessionToken, e.getMessage());
                 sessionInvalid = true;
-                String clientIp = servletRequest != null ? servletRequest.getRemoteAddr() : "guest";
-                sessionKey = "guest:" + (clientIp != null ? clientIp : "anonymous");
+                sessionKey = "guest:" + clientIp + ":" + effectiveClientId;
             }
         } else {
-            // Khách duyệt thực đơn trực tuyến: nhận diện theo IP client
-            String clientIp = servletRequest != null ? servletRequest.getRemoteAddr() : "guest";
-            sessionKey = "guest:" + (clientIp != null ? clientIp : "anonymous");
+            // Khách duyệt thực đơn trực tuyến: kết hợp IP + ClientId để tránh chặn nhầm khi dùng chung wifi quán
+            sessionKey = "guest:" + clientIp + ":" + effectiveClientId;
         }
 
         // 2. Giới hạn lượt gửi (Rate Limiting)
         if (!rateLimiter.tryAcquire(sessionKey)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(
                     AiChatResponse.builder()
-                            .reply("Dạ quý khách gửi tin nhắn hơi nhanh, OmniBot đang xử lý. Quý khách vui lòng đợi một chút rồi hỏi tiếp nhé! ⏳")
+                            .reply("Dạ quý khách gửi tin nhắn hơi nhanh hoặc hệ thống đang xử lý nhiều lượt yêu cầu. Quý khách vui lòng đợi một chút rồi hỏi tiếp nhé! ⏳")
                             .recommendedDishes(Collections.emptyList())
                             .modelUsed("Rate Limiter")
                             .build()
@@ -72,12 +74,31 @@ public class AiChatbotController {
         return responseBuilder.body(aiChatbotService.chat(request));
     }
 
+    private String extractClientIp(HttpServletRequest request) {
+        if (request == null) return "guest";
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.trim().isEmpty()) {
+            String[] parts = xForwardedFor.split(",");
+            if (parts.length > 0 && !parts[0].trim().isEmpty()) {
+                return parts[0].trim();
+            }
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.trim().isEmpty()) {
+            return xRealIp.trim();
+        }
+        String remoteAddr = request.getRemoteAddr();
+        return (remoteAddr != null && !remoteAddr.trim().isEmpty()) ? remoteAddr.trim() : "guest";
+    }
+
     @GetMapping("/status")
     public Map<String, Object> getStatus() {
         return Map.of(
                 "status", "ONLINE",
                 "service", "OmniResto AI Culinary Assistant",
-                "version", "1.0.0"
+                "version", "1.1.0",
+                "maxPerMinute", rateLimiter.getMaxRequestsPerMinute(),
+                "globalMaxPerMinute", rateLimiter.getGlobalMaxRequestsPerMinute()
         );
     }
 }

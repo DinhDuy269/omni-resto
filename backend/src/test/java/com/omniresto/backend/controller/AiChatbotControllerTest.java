@@ -45,7 +45,7 @@ class AiChatbotControllerTest {
     @DisplayName("Khách xem menu online không có token bàn vẫn được tư vấn (rate limit theo IP)")
     void testGuestWithoutSessionTokenAllowed() {
         when(servletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(rateLimiter.tryAcquire("guest:127.0.0.1")).thenReturn(true);
+        when(rateLimiter.tryAcquire("guest:127.0.0.1:anon")).thenReturn(true);
         when(aiChatbotService.chat(any())).thenReturn(
                 AiChatResponse.builder()
                         .reply("Dạ em chào quý khách!")
@@ -56,7 +56,7 @@ class AiChatbotControllerTest {
         AiChatRequest request = new AiChatRequest();
         request.setMessage("Xin chào");
 
-        ResponseEntity<AiChatResponse> response = aiChatbotController.chat(null, request, servletRequest);
+        ResponseEntity<AiChatResponse> response = aiChatbotController.chat(null, null, request, servletRequest);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Dạ em chào quý khách!", response.getBody().getReply());
@@ -70,7 +70,7 @@ class AiChatbotControllerTest {
         when(tableSessionService.validateAndTouchSession("invalid_token"))
                 .thenThrow(new RuntimeException("Session not found or closed"));
         when(servletRequest.getRemoteAddr()).thenReturn("192.168.1.50");
-        when(rateLimiter.tryAcquire("guest:192.168.1.50")).thenReturn(true);
+        when(rateLimiter.tryAcquire("guest:192.168.1.50:anon")).thenReturn(true);
         when(aiChatbotService.chat(any())).thenReturn(
                 AiChatResponse.builder()
                         .reply("Dạ em chào quý khách!")
@@ -81,7 +81,7 @@ class AiChatbotControllerTest {
         AiChatRequest request = new AiChatRequest();
         request.setMessage("Xin chào");
 
-        ResponseEntity<AiChatResponse> response = aiChatbotController.chat("invalid_token", request, servletRequest);
+        ResponseEntity<AiChatResponse> response = aiChatbotController.chat("invalid_token", null, request, servletRequest);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Dạ em chào quý khách!", response.getBody().getReply());
@@ -100,7 +100,7 @@ class AiChatbotControllerTest {
         AiChatRequest request = new AiChatRequest();
         request.setMessage("Xin chào");
 
-        ResponseEntity<AiChatResponse> response = aiChatbotController.chat("valid_token", request, servletRequest);
+        ResponseEntity<AiChatResponse> response = aiChatbotController.chat("valid_token", null, request, servletRequest);
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().getReply().contains("nhanh"));
@@ -124,7 +124,7 @@ class AiChatbotControllerTest {
         AiChatRequest request = new AiChatRequest();
         request.setMessage("Xin chào");
 
-        ResponseEntity<AiChatResponse> response = aiChatbotController.chat("valid_token", request, servletRequest);
+        ResponseEntity<AiChatResponse> response = aiChatbotController.chat("valid_token", null, request, servletRequest);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Dạ em chào anh chị!", response.getBody().getReply());

@@ -3,16 +3,22 @@ import { CheckCircle2, ShieldCheck, Copy, RefreshCw } from 'lucide-react';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../shared/config/paymentConfig';
 
 interface VietQRPaymentModalProps {
-  orderId: string;
-  orderNumber: string;
-  totalAmount: number;
+  order_id?: string;
+  orderId?: string;
+  order_number?: string;
+  orderNumber?: string;
+  total_amount?: number;
+  totalAmount?: number;
   onClose: () => void;
   onPaymentSuccess: () => void;
 }
 
 export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
+  order_id,
   orderId,
+  order_number,
   orderNumber,
+  total_amount,
   totalAmount,
   onClose,
   onPaymentSuccess,
@@ -20,11 +26,15 @@ export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
 
+  const finalOrderId = order_id || orderId || '';
+  const finalOrderNumber = order_number || orderNumber || '';
+  const finalTotalAmount = total_amount ?? totalAmount ?? 0;
+
   const { bankName, accountNumber, accountName: accountHolder } = PAYMENT_CONFIG;
-  const transferContent = `OMNIRESTO ${orderNumber}`;
+  const transferContent = `OMNIRESTO ${finalOrderNumber}`;
 
   // VietQR Dynamic Image URL
-  const qrImageUrl = generateVietQRUrl(totalAmount, transferContent);
+  const qrImageUrl = generateVietQRUrl(finalTotalAmount, transferContent);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transferContent);
@@ -36,13 +46,13 @@ export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
     setIsSimulating(true);
     try {
       // Send mock webhook to backend payment callback
-      const res = await fetch('http://localhost:8080/api/payments/webhook', {
+      const res = await fetch('/api/payments/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId,
-          transactionId: `TXN-${Date.now()}`,
-          amount: totalAmount,
+          order_id: finalOrderId,
+          transaction_id: `TXN-${Date.now()}`,
+          amount: finalTotalAmount,
         }),
       });
 

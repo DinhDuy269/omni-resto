@@ -32,7 +32,7 @@ export const ClientOrdersPage: React.FC = () => {
   const navigate = useNavigate();
   const {
     orders,
-    tableSession,
+    table_session,
     refreshTableSession,
     fetchOrdersFromServer,
     requestPayment,
@@ -59,10 +59,10 @@ export const ClientOrdersPage: React.FC = () => {
   // Tự động làm mới dữ liệu phiên bàn & danh sách đơn hàng từ Server khi vào trang
   useEffect(() => {
     fetchOrdersFromServer();
-    if (tableSession?.sessionToken) {
+    if (table_session?.session_token) {
       refreshTableSession();
     }
-  }, [tableSession?.sessionToken, fetchOrdersFromServer, refreshTableSession]);
+  }, [table_session?.session_token, fetchOrdersFromServer, refreshTableSession]);
 
   // Filter orders by search
   const filteredOrders = useMemo(() => {
@@ -70,9 +70,9 @@ export const ClientOrdersPage: React.FC = () => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
-        o.orderNumber.toLowerCase().includes(q) ||
-        (o.tableNo && o.tableNo.toLowerCase().includes(q)) ||
-        (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+        o.order_number.toLowerCase().includes(q) ||
+        (o.table_no && o.table_no.toLowerCase().includes(q)) ||
+        (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
         o.items.some((it) => it.name.toLowerCase().includes(q))
       );
     });
@@ -190,23 +190,23 @@ export const ClientOrdersPage: React.FC = () => {
       quantity: number;
       price: number;
       status: string;
-      roundNo: number;
+      round_no: number;
       notes?: string;
-      orderNumber: string;
+      order_number: string;
     }[] = [];
 
     activeOrders.forEach((ord) => {
       ord.items.forEach((it, idx) => {
         list.push({
-          key: `${ord.id}-${it.menuItemId}-${it.name}-${idx}`,
+          key: `${ord.id}-${it.menu_item_id}-${it.name}-${idx}`,
           name: it.name,
           image: it.image,
           quantity: it.quantity,
           price: it.price,
           status: it.status || ord.status,
-          roundNo: it.roundNo || 1,
+          round_no: it.round_no || 1,
           notes: it.notes,
-          orderNumber: ord.orderNumber,
+          order_number: ord.order_number,
         });
       });
     });
@@ -215,7 +215,7 @@ export const ClientOrdersPage: React.FC = () => {
   }, [activeOrders]);
 
   // Thống kê tổng tiền bàn
-  const totalTableAmount = activeOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalTableAmount = activeOrders.reduce((sum, o) => sum + o.total_amount, 0);
   const totalTableDishCount = activeOrders.reduce(
     (sum, o) => sum + o.items.reduce((s, it) => s + it.quantity, 0),
     0
@@ -260,7 +260,7 @@ export const ClientOrdersPage: React.FC = () => {
                   gap: '5px',
                 }}
               >
-                📍 {tableSession?.tableNo || 'Bàn của bạn'}
+                📍 {table_session?.table_no || 'Bàn của bạn'}
               </span>
               <span
                 style={{
@@ -293,7 +293,7 @@ export const ClientOrdersPage: React.FC = () => {
         </div>
 
         {/* ── BANNER 1: Hóa đơn đang đóng băng để thanh toán ── */}
-        {tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED' && (
+        {table_session?.status?.toUpperCase() === 'PAYMENT_REQUESTED' && (
           <div
             style={{
               background: '#eff6ff',
@@ -587,14 +587,14 @@ export const ClientOrdersPage: React.FC = () => {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>
-                            {order.orderNumber}
+                            {order.order_number}
                           </strong>
                           <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                            · {order.placedAt}
+                            · {order.placed_at}
                           </span>
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '1px' }}>
-                          {itemCount} món · <strong>{order.totalAmount.toLocaleString('vi-VN')}đ</strong>
+                          {itemCount} món · <strong>{order.total_amount.toLocaleString('vi-VN')}đ</strong>
                         </div>
                       </div>
                     </div>
@@ -631,7 +631,7 @@ export const ClientOrdersPage: React.FC = () => {
                       <div style={{ marginBottom: '14px' }}>
                         <OrderStatusStepper
                           status={order.status}
-                          estimatedMinutes={order.estimatedMinutes}
+                          estimatedMinutes={order.estimated_minutes}
                         />
                       </div>
 
@@ -639,7 +639,7 @@ export const ClientOrdersPage: React.FC = () => {
                       {(() => {
                         const roundsMap: Record<number, typeof order.items> = {};
                         order.items.forEach((it) => {
-                          const r = it.roundNo || 1;
+                          const r = it.round_no || 1;
                           if (!roundsMap[r]) roundsMap[r] = [];
                           roundsMap[r].push(it);
                         });
@@ -678,7 +678,7 @@ export const ClientOrdersPage: React.FC = () => {
                                       const itemBadge = getItemStatusBadge(it.status);
                                       return (
                                         <div
-                                          key={`${it.menuItemId}-${rNo}-${itemIdx}`}
+                                          key={`${it.menu_item_id}-${rNo}-${itemIdx}`}
                                           style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -759,12 +759,12 @@ export const ClientOrdersPage: React.FC = () => {
                         }}
                       >
                         <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          Thanh toán: <strong>{order.paymentMethod === 'QR_CODE' ? 'Quét QR' : 'Tiền mặt/Quầy'}</strong>
+                          Thanh toán: <strong>{order.payment_method === 'QR_CODE' ? 'Quét QR' : 'Tiền mặt/Quầy'}</strong>
                         </span>
                         <div style={{ textAlign: 'right' }}>
                           <span style={{ fontSize: '0.75rem', color: '#64748b', marginRight: '6px' }}>Đợt này:</span>
                           <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#ea580c' }}>
-                            {order.totalAmount.toLocaleString('vi-VN')}đ
+                            {order.total_amount.toLocaleString('vi-VN')}đ
                           </span>
                         </div>
                       </div>
@@ -841,7 +841,7 @@ export const ClientOrdersPage: React.FC = () => {
                           {item.name}
                         </div>
                         <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                          Đơn {item.orderNumber} {item.roundNo && item.roundNo > 1 ? `· Đợt ${item.roundNo}` : ''} · SL: <strong>{item.quantity}</strong> · {(item.price * item.quantity).toLocaleString('vi-VN')}đ
+                          Đơn {item.order_number} {item.round_no && item.round_no > 1 ? `· Đợt ${item.round_no}` : ''} · SL: <strong>{item.quantity}</strong> · {(item.price * item.quantity).toLocaleString('vi-VN')}đ
                           {item.notes ? ` · (${item.notes})` : ''}
                         </div>
                       </div>
@@ -906,16 +906,16 @@ export const ClientOrdersPage: React.FC = () => {
                     <CheckCircle2 size={16} color="#16a34a" />
                     <div>
                       <strong style={{ fontSize: '0.8125rem', color: '#0f172a' }}>
-                        {order.orderNumber}
+                        {order.order_number}
                       </strong>
                       <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: '6px' }}>
-                        · {order.placedAt} ({order.items.length} món)
+                        · {order.placed_at} ({order.items.length} món)
                       </span>
                     </div>
                   </div>
 
                   <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>
-                    {order.totalAmount.toLocaleString('vi-VN')}đ
+                    {order.total_amount.toLocaleString('vi-VN')}đ
                   </strong>
                 </div>
               ))}
@@ -962,7 +962,7 @@ export const ClientOrdersPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {tableSession?.status?.toUpperCase() === 'PAYMENT_REQUESTED' ? (
+              {table_session?.status?.toUpperCase() === 'PAYMENT_REQUESTED' ? (
                 <>
                   <button
                     onClick={() => setIsPaymentModalOpen(true)}
@@ -1125,7 +1125,7 @@ export const ClientOrdersPage: React.FC = () => {
                   💳 Thanh toán cuối bữa
                 </h3>
                 <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  {tableSession?.tableNo || 'Bàn ăn'} • Hóa đơn đã đóng băng
+                  {table_session?.table_no || 'Bàn ăn'} • Hóa đơn đã đóng băng
                 </div>
               </div>
               <button
@@ -1407,9 +1407,9 @@ export const ClientOrdersPage: React.FC = () => {
             {paymentTab === 'qr' && (
               <div style={{ textAlign: 'center' }}>
                 {(() => {
-                  const activeOrderNumber = tableSession?.activeOrderNumber || activeOrders[0]?.orderNumber || 'ORD-BILL';
+                  const activeOrderNumber = table_session?.active_order_number || activeOrders[0]?.order_number || 'ORD-BILL';
                   const transferContent = `OMNIRESTO ${activeOrderNumber}`;
-                  const qrUrl = tableSession?.vietQr?.qrImageUrl ||
+                  const qrUrl = table_session?.viet_qr?.qr_image_url ||
                     generateVietQRUrl(totalTableAmount, transferContent);
 
                   return (
@@ -1445,15 +1445,15 @@ export const ClientOrdersPage: React.FC = () => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                           <span style={{ color: '#64748b' }}>Ngân hàng:</span>
-                          <strong style={{ color: '#0f172a' }}>{tableSession?.vietQr?.bankId || PAYMENT_CONFIG.bankName}</strong>
+                          <strong style={{ color: '#0f172a' }}>{table_session?.viet_qr?.bank_id || PAYMENT_CONFIG.bankName}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                           <span style={{ color: '#64748b' }}>Số tài khoản:</span>
-                          <strong style={{ color: '#0f172a' }}>{tableSession?.vietQr?.accountNumber || PAYMENT_CONFIG.accountNumber}</strong>
+                          <strong style={{ color: '#0f172a' }}>{table_session?.viet_qr?.account_number || PAYMENT_CONFIG.accountNumber}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                           <span style={{ color: '#64748b' }}>Chủ tài khoản:</span>
-                          <strong style={{ color: '#0f172a' }}>{tableSession?.vietQr?.accountName || PAYMENT_CONFIG.accountName}</strong>
+                          <strong style={{ color: '#0f172a' }}>{table_session?.viet_qr?.account_name || PAYMENT_CONFIG.accountName}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>Nội dung:</span>
@@ -1603,7 +1603,7 @@ export const ClientOrdersPage: React.FC = () => {
       <ServiceRequestModal
         isOpen={isServiceModalOpen}
         onClose={() => setIsServiceModalOpen(false)}
-        tableNo={tableSession?.tableNo}
+        table_no={table_session?.table_no}
       />
     </div>
   );

@@ -55,8 +55,8 @@ export const ClientMenu: React.FC = () => {
   useEffect(() => {
     menuApi.getMealPeriodInfo()
       .then((info) => {
-        if (info && info.currentPeriod) {
-          setCurrentPeriod(info.currentPeriod);
+        if (info && info.current_period) {
+          setCurrentPeriod(info.current_period);
         }
       })
       .catch(() => {

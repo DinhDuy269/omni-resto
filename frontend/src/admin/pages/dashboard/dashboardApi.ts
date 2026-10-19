@@ -7,10 +7,10 @@ export const dashboardApi = {
       const res = await apiClient.get<any>('/dashboard/summary');
       const d = res.data || {};
       return {
-        total_tables: Number(d.totalTables ?? d.total_tables ?? 0),
-        total_orders: Number(d.totalOrders ?? d.total_orders ?? 0),
-        total_revenue: Number(d.totalRevenue ?? d.total_revenue ?? 0),
-        active_staff: Number(d.activeStaff ?? d.active_staff ?? 0),
+        total_tables: Number(d.total_tables ?? 0),
+        total_orders: Number(d.total_orders ?? 0),
+        total_revenue: Number(d.total_revenue ?? 0),
+        active_staff: Number(d.active_staff ?? 0),
       };
     } catch (error) {
       throw transformAxiosErrorResponse(error);

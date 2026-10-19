@@ -3,13 +3,13 @@ import type { StaffUser, UserStatus } from '../../../shared/types/admin';
 
 export const transformStaffUser = (usr: any): StaffUser => ({
   id: usr.id,
-  full_name: usr.fullName || usr.full_name || '',
+  full_name: usr.full_name || usr.fullName || '',
   email: usr.email || '',
   phone: usr.phone || '',
   role: usr.role || 'store_manager',
   status: (usr.status || 'active') as UserStatus,
   avatar: usr.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
-  created_at: usr.createdAt || usr.created_at,
+  created_at: usr.created_at || usr.createdAt,
 });
 
 export const userApi = {
@@ -36,6 +36,7 @@ export const userApi = {
   createUser: async (request: Partial<StaffUser>): Promise<StaffUser> => {
     try {
       const payload = {
+        full_name: request.full_name,
         fullName: request.full_name,
         email: request.email,
         phone: request.phone,

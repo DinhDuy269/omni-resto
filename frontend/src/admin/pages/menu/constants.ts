@@ -15,5 +15,5 @@ export const INITIAL_MENU_FORM_DATA = {
   basePrice: 79000,
   description: '',
   isBestSeller: false,
-  image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop',
+  image: '/images/food-placeholder.svg',
 };

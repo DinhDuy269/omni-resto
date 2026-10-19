@@ -10,14 +10,14 @@ export const orderApi = {
             const res = await apiClient.get<any[]>(url, { headers: STAFF_HEADERS });
             return res.data.map((o) => ({
                 id: o.id,
-                order_number: o.orderNumber || o.order_number || '',
-                table_no: o.tableNo || o.table_no,
-                customer_name: o.customerName || o.customer_name || 'Khách vãng lai',
-                order_type: o.orderType || o.order_type || 'DINE_IN',
+                order_number: o.order_number || '',
+                table_no: o.table_no,
+                customer_name: o.customer_name || 'Khách vãng lai',
+                order_type: o.order_type || 'DINE_IN',
                 status: (o.status?.toUpperCase() || 'PENDING') as OrderStatus,
-                payment_status: o.paymentStatus || o.payment_status || 'UNPAID',
-                payment_method: o.paymentMethod || o.payment_method || 'CASH',
-                total_amount: Number(o.totalAmount || o.total_amount || 0),
+                payment_status: o.payment_status || 'UNPAID',
+                payment_method: o.payment_method || 'CASH',
+                total_amount: Number(o.total_amount ?? 0),
                 items: (o.items || []).map((it: any) => ({
                     id: it.id,
                     name: it.name,
@@ -26,7 +26,7 @@ export const orderApi = {
                     notes: it.notes,
                     status: it.status?.toUpperCase() || 'PENDING',
                 })),
-                created_at: o.createdAt || o.created_at,
+                created_at: o.created_at,
             }));
         } catch (error) {
             throw transformAxiosErrorResponse(error);

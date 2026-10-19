@@ -148,7 +148,7 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
     addToCart(
       {
         id: uniqueCartKey,
-        menuItemId: item.id,
+        menu_item_id: item.id,
         name: customizedName,
         category: item.category,
         price: unitPrice,
