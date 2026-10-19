@@ -7,6 +7,7 @@ export type OrderItemLineStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY
 export interface CartItem {
   id?: string;
   menu_item_id?: string;
+  menuItemId?: string;
   name: string;
   category: MenuCategory | string;
   price: number;
@@ -31,7 +32,9 @@ export interface TableSession {
   id: string;
   table_id?: string;
   table_no?: string;
+  tableNo?: string;
   session_token?: string;
+  sessionToken?: string;
   device_token?: string;
   is_device_master?: boolean;
   status: 'ACTIVE' | 'PAYMENT_REQUESTED' | 'PAYMENT_PENDING' | 'PAID' | 'CLOSED' | 'EXPIRED'
@@ -39,6 +42,7 @@ export interface TableSession {
   mode: 'PAY_AFTER' | 'PAY_FIRST' | 'pay_after' | 'pay_first';
   expires_at?: string;
   is_verified?: boolean;
+  isVerified?: boolean;
   verified_at?: string;
   verified_by_staff_id?: string;
   message?: string;
@@ -94,13 +98,20 @@ export const VNPAY_SANDBOX_CONFIG = {
 
 export interface ClientOrderDraft {
   order_mode?: OrderMode;
+  orderMode?: OrderMode;
   table_no?: string;
+  tableNo?: string;
   session_token?: string;
+  sessionToken?: string;
   customer_name?: string;
+  customerName?: string;
   customer_phone?: string;
+  customerPhone?: string;
   delivery_address?: string;
+  deliveryAddress?: string;
   notes?: string;
   payment_method?: ClientPaymentMethod;
+  paymentMethod?: ClientPaymentMethod;
 }
 
 export type PlacedOrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';

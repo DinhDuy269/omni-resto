@@ -10,7 +10,6 @@ import { StaffManagement } from '../admin/pages/auth/StaffManagement';
 import { TableManagement } from '../admin/pages/table/TableManagement';
 import { KitchenDisplaySystem } from '../admin/pages/kds/KitchenDisplaySystem';
 
-// @ts-expect-error JSX component file without TypeScript declaration
 import ReservationManagement from '../pages/admin/ReservationManagement';
 
 // ── Client imports ────────────────────────────────────────────────────────────
@@ -36,7 +35,6 @@ const PathCaseNormalizer: React.FC = () => {
   return null;
 };
 
-// @ts-expect-error JSX component file without TypeScript declaration
 import ReservationPage from '../pages/customer/ReservationPage';
 
 export const AppRouter: React.FC = () => {
