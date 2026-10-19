@@ -14,10 +14,10 @@ export const ClientCart: React.FC = () => {
     cart,
     updateQuantity,
     removeFromCart,
-    orderMode,
+    order_mode: orderMode,
     setOrderMode,
     placeOrder,
-    tableSession,
+    table_session: tableSession,
     refreshTableSession,
   } = useClientStore();
 

@@ -1,8 +1,8 @@
 import React from 'react';
-import { TableManagement } from './VoucherManagement';
+import { VoucherManagement } from './VoucherManagement';
 
-export const TableRouter: React.FC = () => {
-  return <TableManagement />;
+export const VoucherRouter: React.FC = () => {
+  return <VoucherManagement />;
 };
 
-export default TableRouter;
+export default VoucherRouter;

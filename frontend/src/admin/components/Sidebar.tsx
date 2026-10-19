@@ -29,6 +29,7 @@ export const Sidebar: React.FC = () => {
         { label: 'Menu & Món Ăn', path: '/admin/menu', icon: UtensilsCrossed },
         { label: 'Quản Lý Đơn Hàng', path: '/admin/orders', icon: ShoppingBag,
           badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
+        },
         { label: 'Màn Hình Bếp (KDS)', path: '/admin/kds', icon: ChefHat },
         { label: 'Sơ Đồ Bàn', path: '/admin/tables', icon: Grid2x2 },
         { label: 'Khuyến Mãi & Voucher', path: '/admin/vouchers', icon: Ticket },

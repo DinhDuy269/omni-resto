@@ -35,7 +35,7 @@ export interface TableSession {
   device_token?: string;
   is_device_master?: boolean;
   status: 'ACTIVE' | 'PAYMENT_REQUESTED' | 'PAYMENT_PENDING' | 'PAID' | 'CLOSED' | 'EXPIRED'
-    | 'active' | 'payment_requested' | 'payment_pending' | 'paid' | 'closed' | 'expired';
+  | 'active' | 'payment_requested' | 'payment_pending' | 'paid' | 'closed' | 'expired';
   mode: 'PAY_AFTER' | 'PAY_FIRST' | 'pay_after' | 'pay_first';
   expires_at?: string;
   is_verified?: boolean;
