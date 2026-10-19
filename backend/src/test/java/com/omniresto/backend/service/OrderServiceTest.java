@@ -50,12 +50,9 @@ class OrderServiceTest {
     private MenuItemRepository menuItemRepository;
 
     @Mock
-<<<<<<< HEAD
-=======
     private CategoryOptionRepository categoryOptionRepository;
 
     @Mock
->>>>>>> main
     private TableSessionService tableSessionService;
 
     @Mock
@@ -135,8 +132,6 @@ class OrderServiceTest {
         assertNotNull(response);
         assertNotNull(response.getOrderNumber());
         assertEquals("Bàn 01", response.getTableNo());
-<<<<<<< HEAD
-=======
         assertEquals(BigDecimal.valueOf(180000), response.getTotalAmount());
 
         // Idempotency test: calling with same key returns cached response
@@ -172,7 +167,6 @@ class OrderServiceTest {
         assertNotNull(response);
         assertEquals(OrderStatus.pending, response.getStatus());
         assertEquals(OrderType.takeaway, response.getOrderType());
->>>>>>> main
     }
 
     @Test

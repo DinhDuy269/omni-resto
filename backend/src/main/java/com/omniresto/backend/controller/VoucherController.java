@@ -44,4 +44,14 @@ public class VoucherController {
             @RequestParam BigDecimal orderAmount) {
         return ResponseEntity.ok(voucherService.validateVoucherForOrder(code, orderAmount));
     }
+
+    // Thêm API cập nhật trạng thái voucher (Kích hoạt / Tạm dừng)
+    // Khớp với URL: PATCH /api/vouchers/{id}/status?status=ACTIVE hoặc INACTIVE
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateVoucherStatus(
+            @PathVariable String id,
+            @RequestParam String status) {
+        voucherService.updateVoucherStatus(id, status);
+        return ResponseEntity.ok().build();
+    }
 }

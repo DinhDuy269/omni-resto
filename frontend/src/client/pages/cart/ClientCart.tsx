@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Plus, Minus, QrCode, Banknote, CheckCircle, AlertCircle, ExternalLink, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, Minus, QrCode, Banknote, CheckCircle, AlertCircle, ExternalLink, ShieldCheck, Ticket } from 'lucide-react';
 import { useClientStore, selectTotalAmount } from '../../store/clientStore';
 import type { OrderMode, ClientPaymentMethod, VnPayPaymentInfo } from '../../../shared/types/client';
 import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
 import { createVnPayPayment, processVnPayDirectPayment } from '../../../shared/api/vnpayApi';
+import { useAdminStore } from '../../../admin/store/adminStore';
 
 export const ClientCart: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export const ClientCart: React.FC = () => {
     refreshTableSession,
   } = useClientStore();
 
+  const { vouchers } = useAdminStore();
   const totalAmount = useClientStore(selectTotalAmount);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const isEmpty = cart.length === 0;
@@ -32,6 +34,11 @@ export const ClientCart: React.FC = () => {
   const [payMethod, setPayMethod] = useState<ClientPaymentMethod>('VNPAY_QR');
   const [takeawayAtTable, setTakeawayAtTable] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Voucher states
+  const [voucherCode, setVoucherCode] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState<typeof vouchers[0] | null>(null);
+  const [voucherMsg, setVoucherMsg] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
   // Payment modal state (VNPAY-QR & VietQR)
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -47,6 +54,49 @@ export const ClientCart: React.FC = () => {
   const [vnpayOtp, setVnPayOtp] = useState(VNPAY_SANDBOX_CONFIG.otp);
   const [isPayingVnPay, setIsPayingVnPay] = useState(false);
 
+  // Lấy danh sách voucher đang hoạt động
+  // Voucher Logic
+  const activeVouchers = useMemo(() => {
+    return vouchers?.filter(v => v.status === 'ACTIVE' || v.status === 'active') || [];
+  }, [vouchers]);
+
+  const discountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    let discount = 0;
+
+    if (appliedVoucher.discountType === 'PERCENTAGE' || appliedVoucher.discountType === 'percentage') {
+      discount = totalAmount * (appliedVoucher.discountValue / 100);
+      if (appliedVoucher.maxDiscountAmount) {
+        discount = Math.min(discount, appliedVoucher.maxDiscountAmount);
+      }
+    } else {
+      discount = appliedVoucher.discountValue;
+    }
+
+    return Math.min(discount, totalAmount);
+  }, [appliedVoucher, totalAmount]);
+
+  const finalAmount = totalAmount - discountAmount;
+
+  const handleApplyVoucher = () => {
+    const codeToApply = voucherCode.trim().toUpperCase();
+    const selected = activeVouchers.find(v => v.code.toUpperCase() === codeToApply);
+
+    if (!selected) {
+      setAppliedVoucher(null);
+      setVoucherMsg({ text: 'Mã voucher không tồn tại hoặc đã hết hạn.', type: 'error' });
+      return;
+    }
+
+    if (totalAmount < selected.minOrderAmount) {
+      setAppliedVoucher(null);
+      setVoucherMsg({ text: `Đơn hàng chưa đạt mức tối thiểu ${selected.minOrderAmount.toLocaleString('vi-VN')}đ để áp dụng mã này.`, type: 'error' });
+      return;
+    }
+
+    setAppliedVoucher(selected);
+    setVoucherMsg({ text: `Áp dụng mã ${selected.code} thành công!`, type: 'success' });
+  };
   // Auto-sync session state
   useEffect(() => {
     if (tableSession?.sessionToken) {
@@ -103,6 +153,7 @@ export const ClientCart: React.FC = () => {
         deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddr.trim() : undefined,
         notes: notes.trim() || undefined,
         paymentMethod: orderMode === 'DINE_IN' && tableSession?.mode !== 'PAY_FIRST' ? 'CASH' : payMethod,
+        voucherCode: appliedVoucher?.code || undefined,
       });
 
       if (!placed) return;
@@ -626,7 +677,86 @@ export const ClientCart: React.FC = () => {
               )}
             </div>
 
-            {/* 3. Phương thức thanh toán (Gọn gàng) */}
+            {/* 3. Voucher / Khuyến mãi */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              border: '1px solid var(--c-border-light, #e2e8f0)',
+              padding: '18px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <Ticket size={18} color="var(--c-primary)" />
+                <h2 style={{ fontSize: '0.9rem', fontWeight: 800, margin: 0, color: 'var(--c-text-main)' }}>
+                  Mã ưu đãi / Khuyến mãi
+                </h2>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="text"
+                    placeholder="Nhập mã voucher..."
+                    value={voucherCode}
+                    onChange={(e) => {
+                      setVoucherCode(e.target.value.toUpperCase());
+                      setVoucherMsg(null);
+                    }}
+                    style={{
+                      width: '100%', fontFamily: 'var(--c-font)', borderRadius: 8,
+                      border: '1px solid #cbd5e1', padding: '10px 14px',
+                      background: '#f8fafc', outline: 'none', boxSizing: 'border-box',
+                      fontSize: '0.85rem', color: 'var(--c-text-main)'
+                    }}
+                  />
+                </div>
+                <button
+                  className="c-btn c-btn-primary"
+                  style={{ padding: '0 20px', borderRadius: 8, fontWeight: 700, border: 'none', cursor: voucherCode.trim() ? 'pointer' : 'not-allowed', opacity: voucherCode.trim() ? 1 : 0.6 }}
+                  disabled={!voucherCode.trim()}
+                  onClick={handleApplyVoucher}
+                >
+                  Áp dụng
+                </button>
+              </div>
+
+              {activeVouchers.length > 0 && (
+                <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {activeVouchers.map(v => (
+                    <div
+                      key={v.id}
+                      onClick={() => {
+                        setVoucherCode(v.code);
+                        setVoucherMsg(null);
+                      }}
+                      style={{
+                        padding: '6px 12px', borderRadius: 99,
+                        border: voucherCode === v.code ? '1px solid var(--c-primary)' : '1px solid #e2e8f0',
+                        background: voucherCode === v.code ? '#fff7ed' : '#f8fafc',
+                        color: voucherCode === v.code ? 'var(--c-primary)' : '#475569',
+                        fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s'
+                      }}
+                      title={v.name}
+                    >
+                      🎁 {v.code}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {voucherMsg && (
+                <div style={{
+                  marginTop: 12, padding: '10px 14px', borderRadius: 8,
+                  background: voucherMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                  color: voucherMsg.type === 'success' ? '#16a34a' : '#ef4444',
+                  fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8
+                }}>
+                  {voucherMsg.type === 'success' ? '✅' : '❌'} {voucherMsg.text}
+                </div>
+              )}
+            </div>
+
+            {/* 4. Phương thức thanh toán (Gọn gàng) */}
             <div style={{
               background: '#ffffff',
               borderRadius: 16,
@@ -763,6 +893,12 @@ export const ClientCart: React.FC = () => {
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>{totalAmount.toLocaleString('vi-VN')}đ</span>
               </div>
 
+              {appliedVoucher && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+                  <span>Khuyến mãi ({appliedVoucher.code})</span>
+                  <span style={{ fontWeight: 700 }}>-{discountAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                 <span>Phí dịch vụ</span>
                 <span style={{ fontWeight: 700, color: '#16a34a' }}>Miễn phí</span>
@@ -1031,19 +1167,19 @@ export const ClientCart: React.FC = () => {
                   </div>
                 )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPaymentModal(false);
-                      navigate(`/client/orders`);
-                    }}
-                    style={{
-                      background: 'none', border: 'none', color: '#64748b',
-                      fontSize: '0.8rem', cursor: 'pointer', padding: 4,
-                    }}
-                  >
-                    Đóng và theo dõi đơn hàng sau →
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    navigate(`/client/orders`);
+                  }}
+                  style={{
+                    background: 'none', border: 'none', color: '#64748b',
+                    fontSize: '0.8rem', cursor: 'pointer', padding: 4,
+                  }}
+                >
+                  Đóng và theo dõi đơn hàng sau →
+                </button>
               </div>
             ) : (
               <div>

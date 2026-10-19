@@ -33,13 +33,12 @@ public class VoucherService {
     }
 
     public VoucherResponse createVoucher(VoucherRequest request) {
-        // Kiểm tra xem mã voucher đã tồn tại chưa
         if (voucherRepository.findByCode(request.getCode()).isPresent()) {
             throw new RuntimeException("Mã Voucher đã tồn tại: " + request.getCode());
         }
 
         VoucherEntity entity = VoucherEntity.builder()
-                .code(request.getCode().toUpperCase()) // Luôn viết hoa mã code
+                .code(request.getCode().toUpperCase())
                 .name(request.getName())
                 .description(request.getDescription())
                 .discountType(request.getDiscountType())
@@ -54,37 +53,40 @@ public class VoucherService {
                 .status(VoucherStatus.ACTIVE)
                 .build();
                 
-        // Set ID theo chuẩn hệ thống
         entity.setId("vch-" + UUID.randomUUID().toString().substring(0, 8));
 
         VoucherEntity saved = voucherRepository.save(entity);
         return mapToResponse(saved);
     }
 
-    // TÍNH NĂNG "ĂN ĐIỂM": API để kiểm tra xem đơn hàng có đủ điều kiện dùng voucher không
     public VoucherResponse validateVoucherForOrder(String code, BigDecimal orderTotal) {
         VoucherEntity voucher = voucherRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Mã Voucher không tồn tại!"));
 
-        // 1. Check trạng thái
         if (voucher.getStatus() != VoucherStatus.ACTIVE) {
             throw new RuntimeException("Mã Voucher đã bị khóa hoặc không còn hoạt động.");
         }
-        // 2. Check thời gian
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())) {
             throw new RuntimeException("Mã Voucher chưa đến thời gian áp dụng hoặc đã hết hạn.");
         }
-        // 3. Check số lượng
         if (voucher.getUsedQuantity() >= voucher.getTotalQuantity()) {
             throw new RuntimeException("Mã Voucher đã hết lượt sử dụng.");
         }
-        // 4. Check giá trị đơn hàng tối thiểu
         if (orderTotal.compareTo(voucher.getMinOrderAmount()) < 0) {
             throw new RuntimeException("Đơn hàng chưa đạt giá trị tối thiểu " + voucher.getMinOrderAmount() + " để áp dụng mã này.");
         }
 
         return mapToResponse(voucher);
+    }
+
+    // Đã sửa: bỏ @Override, dùng VoucherEntity và parse sang VoucherStatus
+    public void updateVoucherStatus(String id, String status) {
+        VoucherEntity voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy voucher với id: " + id));
+
+        voucher.setStatus(VoucherStatus.valueOf(status.toUpperCase()));
+        voucherRepository.save(voucher);
     }
 
     private VoucherResponse mapToResponse(VoucherEntity entity) {

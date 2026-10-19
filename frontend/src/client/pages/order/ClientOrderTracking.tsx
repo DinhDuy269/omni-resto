@@ -37,13 +37,8 @@ export const ClientOrderTracking: React.FC = () => {
 
   // Tìm đơn hàng theo ID hoặc orderNumber
   const matchedOrder = orders.find(
-<<<<<<< HEAD
-    (o) => o.id === orderId || o.order_number === orderId
-  ) || (placedOrder?.id === orderId ? placedOrder : null);
-=======
     (o) => o.id === orderId || o.order_number === orderId || o.orderNumber === orderId
   ) || (placedOrder?.id === orderId || placedOrder?.orderNumber === orderId ? placedOrder : null);
->>>>>>> main
 
   const currentStatus: PlacedOrderStatus = ((matchedOrder?.status ?? 'PENDING').toUpperCase() as PlacedOrderStatus);
 
@@ -87,12 +82,7 @@ export const ClientOrderTracking: React.FC = () => {
   }
 
   const currentOrder = matchedOrder;
-<<<<<<< HEAD
-  const isCompleted = simulatedStatus === 'COMPLETED';
-  const tableDisplay = currentOrder.table_no || tableSession?.table_no || 'Tại bàn';
-=======
   const isCompleted = currentStatus === 'COMPLETED';
->>>>>>> main
 
   const orderMode = currentOrder.order_mode || (currentOrder as any).orderMode || (currentOrder.table_no ? 'DINE_IN' : 'TAKEAWAY');
   let orderModeBadge = {

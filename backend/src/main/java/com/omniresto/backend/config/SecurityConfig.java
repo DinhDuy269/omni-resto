@@ -82,6 +82,7 @@ public class SecurityConfig {
             .requestMatchers(tableApiPatterns()).permitAll()
             .requestMatchers(eventApiPatterns()).permitAll()
             .requestMatchers(newsletterApiPatterns()).permitAll()
+            .requestMatchers(voucherApiPatterns()).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/ws/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/ws-raw/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/api/payments/**")).permitAll()
@@ -145,6 +146,15 @@ public class SecurityConfig {
         return new RequestMatcher[]{
             new AntPathRequestMatcher("/api/newsletter"),
             new AntPathRequestMatcher("/api/newsletter/**")
+        };
+    }
+    // endregion
+
+    // region voucher
+    private static RequestMatcher[] voucherApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/vouchers"),
+            new AntPathRequestMatcher("/api/vouchers/**")
         };
     }
     // endregion

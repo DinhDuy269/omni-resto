@@ -24,6 +24,16 @@ export const voucherApi = {
     }
   },
 
+  // Cập nhật thông tin voucher theo ID
+  updateVoucher: async (id: string, voucherData: Partial<VoucherInfo>): Promise<VoucherInfo> => {
+    try {
+      const res = await apiClient.put<VoucherInfo>(`/vouchers/${id}`, voucherData);
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
   // Dùng cho client áp mã ở giỏ hàng
   validateVoucher: async (code: string, orderAmount: number): Promise<VoucherInfo> => {
     try {

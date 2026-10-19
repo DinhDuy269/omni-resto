@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, Plus, Ticket } from 'lucide-react';
 import { VoucherCard } from './components/VoucherCard';
 import { useVoucher } from './hooks/useVoucher';
+import { voucherApi } from '../../../shared/api/voucherApi';
+import { useAdminStore } from '../../store/adminStore';
+import { Modal } from '../../../shared/components/Modal';
+import type { VoucherInfo, VoucherStatus, DiscountType } from '../../../shared/types/admin';
 
-// Component giả lập. Trong thực tế bạn có thể truyền data thật từ API vào useVoucher
 export const VoucherManagement: React.FC = () => {
   const {
     vouchers,
@@ -12,12 +15,110 @@ export const VoucherManagement: React.FC = () => {
     setFilterStatus,
     searchQuery,
     setSearchQuery,
-    toggleVoucherStatus
+    toggleVoucherStatus,
   } = useVoucher();
 
-  const handleCreateNew = () => {
-    // Logic mở Modal tạo mới voucher
-    console.log("Mở form tạo voucher");
+  const { vouchers: allVouchers, setVouchers } = useAdminStore();
+
+  // Modals state giống TableManagement
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState<VoucherInfo | null>(null);
+
+  // Form State
+  const initialForm = {
+    code: '',
+    name: '',
+    description: '',
+    discountType: 'FIXED_AMOUNT' as DiscountType,
+    discountValue: 0,
+    maxDiscountAmount: 0,
+    minOrderAmount: 0,
+    totalQuantity: 100,
+    usageLimitPerUser: 1,
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+    status: 'ACTIVE' as VoucherStatus,
+  };
+
+  const [voucherForm, setVoucherForm] = useState(initialForm);
+
+  // Mở modal thêm mới
+  const handleOpenAddModal = () => {
+    setVoucherForm(initialForm);
+    setIsAddModalOpen(true);
+  };
+
+  // Mở modal chỉnh sửa
+  const handleOpenEditModal = (v: VoucherInfo) => {
+    setEditingVoucher(v);
+    setVoucherForm({
+      code: v.code,
+      name: v.name,
+      description: v.description || '',
+      discountType: v.discountType,
+      discountValue: v.discountValue,
+      maxDiscountAmount: v.maxDiscountAmount || 0,
+      minOrderAmount: v.minOrderAmount,
+      totalQuantity: v.totalQuantity,
+      usageLimitPerUser: v.usageLimitPerUser,
+      startDate: v.startDate ? v.startDate.slice(0, 10) : '',
+      endDate: v.endDate ? v.endDate.slice(0, 10) : '',
+      status: v.status,
+    });
+  };
+
+  // Xử lý tạo mới voucher
+  const handleSubmitAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voucherForm.code.trim() || !voucherForm.name.trim()) return;
+
+    try {
+      const payload: Partial<VoucherInfo> = {
+        ...voucherForm,
+        code: voucherForm.code.trim().toUpperCase(),
+        discountValue: Number(voucherForm.discountValue),
+        maxDiscountAmount:
+          voucherForm.discountType === 'PERCENTAGE' && Number(voucherForm.maxDiscountAmount) > 0
+            ? Number(voucherForm.maxDiscountAmount)
+            : undefined,
+        minOrderAmount: Number(voucherForm.minOrderAmount) || 0,
+        totalQuantity: Number(voucherForm.totalQuantity) || 0,
+        usageLimitPerUser: Number(voucherForm.usageLimitPerUser) || 1,
+      };
+
+      const created = await voucherApi.createVoucher(payload);
+      setVouchers([created, ...allVouchers]);
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tạo khuyến mãi!');
+    }
+  };
+
+  // Xử lý lưu chỉnh sửa voucher
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVoucher || !voucherForm.code.trim()) return;
+
+    try {
+      const payload: Partial<VoucherInfo> = {
+        ...voucherForm,
+        code: voucherForm.code.trim().toUpperCase(),
+        discountValue: Number(voucherForm.discountValue),
+        maxDiscountAmount:
+          voucherForm.discountType === 'PERCENTAGE' && Number(voucherForm.maxDiscountAmount) > 0
+            ? Number(voucherForm.maxDiscountAmount)
+            : undefined,
+        minOrderAmount: Number(voucherForm.minOrderAmount) || 0,
+        totalQuantity: Number(voucherForm.totalQuantity) || 0,
+        usageLimitPerUser: Number(voucherForm.usageLimitPerUser) || 1,
+      };
+
+      const updated = await voucherApi.updateVoucher(editingVoucher.id, payload);
+      setVouchers(allVouchers.map((v) => (v.id === editingVoucher.id ? updated : v)));
+      setEditingVoucher(null);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi cập nhật khuyến mãi!');
+    }
   };
 
   return (
@@ -47,7 +148,7 @@ export const VoucherManagement: React.FC = () => {
             />
           </div>
 
-          <button className="btn btn-primary" onClick={handleCreateNew}>
+          <button className="btn btn-primary" onClick={handleOpenAddModal}>
             <Plus size={16} />
             <span>Thêm Khuyến Mãi</span>
           </button>
@@ -96,9 +197,8 @@ export const VoucherManagement: React.FC = () => {
             <VoucherCard
               key={voucher.id}
               voucher={voucher}
-              onEdit={(v) => console.log('Mở form sửa:', v.code)}
+              onEdit={() => handleOpenEditModal(voucher)}
               onToggleStatus={(id, currentStatus) => {
-                // Logic đảo ngược trạng thái
                 const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
                 toggleVoucherStatus(id, newStatus);
               }}
@@ -106,6 +206,289 @@ export const VoucherManagement: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Modal: Thêm Khuyến Mãi Mới (Giống cấu trúc Modal TableManagement) */}
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Thêm Mã Khuyến Mãi Mới">
+        <form onSubmit={handleSubmitAdd}>
+          <div className="form-group">
+            <label className="form-label">Mã Khuyến Mãi (Code)*</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="VD: GIAM20K, CHAOBANMOI..."
+              required
+              value={voucherForm.code}
+              onChange={(e) => setVoucherForm({ ...voucherForm, code: e.target.value.toUpperCase() })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tên Chương Trình Khuyến Mãi*</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="VD: Giảm 20.000đ cho đơn từ 100k"
+              required
+              value={voucherForm.name}
+              onChange={(e) => setVoucherForm({ ...voucherForm, name: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Hình Thức Giảm*</label>
+              <select
+                className="form-select"
+                value={voucherForm.discountType}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discountType: e.target.value as DiscountType })}
+              >
+                <option value="FIXED_AMOUNT">Giảm Tiền Mặt (VNĐ)</option>
+                <option value="PERCENTAGE">Giảm Theo Phần Trăm (%)</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                {voucherForm.discountType === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
+              </label>
+              <input
+                type="number"
+                className="form-input"
+                min={0}
+                required
+                value={voucherForm.discountValue}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discountValue: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Giảm Tối Đa (VNĐ)</label>
+              <input
+                type="number"
+                className="form-input"
+                min={0}
+                disabled={voucherForm.discountType !== 'PERCENTAGE'}
+                placeholder={voucherForm.discountType !== 'PERCENTAGE' ? 'Không áp dụng' : 'VD: 50000'}
+                value={voucherForm.maxDiscountAmount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, maxDiscountAmount: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Đơn Hàng Tối Thiểu (VNĐ)</label>
+              <input
+                type="number"
+                className="form-input"
+                min={0}
+                value={voucherForm.minOrderAmount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, minOrderAmount: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Tổng Lượt Dùng (Số lượng)*</label>
+              <input
+                type="number"
+                className="form-input"
+                min={1}
+                required
+                value={voucherForm.totalQuantity}
+                onChange={(e) => setVoucherForm({ ...voucherForm, totalQuantity: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Giới Hạn Lượt/Khách*</label>
+              <input
+                type="number"
+                className="form-input"
+                min={1}
+                required
+                value={voucherForm.usageLimitPerUser}
+                onChange={(e) => setVoucherForm({ ...voucherForm, usageLimitPerUser: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Ngày Bắt Đầu*</label>
+              <input
+                type="date"
+                className="form-input"
+                required
+                value={voucherForm.startDate}
+                onChange={(e) => setVoucherForm({ ...voucherForm, startDate: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Ngày Kết Thúc*</label>
+              <input
+                type="date"
+                className="form-input"
+                required
+                value={voucherForm.endDate}
+                onChange={(e) => setVoucherForm({ ...voucherForm, endDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsAddModalOpen(false)}>
+              Hủy
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Tạo Khuyến Mãi
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Chỉnh Sửa Khuyến Mãi */}
+      <Modal isOpen={!!editingVoucher} onClose={() => setEditingVoucher(null)} title="Chỉnh Sửa Thông Tin Voucher">
+        <form onSubmit={handleSubmitEdit}>
+          <div className="form-group">
+            <label className="form-label">Mã Khuyến Mãi (Code)*</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              value={voucherForm.code}
+              onChange={(e) => setVoucherForm({ ...voucherForm, code: e.target.value.toUpperCase() })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tên Chương Trình Khuyến Mãi*</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              value={voucherForm.name}
+              onChange={(e) => setVoucherForm({ ...voucherForm, name: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Hình Thức Giảm*</label>
+              <select
+                className="form-select"
+                value={voucherForm.discountType}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discountType: e.target.value as DiscountType })}
+              >
+                <option value="FIXED_AMOUNT">Giảm Tiền Mặt (VNĐ)</option>
+                <option value="PERCENTAGE">Giảm Theo Phần Trăm (%)</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                {voucherForm.discountType === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
+              </label>
+              <input
+                type="number"
+                className="form-input"
+                min={0}
+                required
+                value={voucherForm.discountValue}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discountValue: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Giảm Tối Đa (VNĐ)</label>
+              <input
+                type="number"
+                className="form-input"
+                min={0}
+                disabled={voucherForm.discountType !== 'PERCENTAGE'}
+                value={voucherForm.maxDiscountAmount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, maxDiscountAmount: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Đơn Hàng Tối Thiểu (VNĐ)</label>
+              <input
+                type="number"
+                className="form-input"
+                min={0}
+                value={voucherForm.minOrderAmount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, minOrderAmount: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Tổng Lượt Dùng (Số lượng)*</label>
+              <input
+                type="number"
+                className="form-input"
+                min={1}
+                required
+                value={voucherForm.totalQuantity}
+                onChange={(e) => setVoucherForm({ ...voucherForm, totalQuantity: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Giới Hạn Lượt/Khách*</label>
+              <input
+                type="number"
+                className="form-input"
+                min={1}
+                required
+                value={voucherForm.usageLimitPerUser}
+                onChange={(e) => setVoucherForm({ ...voucherForm, usageLimitPerUser: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Ngày Bắt Đầu*</label>
+              <input
+                type="date"
+                className="form-input"
+                required
+                value={voucherForm.startDate}
+                onChange={(e) => setVoucherForm({ ...voucherForm, startDate: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Ngày Kết Thúc*</label>
+              <input
+                type="date"
+                className="form-input"
+                required
+                value={voucherForm.endDate}
+                onChange={(e) => setVoucherForm({ ...voucherForm, endDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setEditingVoucher(null)}>
+              Hủy
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Lưu Thay Đổi
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
+
+export default VoucherManagement;

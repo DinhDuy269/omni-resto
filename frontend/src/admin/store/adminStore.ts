@@ -3,6 +3,7 @@ import { menuApi } from '../pages/menu/menuApi';
 import { tableApi } from '../../shared/api/tableApi';
 import { orderApi } from '../../shared/api/orderApi';
 import { staffApi } from '../../shared/api/staffApi';
+import { voucherApi } from '../../shared/api/voucherApi';
 import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, OrderStatus, VoucherInfo } from '../../shared/types/admin';
 
 export const DISH_CATEGORIES = [
@@ -34,6 +35,7 @@ interface AdminState {
   staff_list: StaffUser[];
   tables: TableInfo[];
   service_requests: ServiceRequestItem[];
+  vouchers: VoucherInfo[];
 
   // Bulk setters
   setMenuItems: (items: MenuItem[]) => void;
@@ -76,8 +78,19 @@ interface AdminState {
   // Service requests (gọi phục vụ tại bàn)
   addServiceRequest: (req: { table_no: string; order_id?: string; request_text: string }) => void;
   resolveServiceRequest: (id: string) => void;
-resolveServiceRequestsByTable: (table_no: string) => void;
+  resolveServiceRequestsByTable: (table_no: string) => void;
   clearAllServiceRequests: () => void;
+
+  // Voucher
+  // Vouchers
+  setVouchers: (vouchers: VoucherInfo[]) => void;
+  addVoucher: (voucher: Omit<VoucherInfo, 'id'>) => void;
+  updateVoucher: (voucher: VoucherInfo) => void;
+  deleteVoucher: (id: string) => void;
+  toggleVoucherStatus: (
+    id: string,
+    status: VoucherInfo['status']
+  ) => void;
 }
 
 /**
@@ -105,16 +118,18 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   service_requests: [],
   isLoading: false,
   loadError: null,
+  vouchers: [],
 
   // ---------- Tải dữ liệu từ backend ----------
   fetchInitialData: async () => {
     set({ isLoading: true, loadError: null });
 
-    const [menu, tables, orders, staff] = await Promise.allSettled([
+    const [menu, tables, orders, staff, voucher] = await Promise.allSettled([
       menuApi.getMenuItems(),
       tableApi.getAll(),
       orderApi.getAll(),
       staffApi.getAll(),
+      voucherApi.getVouchers(),
     ]);
 
     const failed: string[] = [];
@@ -147,6 +162,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     if (staff.status === 'fulfilled') patch.staff_list = staff.value;
     else failed.push('nhân sự');
 
+    if (voucher.status === 'fulfilled') patch.vouchers = voucher.value;
+    else failed.push('khuyến mãi');
+
     if (failed.length > 0) {
       console.error('Không tải được từ backend:', failed.join(', '));
     }
@@ -165,10 +183,28 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   setOrders: (orders) => set({ orders }),
   setStaffList: (staff) => set({ staff_list: staff }),
   setTables: (tables) => set({ tables }),
+  setVouchers: (vouchers) => set({ vouchers }),
 
+  // ---------- Vouchers (TODO: nối voucherApi) ----------
+  addVoucher: () => notWired('addVoucher'),
+  updateVoucher: () => notWired('updateVoucher'),
+  deleteVoucher: () => notWired('deleteVoucher'),
+  toggleVoucherStatus: async (id, status) => {
+    const prev = get().vouchers;
+    // Cập nhật giao diện ngay lập tức (optimistic update)
+    set({ vouchers: prev.map((v) => (v.id === id ? { ...v, status } : v)) });
+    try {
+      await voucherApi.updateStatus(id, status);
+    } catch (err) {
+      // Hoàn tác nếu backend trả về lỗi
+      set({ vouchers: prev });
+      console.error('Lỗi khi đổi trạng thái voucher:', err);
+      throw err;
+    }
+  },
   // ---------- Menu (TODO: nối menuApi) ----------
   addMenuItem: () => notWired('addMenuItem'),
-updateMenuItem: () => notWired('updateMenuItem'),
+  updateMenuItem: () => notWired('updateMenuItem'),
   deleteMenuItem: () => notWired('deleteMenuItem'),
   toggleMenuItemStatus: () => notWired('toggleMenuItemStatus'),
 
@@ -234,7 +270,7 @@ updateMenuItem: () => notWired('updateMenuItem'),
     };
     set((s) => ({ orders: upsertById(s.orders, normalized) }));
   },
-// ---------- Staff (TODO: nối staffApi) ----------
+  // ---------- Staff (TODO: nối staffApi) ----------
   addStaff: () => notWired('addStaff'),
   toggleStaffStatus: () => notWired('toggleStaffStatus'),
 
