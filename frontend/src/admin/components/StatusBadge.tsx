@@ -16,6 +16,7 @@ type StatusType =
   | 'OCCUPIED'
   | 'RESERVED'
   | 'CLEANING'
+  | 'EXPIRED' // <-- Thêm cho Voucher
   | 'active'
   | 'inactive'
   | 'maintenance'
@@ -30,7 +31,8 @@ type StatusType =
   | 'cancelled'
   | 'occupied'
   | 'reserved'
-  | 'cleaning';
+  | 'cleaning'
+  | 'expired'; // <-- Đã thêm cho Voucher
 
 interface StatusBadgeProps {
   status: StatusType | string;
@@ -57,6 +59,9 @@ const statusMap: Record<string, { label: string; bg: string; color: string; bord
   OCCUPIED: { label: 'Có khách', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
   RESERVED: { label: 'Đã đặt bàn', bg: 'var(--info-bg)', color: 'var(--info)', border: 'var(--info-border)' },
   CLEANING: { label: 'Cần dọn', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
+
+  // <-- Đã thêm cho Voucher
+  EXPIRED: { label: 'Đã hết hạn', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 'md' }) => {
@@ -68,6 +73,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 
     border: 'var(--border-color)',
   };
 
+  // Nếu truyền prop label vào, nó sẽ ưu tiên ghi đè label mặc định trong statusMap
   const displayText = label || config.label;
 
   return (

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Plus, Minus, QrCode, Banknote, CheckCircle, AlertCircle, ExternalLink, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, Minus, QrCode, Banknote, CheckCircle, AlertCircle, ExternalLink, ShieldCheck, Ticket } from 'lucide-react';
 import { useClientStore, selectTotalAmount } from '../../store/clientStore';
+import { useAdminStore } from '../../../admin/store/adminStore';
 import type { OrderMode, ClientPaymentMethod, VnPayPaymentInfo } from '../../../shared/types/client';
 import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
@@ -32,6 +33,51 @@ export const ClientCart: React.FC = () => {
   const [payMethod, setPayMethod] = useState<ClientPaymentMethod>('VNPAY_QR');
   const [takeawayAtTable, setTakeawayAtTable] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Voucher states
+  const { vouchers } = useAdminStore();
+  const [voucherCode, setVoucherCode] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
+  const [voucherMsg, setVoucherMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const activeVouchers = useMemo(() => {
+    return (vouchers || []).filter((v: any) => v.status === 'ACTIVE' || v.status === 'active');
+  }, [vouchers]);
+
+  const discountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    let discount = 0;
+    if (appliedVoucher.discountType === 'PERCENTAGE' || appliedVoucher.discountType === 'percentage') {
+      discount = totalAmount * (Number(appliedVoucher.discountValue) / 100);
+      if (appliedVoucher.maxDiscountAmount) {
+        discount = Math.min(discount, Number(appliedVoucher.maxDiscountAmount));
+      }
+    } else {
+      discount = Number(appliedVoucher.discountValue) || 0;
+    }
+    return Math.min(discount, totalAmount);
+  }, [appliedVoucher, totalAmount]);
+
+  const finalAmount = Math.max(0, totalAmount - discountAmount);
+
+  const handleApplyVoucher = () => {
+    const selected = activeVouchers.find((v: any) => v.code.toUpperCase() === voucherCode.trim().toUpperCase());
+    if (!selected) {
+      setAppliedVoucher(null);
+      setVoucherMsg({ text: 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn.', type: 'error' });
+      return;
+    }
+    if (totalAmount < (Number(selected.minOrderAmount) || 0)) {
+      setAppliedVoucher(null);
+      setVoucherMsg({
+        text: `Đơn hàng tối thiểu ${Number(selected.minOrderAmount).toLocaleString('vi-VN')}đ để áp dụng mã này.`,
+        type: 'error',
+      });
+      return;
+    }
+    setAppliedVoucher(selected);
+    setVoucherMsg({ text: `Áp dụng mã ${selected.code} thành công!`, type: 'success' });
+  };
 
   // Payment modal state (VNPAY-QR & VietQR)
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -101,7 +147,7 @@ export const ClientCart: React.FC = () => {
         customerName: finalCustomerName || undefined,
         customerPhone: customerPhone.trim() || undefined,
         deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddr.trim() : undefined,
-        notes: notes.trim() || undefined,
+        notes: (appliedVoucher ? `[Voucher ${appliedVoucher.code} - Giảm ${discountAmount.toLocaleString('vi-VN')}đ] ${notes.trim()}`.trim() : notes.trim()) || undefined,
         paymentMethod: orderMode === 'DINE_IN' && tableSession?.mode !== 'PAY_FIRST' ? 'CASH' : payMethod,
       });
 
@@ -626,6 +672,85 @@ export const ClientCart: React.FC = () => {
               )}
             </div>
 
+            {/* 2.5. Voucher & Mã Khuyến Mãi */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              border: '1px solid var(--c-border-light, #e2e8f0)',
+              padding: '18px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                fontSize: '0.8rem', fontWeight: 800,
+                color: 'var(--c-text-muted)', textTransform: 'uppercase',
+                letterSpacing: '0.5px', marginBottom: 12,
+              }}>
+                <Ticket size={16} color="var(--c-primary)" />
+                <span>Mã ưu đãi / Khuyến mãi</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <select
+                    className="form-control"
+                    value={voucherCode}
+                    onChange={(e) => {
+                      setVoucherCode(e.target.value);
+                      setVoucherMsg(null);
+                    }}
+                    style={{
+                      width: '100%',
+                      fontFamily: 'inherit',
+                      borderRadius: 10,
+                      border: '1px solid #cbd5e1',
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      fontSize: '0.85rem',
+                      color: voucherCode ? '#0f172a' : '#64748b'
+                    }}
+                  >
+                    <option value="">-- Chọn mã khuyến mãi --</option>
+                    {activeVouchers.map((v: any) => (
+                      <option key={v.id} value={v.code}>
+                        🎁 {v.code} - {v.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  className="c-btn c-btn-primary"
+                  style={{ padding: '0 20px', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem' }}
+                  disabled={!voucherCode}
+                  onClick={handleApplyVoucher}
+                >
+                  Áp dụng
+                </button>
+              </div>
+
+              {voucherMsg && (
+                <div style={{
+                  marginTop: 10,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  background: voucherMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                  border: `1px solid ${voucherMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                  color: voucherMsg.type === 'success' ? '#15803d' : '#b91c1c',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  {voucherMsg.type === 'success' ? '✅' : '❌'} {voucherMsg.text}
+                </div>
+              )}
+            </div>
+
             {/* 3. Phương thức thanh toán (Gọn gàng) */}
             <div style={{
               background: '#ffffff',
@@ -768,6 +893,13 @@ export const ClientCart: React.FC = () => {
                 <span style={{ fontWeight: 700, color: '#16a34a' }}>Miễn phí</span>
               </div>
 
+              {appliedVoucher && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+                  <span>Khuyến mãi ({appliedVoucher.code})</span>
+                  <span style={{ fontWeight: 700 }}>-{discountAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+              )}
+
               {isDelivery && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                   <span>Phí giao hàng</span>
@@ -780,7 +912,7 @@ export const ClientCart: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>Tổng cộng</span>
                 <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--c-primary)' }}>
-                  {totalAmount.toLocaleString('vi-VN')}đ
+                  {finalAmount.toLocaleString('vi-VN')}đ
                 </span>
               </div>
             </div>
@@ -802,10 +934,10 @@ export const ClientCart: React.FC = () => {
               {isSubmitting
                 ? 'Đang gửi đơn...'
                 : isDineIn
-                  ? (tableSession ? `🚀 Gửi bếp ngay • ${totalAmount.toLocaleString('vi-VN')}đ` : '📷 Quét QR bàn để đặt món')
+                  ? (tableSession ? `🚀 Gửi bếp ngay • ${finalAmount.toLocaleString('vi-VN')}đ` : '📷 Quét QR bàn để đặt món')
                   : isTakeaway
-                    ? `📦 Đặt món mang về • ${totalAmount.toLocaleString('vi-VN')}đ`
-                    : `🛵 Đặt giao hàng • ${totalAmount.toLocaleString('vi-VN')}đ`}
+                    ? `📦 Đặt món mang về • ${finalAmount.toLocaleString('vi-VN')}đ`
+                    : `🛵 Đặt giao hàng • ${finalAmount.toLocaleString('vi-VN')}đ`}
             </button>
 
             <div style={{ marginTop: 12, textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>

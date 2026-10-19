@@ -3,7 +3,7 @@ import { menuApi } from '../pages/menu/menuApi';
 import { tableApi } from '../../shared/api/tableApi';
 import { orderApi } from '../../shared/api/orderApi';
 import { staffApi } from '../../shared/api/staffApi';
-import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, OrderStatus } from '../../shared/types/admin';
+import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, OrderStatus, VoucherInfo } from '../../shared/types/admin';
 
 export const DISH_CATEGORIES = [
   { id: 'cat-pho', name: 'Phở & Bún Nước' },
@@ -34,6 +34,7 @@ interface AdminState {
   staff_list: StaffUser[];
   tables: TableInfo[];
   service_requests: ServiceRequestItem[];
+  vouchers: VoucherInfo[];
 
   // Bulk setters
   setMenuItems: (items: MenuItem[]) => void;
@@ -41,6 +42,7 @@ interface AdminState {
   setOrders: (orders: Order[]) => void;
   setStaffList: (staff: StaffUser[]) => void;
   setTables: (tables: TableInfo[]) => void;
+  setVouchers: (vouchers: VoucherInfo[]) => void; // <-- Thêm Setter cho Vouchers
 
   // Menu
   addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
@@ -78,6 +80,9 @@ interface AdminState {
   resolveServiceRequest: (id: string) => void;
   resolveServiceRequestsByTable: (table_no: string) => void;
   clearAllServiceRequests: () => void;
+
+  // Actions - Vouchers
+  toggleVoucherStatus: (id: string, status: VoucherInfo['status']) => void;
 }
 
 /**
@@ -95,6 +100,61 @@ function upsertById<T extends { id: string }>(list: T[], item: T): T[] {
   return exists ? list.map((x) => (x.id === item.id ? item : x)) : [item, ...list];
 }
 
+export const INITIAL_VOUCHERS: VoucherInfo[] = [
+  {
+    id: 'vch-01',
+    code: 'WELCOME100',
+    name: 'Quà Tặng Thành Viên Mới',
+    description: 'Giảm ngay 100.000đ cho đơn hàng đầu tiên. Tự động tặng khi khách hàng mới đăng ký tài khoản thành công.',
+    discountType: 'FIXED_AMOUNT',
+    discountValue: 100000,
+    minOrderAmount: 0,
+    totalQuantity: 99999,
+    usedQuantity: 1250,
+    usageLimitPerUser: 1,
+    startDate: '2026-01-01T00:00:00',
+    endDate: '2027-12-31T23:59:59',
+    status: 'ACTIVE',
+    isWelcomeVoucher: true,
+    createdAt: '2026-01-01T00:00:00',
+  },
+  {
+    id: 'vch-02',
+    code: 'FREELUNCH20',
+    name: 'Trưa Vui Vẻ Giảm 20%',
+    description: 'Giảm 20% tổng hóa đơn, tối đa 50.000đ. Áp dụng cho các bữa trưa tại nhà hàng.',
+    discountType: 'PERCENTAGE',
+    discountValue: 20,
+    maxDiscountAmount: 50000,
+    minOrderAmount: 150000,
+    totalQuantity: 500,
+    usedQuantity: 498,
+    usageLimitPerUser: 2,
+    startDate: '2026-09-01T00:00:00',
+    endDate: '2026-11-30T23:59:59',
+    status: 'ACTIVE',
+    isWelcomeVoucher: false,
+    createdAt: '2026-08-25T00:00:00',
+  },
+  {
+    id: 'vch-03',
+    code: 'SUMMER2026',
+    name: 'Chào Hè Rực Rỡ',
+    description: 'Giảm 50.000đ phí giao hàng cho các đơn Takeaway / Delivery.',
+    discountType: 'FIXED_AMOUNT',
+    discountValue: 50000,
+    minOrderAmount: 200000,
+    totalQuantity: 1000,
+    usedQuantity: 1000,
+    usageLimitPerUser: 1,
+    startDate: '2026-05-01T00:00:00',
+    endDate: '2026-08-31T23:59:59',
+    status: 'EXPIRED',
+    isWelcomeVoucher: false,
+    createdAt: '2026-04-15T00:00:00',
+  }
+];
+
 export const useAdminStore = create<AdminState>((set, get) => ({
   // ---------- State ----------
   menu_items: [],
@@ -103,6 +163,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   staff_list: [],
   tables: [],
   service_requests: [],
+  vouchers: INITIAL_VOUCHERS,
   isLoading: false,
   loadError: null,
 
@@ -165,6 +226,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   setOrders: (orders) => set({ orders }),
   setStaffList: (staff) => set({ staff_list: staff }),
   setTables: (tables) => set({ tables }),
+  setVouchers: (vouchers) => set({ vouchers }), // <-- Thêm Setter cho Vouchers
 
   // ---------- Menu (TODO: nối menuApi) ----------
   addMenuItem: () => notWired('addMenuItem'),
@@ -263,6 +325,12 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       service_requests: s.service_requests.map((r) => (r.table_no === table_no ? { ...r, status: 'RESOLVED' } : r)),
     })),
   clearAllServiceRequests: () => set({ service_requests: [] }),
+
+  // Action Bật/Tắt trạng thái Voucher
+  toggleVoucherStatus: (id, status) =>
+    set((state) => ({
+      vouchers: state.vouchers.map((v) => (v.id === id ? { ...v, status } : v)),
+    })),
 }));
 
 /**
