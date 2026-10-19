@@ -181,8 +181,29 @@ const initialSavedOrders = typeof window !== 'undefined' ? loadSavedOrders() : [
 const initialSavedTableSession = typeof window !== 'undefined' ? loadSavedTableSession() : null;
 
 export const useClientStore = create<ClientState>((set, get) => ({
-  // Cart
-  cart: [],
+  // Cart (với 2 món mẫu sẵn sàng để kiểm thử giỏ hàng và áp dụng Voucher)
+  cart: [
+    {
+      id: 'demo-dish-1',
+      menu_item_id: 'demo-dish-1',
+      name: 'Phở Bò Tái Lăn Hà Nội',
+      category: 'Phở & Bún Nước',
+      price: 85000,
+      quantity: 2,
+      image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=500&auto=format&fit=crop&q=60',
+      notes: 'Ít hành, nhiều nước béo',
+    },
+    {
+      id: 'demo-dish-2',
+      menu_item_id: 'demo-dish-2',
+      name: 'Trà Sen Vàng Long Nhãn',
+      category: 'Đồ Uống & Tráng Miệng',
+      price: 45000,
+      quantity: 2,
+      image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=500&auto=format&fit=crop&q=60',
+      notes: '70% đá, 50% ngọt',
+    },
+  ],
 
   addToCart: (item, quantity = 1) =>
     set((state) => {
