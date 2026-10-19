@@ -27,10 +27,13 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final StaffKeyAuthenticationFilter staffKeyAuthenticationFilter;
+
+    public SecurityConfig(StaffKeyAuthenticationFilter staffKeyAuthenticationFilter) {
+        this.staffKeyAuthenticationFilter = staffKeyAuthenticationFilter;
+    }
 
     @Bean //nghĩa là Spring gọi hàm này một lần khi khởi động, giữ kết quả để dùng chung.
     
@@ -91,6 +94,8 @@ public class SecurityConfig {
             .requestMatchers(tableApiPatterns()).permitAll()
             .requestMatchers(eventApiPatterns()).permitAll()
             .requestMatchers(newsletterApiPatterns()).permitAll()
+            .requestMatchers(voucherApiPatterns()).permitAll()
+            .requestMatchers(serviceRequestApiPatterns()).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/ws/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/ws-raw/**")).permitAll()
             .requestMatchers(new AntPathRequestMatcher("/api/payments/**")).permitAll()
@@ -105,7 +110,9 @@ public class SecurityConfig {
     private static RequestMatcher[] menuApiPatterns() {
         return new RequestMatcher[]{
             new AntPathRequestMatcher("/api/menu-items"),
-            new AntPathRequestMatcher("/api/menu-items/**")
+            new AntPathRequestMatcher("/api/menu-items/**"),
+            new AntPathRequestMatcher("/api/categories"),
+            new AntPathRequestMatcher("/api/categories/**")
         };
     }
     // endregion
@@ -134,11 +141,30 @@ public class SecurityConfig {
             new AntPathRequestMatcher("/api/tables"),
             new AntPathRequestMatcher("/api/tables/**"),
             new AntPathRequestMatcher("/api/table-sessions"),
-            new AntPathRequestMatcher("/api/table-sessions/**")
+            new AntPathRequestMatcher("/api/table-sessions/**"),
+            new AntPathRequestMatcher("/api/reservations"),
+            new AntPathRequestMatcher("/api/reservations/**")
         };
     }
     // endregion
 
+    // region voucher
+    private static RequestMatcher[] voucherApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/vouchers"),
+            new AntPathRequestMatcher("/api/vouchers/**")
+        };
+    }
+    // endregion
+
+    // region service-request
+    private static RequestMatcher[] serviceRequestApiPatterns() {
+        return new RequestMatcher[]{
+            new AntPathRequestMatcher("/api/service-requests"),
+            new AntPathRequestMatcher("/api/service-requests/**")
+        };
+    }
+    // endregion
 
     // region event
     private static RequestMatcher[] eventApiPatterns() {

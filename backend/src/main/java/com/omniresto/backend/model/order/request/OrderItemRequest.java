@@ -1,5 +1,6 @@
 package com.omniresto.backend.model.order.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -17,6 +18,7 @@ public class OrderItemRequest {
 
     @NotBlank(message = "Mã món ăn (menuItemId) không được để trống")
     @Size(max = 36, message = "Mã món ăn không được vượt quá 36 ký tự")
+    @JsonAlias({"menuItemId", "menu_item_id"})
     private String menuItemId;
 
     private String name;
@@ -31,5 +33,6 @@ public class OrderItemRequest {
     @Size(max = 255, message = "Ghi chú món không được vượt quá 255 ký tự")
     private String notes;
 
+    @JsonAlias({"optionIds", "option_ids"})
     private List<String> optionIds;
 }
