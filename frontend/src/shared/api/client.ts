@@ -7,6 +7,7 @@ export const apiClient = axios.create({
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
+    'X-Staff-Key': 'STAFF_SECRET_KEY',
   },
 });
 
