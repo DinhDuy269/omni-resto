@@ -751,7 +751,16 @@ export const ClientCart: React.FC = () => {
 
               {/* Danh sách các mã có sẵn để bấm chọn nhanh */}
               {availableVouchers.length > 0 && (
-                <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div style={{
+                  marginTop: 12,
+                  display: 'flex',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                  maxHeight: '112px',
+                  overflowY: 'auto',
+                  paddingRight: '4px',
+                  alignContent: 'flex-start',
+                }}>
                   {availableVouchers.map((v) => (
                     <div
                       key={v.id}
@@ -760,15 +769,16 @@ export const ClientCart: React.FC = () => {
                         setVoucherMsg(null);
                       }}
                       style={{
-                        padding: '4px 10px',
-                        borderRadius: 100,
-                        border: voucherCode === v.code ? '1.5px solid var(--c-primary)' : '1px solid #cbd5e1',
-                        background: voucherCode === v.code ? 'rgba(232, 93, 38, 0.1)' : '#f8fafc',
-                        color: voucherCode === v.code ? 'var(--c-primary)' : '#334155',
+                        padding: '6px 12px',
+                        borderRadius: 99,
+                        border: voucherCode === v.code ? '1.5px solid var(--c-primary)' : '1px solid #e2e8f0',
+                        background: voucherCode === v.code ? '#fff7ed' : '#f8fafc',
+                        color: voucherCode === v.code ? 'var(--c-primary)' : '#475569',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                         fontWeight: 600,
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.2s',
+                        height: 'fit-content',
                       }}
                       title={`${v.name} (Đơn tối thiểu: ${v.minOrderAmount.toLocaleString('vi-VN')}đ)`}
                     >

@@ -30,34 +30,60 @@ export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }
           isActive ? 'var(--success)' : isExpired ? 'var(--danger)' : 'var(--text-muted)'
         }`,
         transition: 'transform 0.2s, box-shadow 0.2s',
+        minWidth: 0,
       }}
     >
       {/* Header: Code & Status */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div
+            title={voucher.code}
             style={{
+              display: 'inline-block',
+              maxWidth: '100%',
               padding: '6px 10px',
               borderRadius: '6px',
               backgroundColor: 'var(--bg-app)',
               border: '1px dashed var(--primary)',
               color: 'var(--primary)',
               fontWeight: 800,
-              fontSize: '1rem',
+              fontSize: '0.925rem',
+              letterSpacing: '0.5px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              boxSizing: 'border-box',
+              verticalAlign: 'middle',
             }}
           >
             {voucher.code}
           </div>
         </div>
-        <StatusBadge status={voucher.status} size="sm" />
+        <div style={{ flexShrink: 0 }}>
+          <StatusBadge status={voucher.status} size="sm" />
+        </div>
       </div>
 
       {/* Body: Info */}
-      <div>
-        <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+      <div style={{ minWidth: 0 }}>
+        <h4
+          title={voucher.name}
+          style={{
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            color: 'var(--text-main)',
+            marginBottom: '4px',
+            lineHeight: 1.4,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: '2.8em',
+          }}
+        >
           {voucher.name}
         </h4>
-        <div style={{ fontSize: '0.875rem', color: 'var(--danger)', fontWeight: 700, marginBottom: '12px' }}>
+        <div style={{ fontSize: '0.875rem', color: 'var(--danger)', fontWeight: 800, marginBottom: '10px' }}>
           Giảm {voucher.discountValue.toLocaleString('vi-VN')} {isPercentage ? '%' : 'đ'}
           {voucher.maxDiscountAmount && isPercentage && (
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
@@ -68,12 +94,12 @@ export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <ShoppingBag size={14} />
-            Đơn tối thiểu: {voucher.minOrderAmount.toLocaleString('vi-VN')}đ
+            <ShoppingBag size={14} style={{ flexShrink: 0 }} />
+            <span>Đơn tối thiểu: {voucher.minOrderAmount.toLocaleString('vi-VN')}đ</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={14} />
-            HSD: {new Date(voucher.endDate).toLocaleDateString('vi-VN')}
+            <Calendar size={14} style={{ flexShrink: 0 }} />
+            <span>HSD: {new Date(voucher.endDate).toLocaleDateString('vi-VN')}</span>
           </div>
         </div>
       </div>
