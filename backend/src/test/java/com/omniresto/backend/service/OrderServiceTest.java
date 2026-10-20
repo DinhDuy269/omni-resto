@@ -18,6 +18,7 @@ import com.omniresto.backend.repository.CategoryOptionRepository;
 import com.omniresto.backend.repository.MenuItemRepository;
 import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
+import com.omniresto.backend.repository.TableSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,9 @@ class OrderServiceTest {
 
     @Mock
     private TableSessionService tableSessionService;
+
+    @Mock
+    private TableSessionRepository tableSessionRepository;
 
     @Mock
     private OrderWebSocketHandler orderWebSocketHandler;
@@ -212,5 +216,41 @@ class OrderServiceTest {
         });
 
         assertTrue(exception.getMessage().contains("Không tìm thấy"));
+    }
+
+    @Test
+    @DisplayName("Should cancel order, set total amount to 0, cancel items, and reset frozen session")
+    void updateOrderStatus_Cancelled() {
+        // Arrange
+        mockOrderEntity.setTotalAmount(new BigDecimal("150000"));
+        mockOrderEntity.setTableSessionId("sess-01");
+        TableSessionEntity session = TableSessionEntity.builder()
+                .status(TableSessionStatus.payment_requested)
+                .build();
+        session.setId("sess-01");
+
+        OrderItemEntity item = OrderItemEntity.builder()
+                .order(mockOrderEntity)
+                .itemName("Món A")
+                .unitPrice(new BigDecimal("150000"))
+                .quantity(1)
+                .build();
+        item.setId("item-01");
+
+        when(orderRepository.findById("ord-test-01")).thenReturn(Optional.of(mockOrderEntity));
+        when(orderItemRepository.findByOrder_Id("ord-test-01")).thenReturn(List.of(item));
+        when(tableSessionRepository.findById("sess-01")).thenReturn(Optional.of(session));
+        when(orderRepository.save(any(OrderEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        OrderResponse updated = orderService.updateOrderStatus("ord-test-01", OrderStatus.cancelled);
+
+        // Assert
+        assertNotNull(updated);
+        assertEquals(OrderStatus.cancelled, updated.getStatus());
+        assertEquals(0, updated.getTotalAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(0, mockOrderEntity.getTotalAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(TableSessionStatus.active, session.getStatus());
+        verify(tableSessionRepository, times(1)).save(session);
     }
 }

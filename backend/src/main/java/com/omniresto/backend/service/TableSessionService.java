@@ -409,7 +409,7 @@ public class TableSessionService {
             OrderEntity order = activeOrderOpt.get();
             builder.activeOrderId(order.getId());
             builder.activeOrderNumber(order.getOrderNumber());
-            builder.totalAmount(order.getTotalAmount());
+            builder.totalAmount(order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO);
             builder.paymentStatus(order.getPaymentStatus());
 
             // Nếu đang trong tiến trình yêu cầu thanh toán, tạo mã VietQR cố định
@@ -438,6 +438,8 @@ public class TableSessionService {
                         .transferContent(transferContent)
                         .build());
             }
+        } else {
+            builder.totalAmount(BigDecimal.ZERO);
         }
 
         return builder.build();

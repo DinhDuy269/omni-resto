@@ -10,16 +10,16 @@ export const ClientActiveOrderBar: React.FC = () => {
   const table_session = useClientStore((s) => s.table_session);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  // Lọc tất cả đơn hàng đang hoạt động (chưa hoàn thành)
-  const activeOrders = orders.filter((o) => o.status !== 'COMPLETED');
+  // Lọc tất cả đơn hàng đang hoạt động (chưa hoàn thành và chưa bị hủy)
+  const activeOrders = orders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
 
   // Không hiển thị nếu không có đơn nào đang hoạt động, người dùng đã tắt hoặc đang ở trang danh sách đơn
   if (activeOrders.length === 0 || isDismissed) return null;
   if (location.pathname === '/client/orders') return null;
 
-  // Tính toán tổng số lượng món ăn và số đợt gọi món
+  // Tính toán tổng số lượng món ăn và số đợt gọi món (không tính món đã hủy)
   const totalDishesCount = activeOrders.reduce(
-    (sum, o) => sum + o.items.reduce((s, it) => s + (it.quantity || 1), 0),
+    (sum, o) => sum + o.items.filter((it) => it.status !== 'CANCELLED').reduce((s, it) => s + (it.quantity || 1), 0),
     0
   );
   const roundsCount = activeOrders.length;

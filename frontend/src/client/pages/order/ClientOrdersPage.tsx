@@ -19,6 +19,7 @@ import {
   Banknote,
   Copy,
   X,
+  XCircle,
 } from 'lucide-react';
 import { useClientStore } from '../../store/clientStore';
 import { OrderStatusStepper } from '../../components/OrderStatusStepper';
@@ -79,11 +80,15 @@ export const ClientOrdersPage: React.FC = () => {
   }, [orders, searchQuery]);
 
   const activeOrders = useMemo(
-    () => filteredOrders.filter((o) => o.status !== 'COMPLETED'),
+    () => filteredOrders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'),
     [filteredOrders]
   );
   const completedOrders = useMemo(
     () => filteredOrders.filter((o) => o.status === 'COMPLETED'),
+    [filteredOrders]
+  );
+  const cancelledOrders = useMemo(
+    () => filteredOrders.filter((o) => o.status === 'CANCELLED'),
     [filteredOrders]
   );
 
@@ -154,6 +159,15 @@ export const ClientOrdersPage: React.FC = () => {
           dishTag: '🔔 Đang bưng ra',
           icon: Bell,
         };
+      case 'CANCELLED':
+        return {
+          label: 'Đã hủy',
+          color: '#dc2626',
+          bg: '#fef2f2',
+          badgeText: 'Đơn đã bị hủy',
+          dishTag: '❌ Đã hủy',
+          icon: XCircle,
+        };
       default:
         return {
           label: 'Hoàn tất',
@@ -197,6 +211,7 @@ export const ClientOrdersPage: React.FC = () => {
 
     activeOrders.forEach((ord) => {
       ord.items.forEach((it, idx) => {
+        if (it.status === 'CANCELLED') return;
         list.push({
           key: `${ord.id}-${it.menu_item_id}-${it.name}-${idx}`,
           name: it.name,
@@ -214,10 +229,13 @@ export const ClientOrdersPage: React.FC = () => {
     return list;
   }, [activeOrders]);
 
-  // Thống kê tổng tiền bàn
-  const totalTableAmount = activeOrders.reduce((sum, o) => sum + o.total_amount, 0);
+  // Thống kê tổng tiền bàn (loại trừ các đơn và món đã bị hủy)
+  const totalTableAmount = activeOrders.reduce(
+    (sum, o) => sum + (o.status === 'CANCELLED' ? 0 : o.total_amount),
+    0
+  );
   const totalTableDishCount = activeOrders.reduce(
-    (sum, o) => sum + o.items.reduce((s, it) => s + it.quantity, 0),
+    (sum, o) => sum + o.items.filter((it) => it.status !== 'CANCELLED').reduce((s, it) => s + it.quantity, 0),
     0
   );
 
@@ -919,6 +937,88 @@ export const ClientOrdersPage: React.FC = () => {
                   </strong>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
+            ZONE 3: COMPACT LIST FOR CANCELLED ORDERS
+           ══════════════════════════════════════════════════════ */}
+        {cancelledOrders.length > 0 && (
+          <div style={{ marginTop: '20px' }}>
+            <h3
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 800,
+                color: '#dc2626',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <XCircle size={16} />
+              Đơn đã bị hủy ({cancelledOrders.length})
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {cancelledOrders.map((order) => {
+                const originalEstimate = order.items.reduce((s, it) => s + it.price * it.quantity, 0);
+                return (
+                  <div
+                    key={order.id}
+                    style={{
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <XCircle size={16} color="#dc2626" style={{ flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: '0.8125rem', color: '#991b1b' }}>
+                            {order.order_number}
+                          </strong>
+                          <span
+                            style={{
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            Đã hủy bởi nhà hàng
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: '#7f1d1d' }}>
+                          Đặt lúc {order.placed_at} · {order.items.length} món · Không tính tiền
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      {originalEstimate > 0 && (
+                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                          {originalEstimate.toLocaleString('vi-VN')}đ
+                        </div>
+                      )}
+                      <strong style={{ fontSize: '0.85rem', color: '#dc2626' }}>
+                        0đ
+                      </strong>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

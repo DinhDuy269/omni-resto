@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Clock, ChefHat, Bell } from 'lucide-react';
+import { Check, Clock, ChefHat, Bell, XCircle } from 'lucide-react';
 import type { PlacedOrderStatus } from '../../shared/types/client';
 
 interface Step {
@@ -25,6 +25,23 @@ interface Props {
 
 export const OrderStatusStepper: React.FC<Props> = ({ status, currentStatus, estimatedMinutes }) => {
   const activeStatus = currentStatus || status || 'PENDING';
+
+  if (activeStatus === 'CANCELLED') {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        margin: '16px 0', padding: '12px 16px',
+        background: '#fff5f5', borderRadius: '10px',
+        border: '1px solid #fed7d7',
+      }}>
+        <XCircle size={20} color="#dc2626" />
+        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#991b1b' }}>
+          Đơn hàng này đã bị hủy từ phía nhà hàng (Không tính tiền)
+        </span>
+      </div>
+    );
+  }
+
   const currentIdx = STEPS.findIndex(s => s.key === activeStatus);
   const progressPercent = currentIdx === -1 ? 0 : (currentIdx / (STEPS.length - 1)) * 100;
 

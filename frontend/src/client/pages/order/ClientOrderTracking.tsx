@@ -13,6 +13,7 @@ import {
   PlusCircle,
   Flame,
   Check,
+  XCircle,
 } from 'lucide-react';
 import { useClientStore } from '../../store/clientStore';
 import { ServiceRequestModal } from '../../components/ServiceRequestModal';
@@ -83,6 +84,7 @@ export const ClientOrderTracking: React.FC = () => {
 
   const currentOrder = matchedOrder;
   const isCompleted = currentStatus === 'COMPLETED';
+  const isCancelled = currentStatus === 'CANCELLED';
 
   const orderMode = currentOrder.order_mode || (currentOrder.table_no ? 'DINE_IN' : 'TAKEAWAY');
   let orderModeBadge = {
@@ -116,6 +118,9 @@ export const ClientOrderTracking: React.FC = () => {
 
   // Trạng thái hiển thị từng món ăn
   const getItemStatusBadge = () => {
+    if (isCancelled) {
+      return { text: 'Đã hủy', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '❌' };
+    }
     switch (currentStatus) {
       case 'COMPLETED':
         return {
@@ -190,18 +195,20 @@ export const ClientOrderTracking: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 40, height: 40, borderRadius: 12,
-                background: isCompleted ? '#ecfdf5' : '#fff7ed',
+                background: isCancelled ? '#fef2f2' : isCompleted ? '#ecfdf5' : '#fff7ed',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: isCompleted ? '#16a34a' : '#ea580c',
+                color: isCancelled ? '#dc2626' : isCompleted ? '#16a34a' : '#ea580c',
               }}>
-                {isCompleted ? <CheckCircle2 size={24} /> : <Flame size={24} className="c-pulse" />}
+                {isCancelled ? <XCircle size={24} /> : isCompleted ? <CheckCircle2 size={24} /> : <Flame size={24} className="c-pulse" />}
               </div>
               <div>
                 <h1 style={{
-                  fontSize: '1.15rem', fontWeight: 900, color: '#0f172a',
+                  fontSize: '1.15rem', fontWeight: 900, color: isCancelled ? '#dc2626' : '#0f172a',
                   margin: '0 0 2px', lineHeight: 1.3,
                 }}>
-                  {isCompleted
+                  {isCancelled
+                    ? 'Đơn hàng đã bị hủy'
+                    : isCompleted
                     ? (orderMode === 'TAKEAWAY' ? 'Đơn mang về đã hoàn tất' : orderMode === 'DELIVERY' ? 'Giao hàng thành công' : 'Đơn hàng đã phục vụ xong')
                     : currentStatus === 'READY'
                     ? (orderMode === 'TAKEAWAY' ? 'Món đã sẵn sàng để mang về!' : orderMode === 'DELIVERY' ? 'Đơn hàng đang được giao!' : 'Món đã sẵn sàng phục vụ!')
@@ -211,13 +218,13 @@ export const ClientOrderTracking: React.FC = () => {
                     ? 'Đơn đã duyệt (Chuyển bếp nấu)'
                     : 'Đã gửi vào bếp (Chờ nấu)'}
                 </h1>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  Đơn {currentOrder.order_number} · Đặt lúc {currentOrder.placed_at || 'vừa xong'}
+                <div style={{ fontSize: '0.8rem', color: isCancelled ? '#991b1b' : '#64748b' }}>
+                  Đơn {currentOrder.order_number} · {isCancelled ? 'Đã hủy bởi nhà hàng · Không tính tiền' : `Đặt lúc ${currentOrder.placed_at || 'vừa xong'}`}
                 </div>
               </div>
             </div>
 
-            {!isCompleted && (
+            {!isCompleted && !isCancelled && (
               <div style={{
                 background: '#f8fafc', border: '1px solid #e2e8f0',
                 borderRadius: 10, padding: '6px 10px', textAlign: 'right', flexShrink: 0,
@@ -232,7 +239,31 @@ export const ClientOrderTracking: React.FC = () => {
             )}
           </div>
 
-          {/* Minimal Linear Stepper */}
+          {/* Minimal Linear Stepper hoặc Cancelled Alert */}
+          {isCancelled ? (
+            <div style={{
+              background: '#fff5f5',
+              border: '1px solid #fed7d7',
+              borderRadius: 12,
+              padding: '14px 16px',
+              marginTop: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              color: '#991b1b',
+              fontSize: '0.85rem',
+            }}>
+              <XCircle size={24} color="#dc2626" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', marginBottom: 2 }}>
+                  Đơn hàng này đã bị hủy từ phía nhà hàng
+                </strong>
+                <span style={{ fontSize: '0.8rem', color: '#7f1d1d' }}>
+                  Toàn bộ món ăn trong đơn này đã được hủy bỏ. Quý khách không phải thanh toán đơn hàng này (0đ).
+                </span>
+              </div>
+            </div>
+          ) : (
           <div style={{ position: 'relative', margin: '20px 0 10px' }}>
             {/* Background line */}
             <div style={{
@@ -282,7 +313,8 @@ export const ClientOrderTracking: React.FC = () => {
               })}
             </div>
           </div>
-        </div>
+        )}
+      </div>
 
         {/* ── 2. DISHES LIST WITH ITEM-LEVEL PROGRESS (Gestalt Grouping) ── */}
         <div style={{
@@ -373,15 +405,21 @@ export const ClientOrderTracking: React.FC = () => {
             </div>
             <div style={{ textAlign: 'right' }}>
               <span style={{ fontSize: '0.78rem', color: '#64748b', marginRight: 6 }}>Tổng cộng:</span>
-              <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ea580c' }}>
-                {currentOrder.total_amount.toLocaleString('vi-VN')}đ
-              </span>
+              {isCancelled ? (
+                <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#dc2626' }}>
+                  Đã hủy (0đ)
+                </span>
+              ) : (
+                <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ea580c' }}>
+                  {currentOrder.total_amount.toLocaleString('vi-VN')}đ
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         {/* ── 3. COLLAPSIBLE VIETQR PAYMENT (Tối giản: Mở khi cần) ── */}
-        {currentOrder.payment_method === 'QR_CODE' && !isCompleted && (
+        {currentOrder.payment_method === 'QR_CODE' && !isCompleted && !isCancelled && (
           <div style={{
             background: '#ffffff',
             borderRadius: 16,

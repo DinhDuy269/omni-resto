@@ -55,8 +55,12 @@ const saveTableSessionToStorage = (session: TableSession | null) => {
 };
 
 export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?: PlacedOrder | null): PlacedOrder => {
+  const rawStatus = (serverOrderData.status || existingOrder?.status || 'PENDING').toUpperCase() as PlacedOrderStatus;
+  const isCancelled = rawStatus === 'CANCELLED';
+
   const mappedItems: CartItem[] = (serverOrderData.items || []).map((it: any) => {
     const existingItem = existingOrder?.items?.find((c) => (c.menu_item_id || c.id) === (it.menu_item_id || it.id));
+    const itemStatus = isCancelled ? 'CANCELLED' : ((it.status?.toUpperCase() as any) || 'CONFIRMED');
     return {
       id: it.id,
       menu_item_id: it.menu_item_id || it.id,
@@ -67,31 +71,32 @@ export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?
       image: existingItem?.image || '/images/food-placeholder.svg',
       notes: it.notes,
       round_no: it.round_no || 1,
-      status: (it.status?.toUpperCase() as any) || 'CONFIRMED',
+      status: itemStatus,
       added_at: it.added_at,
     };
   });
 
-  const rawMode = (serverOrderData.order_mode || serverOrderData.order_type || existingOrder?.order_mode || 'dine_in').toLowerCase();
+  const rawMode = (serverOrderData.order_mode || serverOrderData.order_type || serverOrderData.orderType || existingOrder?.order_mode || 'dine_in').toLowerCase();
   const orderMode: OrderMode = rawMode === 'takeaway' ? 'TAKEAWAY' : rawMode === 'delivery' ? 'DELIVERY' : 'DINE_IN';
 
-  const rawStatus = (serverOrderData.status || existingOrder?.status || 'PENDING').toUpperCase() as PlacedOrderStatus;
+  const serverAmount = Number(serverOrderData.total_amount ?? serverOrderData.totalAmount ?? existingOrder?.total_amount ?? 0);
+  const totalAmount = isCancelled ? 0 : serverAmount;
 
   return {
     id: serverOrderData.id,
-    order_number: serverOrderData.order_number || '',
-    table_session_id: serverOrderData.table_session_id,
+    order_number: serverOrderData.order_number || serverOrderData.orderNumber || existingOrder?.order_number || '',
+    table_session_id: serverOrderData.table_session_id || serverOrderData.tableSessionId || existingOrder?.table_session_id,
     order_mode: orderMode,
-    table_no: serverOrderData.table_no,
-    session_token: serverOrderData.session_token,
-    customer_name: serverOrderData.customer_name,
+    table_no: serverOrderData.table_no || serverOrderData.tableNo || existingOrder?.table_no,
+    session_token: serverOrderData.session_token || serverOrderData.sessionToken || existingOrder?.session_token,
+    customer_name: serverOrderData.customer_name || serverOrderData.customerName || existingOrder?.customer_name,
     items: mappedItems,
-    total_amount: Number(serverOrderData.total_amount ?? 0),
+    total_amount: totalAmount,
     status: rawStatus,
-    payment_status: serverOrderData.payment_status?.toUpperCase() as any || 'UNPAID',
-    placed_at: existingOrder?.placed_at || new Date(serverOrderData.created_at || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    payment_status: isCancelled ? 'CANCELLED' : ((serverOrderData.payment_status || serverOrderData.paymentStatus)?.toUpperCase() as any || 'UNPAID'),
+    placed_at: existingOrder?.placed_at || new Date(serverOrderData.created_at || serverOrderData.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
     estimated_minutes: existingOrder?.estimated_minutes || (orderMode === 'DELIVERY' ? 35 : orderMode === 'TAKEAWAY' ? 20 : 15),
-    payment_method: serverOrderData.payment_method || existingOrder?.payment_method,
+    payment_method: serverOrderData.payment_method || serverOrderData.paymentMethod || existingOrder?.payment_method,
   };
 };
 
@@ -163,15 +168,15 @@ export const selectTotalAmount = (s: ClientState) =>
 export const select_total_amount = selectTotalAmount;
 
 export const selectHasActiveOrders = (s: ClientState) =>
-  s.orders.some((o) => o.status !== 'COMPLETED');
+  s.orders.some((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
 export const select_has_active_orders = selectHasActiveOrders;
 
 export const selectActiveOrders = (s: ClientState) =>
-  s.orders;
+  s.orders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
 export const select_active_orders = selectActiveOrders;
 
 export const selectLatestActiveOrder = (s: ClientState) =>
-  s.orders.find((o) => o.status !== 'COMPLETED') || null;
+  s.orders.find((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED') || null;
 export const select_latest_active_order = selectLatestActiveOrder;
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -414,7 +419,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
       console.warn('requestPayment via backend failed, using local simulation:', err);
       // Fallback local simulation
       const orders = get().orders;
-      const activeOrder = orders.find((o) => o.status !== 'COMPLETED');
+      const activeOrder = orders.find((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
       const totalAmount = activeOrder ? activeOrder.total_amount : 0;
       const orderNumber = activeOrder ? activeOrder.order_number : 'ORD-LOCAL';
 
@@ -831,7 +836,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
       const currentOrders = get().orders;
       const updatedList = data.map((d: any) => {
-        const existing = currentOrders.find((o) => o.id === d.id || o.order_number === d.order_number);
+        const orderNum = d.order_number || d.orderNumber;
+        const existing = currentOrders.find((o) => o.id === d.id || (orderNum && o.order_number === orderNum));
         return mapServerOrderToPlacedOrder(d, existing);
       });
 
@@ -853,19 +859,22 @@ export const useClientStore = create<ClientState>((set, get) => ({
     const currentOrders = get().orders;
     const currentSession = get().table_session;
 
+    const orderSessionId = serverOrder.table_session_id || serverOrder.tableSessionId;
+    const orderNumber = serverOrder.order_number || serverOrder.orderNumber;
+
     // Kiểm tra xem đơn hàng này có thuộc về thiết bị/phiên của khách này không
-    const matchesSession = currentSession?.id && serverOrder.table_session_id === currentSession.id;
-    const matchesExisting = currentOrders.some((o) => o.id === serverOrder.id || o.order_number === serverOrder.order_number);
+    const matchesSession = currentSession?.id && orderSessionId === currentSession.id;
+    const matchesExisting = currentOrders.some((o) => o.id === serverOrder.id || (orderNumber && o.order_number === orderNumber));
 
     if (!matchesSession && !matchesExisting) {
       return;
     }
 
-    const existing = currentOrders.find((o) => o.id === serverOrder.id || o.order_number === serverOrder.order_number);
+    const existing = currentOrders.find((o) => o.id === serverOrder.id || (orderNumber && o.order_number === orderNumber));
     const updated = mapServerOrderToPlacedOrder(serverOrder, existing);
 
     set((state) => {
-      const idx = state.orders.findIndex((o) => o.id === updated.id || o.order_number === updated.order_number);
+      const idx = state.orders.findIndex((o) => o.id === updated.id || (updated.order_number && o.order_number === updated.order_number));
       const newOrders = [...state.orders];
       if (idx !== -1) {
         newOrders[idx] = updated;
@@ -874,12 +883,19 @@ export const useClientStore = create<ClientState>((set, get) => ({
       }
       saveOrdersToStorage(newOrders);
 
-      const newPlaced = state.placed_order && (state.placed_order.id === updated.id || state.placed_order.order_number === updated.order_number)
+      const newPlaced = state.placed_order && (state.placed_order.id === updated.id || (updated.order_number && state.placed_order.order_number === updated.order_number))
         ? updated
         : state.placed_order;
 
       return { orders: newOrders, placed_order: newPlaced };
     });
+
+    // Nếu đơn hàng bị hủy hoặc hoàn tất, refresh lại phiên bàn từ backend để cập nhật tổng tiền
+    if (updated.status === 'CANCELLED' || updated.status === 'COMPLETED') {
+      if (currentSession?.session_token) {
+        get().refreshTableSession();
+      }
+    }
   },
 
   // Table service requests (kết nối API backend với rate limiting)

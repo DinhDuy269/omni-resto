@@ -24,6 +24,7 @@ import com.omniresto.backend.repository.CategoryOptionRepository;
 import com.omniresto.backend.repository.MenuItemRepository;
 import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
+import com.omniresto.backend.repository.TableSessionRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -54,6 +55,7 @@ public class OrderService {
     private final MenuItemRepository menuItemRepository;
     private final CategoryOptionRepository categoryOptionRepository;
     private final TableSessionService tableSessionService;
+    private final TableSessionRepository tableSessionRepository;
     private final OrderWebSocketHandler orderWebSocketHandler;
     private final ObjectMapper objectMapper;
 
@@ -434,24 +436,35 @@ public class OrderService {
     @Transactional
     public OrderResponse updateOrderStatus(String id, OrderStatus status) {
         OrderEntity entity = findOrderById(id);
+        List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
 
         if (status == OrderStatus.cancelled) {
-            // Hủy toàn bộ đơn: Hủy các món chưa phục vụ
-            List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
+            // Hủy toàn bộ đơn: Hủy các món trong đơn và đưa tổng tiền về 0
             for (OrderItemEntity it : items) {
-                if (it.getStatus() != OrderItemStatus.served && it.getStatus() != OrderItemStatus.cancelled) {
+                if (it.getStatus() != OrderItemStatus.cancelled) {
                     it.setStatus(OrderItemStatus.cancelled);
                     orderItemRepository.save(it);
                 }
             }
             entity.setStatus(OrderStatus.cancelled);
+            entity.setTotalAmount(BigDecimal.ZERO);
+
+            // Nếu đơn gắn với phiên bàn đang chờ thanh toán, hủy trạng thái đóng băng để bàn trở về active
+            if (entity.getTableSessionId() != null) {
+                tableSessionRepository.findById(entity.getTableSessionId()).ifPresent(session -> {
+                    if (session.getStatus() == TableSessionStatus.payment_requested) {
+                        session.setStatus(TableSessionStatus.active);
+                        tableSessionRepository.save(session);
+                    }
+                });
+            }
         } else {
             // Cập nhật trạng thái tổng thể hợp lệ
             entity.setStatus(status);
         }
 
         OrderEntity updated = orderRepository.save(entity);
-        OrderResponse response = mapToResponse(updated);
+        OrderResponse response = mapToResponseWithItems(updated, items);
 
         sendWebSocketEvent("ORDER_STATUS_CHANGED", response);
         return response;
