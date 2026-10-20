@@ -1,9 +1,11 @@
-import React from 'react';
-import { Search, Plus, Ticket } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Plus, Ticket, RefreshCw } from 'lucide-react';
 import { VoucherCard } from './components/VoucherCard';
+import { VoucherFormModal } from './components/VoucherFormModal';
 import { useVoucher } from './hooks/useVoucher';
+import { useAdminStore } from '../../store/adminStore';
+import type { VoucherInfo } from '../../../shared/types';
 
-// Component giả lập. Trong thực tế bạn có thể truyền data thật từ API vào useVoucher
 export const VoucherManagement: React.FC = () => {
   const {
     vouchers,
@@ -12,16 +14,76 @@ export const VoucherManagement: React.FC = () => {
     setFilterStatus,
     searchQuery,
     setSearchQuery,
-    toggleVoucherStatus
+    toggleVoucherStatus,
   } = useVoucher();
 
+  const { addVoucher, updateVoucher, fetchInitialData, isLoading } = useAdminStore();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState<VoucherInfo | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
   const handleCreateNew = () => {
-    // Logic mở Modal tạo mới voucher
-    console.log("Mở form tạo voucher");
+    setEditingVoucher(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (voucher: VoucherInfo) => {
+    setEditingVoucher(voucher);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmitModal = async (data: Partial<VoucherInfo>) => {
+    if (editingVoucher) {
+      await updateVoucher(editingVoucher.id, data);
+      showToast('success', `Đã cập nhật thành công voucher [${data.code}]!`);
+    } else {
+      await addVoucher(data);
+      showToast('success', `Đã tạo mới thành công mã voucher [${data.code}]!`);
+    }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      await toggleVoucherStatus(id, newStatus);
+      showToast('success', `Đã ${newStatus === 'ACTIVE' ? 'kích hoạt' : 'tạm dừng'} mã voucher!`);
+    } catch (err: any) {
+      showToast('error', err.message || 'Lỗi khi cập nhật trạng thái voucher!');
+    }
   };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Toast Notification */}
+      {notification && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '24px',
+            right: '24px',
+            zIndex: 10000,
+            padding: '12px 20px',
+            borderRadius: '10px',
+            backgroundColor: notification.type === 'success' ? '#10b981' : '#ef4444',
+            color: '#ffffff',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span>{notification.type === 'success' ? '✅' : '❌'}</span>
+          <span>{notification.message}</span>
+        </div>
+      )}
 
       {/* Page Action Header Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
@@ -31,7 +93,7 @@ export const VoucherManagement: React.FC = () => {
             Quản Lý Khuyến Mãi & Voucher
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-            Thiết lập mã giảm giá, kiểm soát lượt sử dụng và kích cầu doanh số
+            Thiết lập mã giảm giá, kiểm soát lượt sử dụng và kích cầu doanh số nhà hàng
           </p>
         </div>
 
@@ -46,6 +108,15 @@ export const VoucherManagement: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => fetchInitialData()}
+            title="Làm mới danh sách"
+            disabled={isLoading}
+          >
+            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+          </button>
 
           <button className="btn btn-primary" onClick={handleCreateNew}>
             <Plus size={16} />
@@ -96,16 +167,22 @@ export const VoucherManagement: React.FC = () => {
             <VoucherCard
               key={voucher.id}
               voucher={voucher}
-              onEdit={(v) => console.log('Mở form sửa:', v.code)}
-              onToggleStatus={(id, currentStatus) => {
-                // Logic đảo ngược trạng thái
-                const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-                toggleVoucherStatus(id, newStatus);
-              }}
+              onEdit={handleEdit}
+              onToggleStatus={handleToggleStatus}
             />
           ))}
         </div>
       )}
+
+      {/* Form Modal for Creating / Editing */}
+      <VoucherFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmitModal}
+        initialData={editingVoucher}
+      />
     </div>
   );
 };
+
+export default VoucherManagement;

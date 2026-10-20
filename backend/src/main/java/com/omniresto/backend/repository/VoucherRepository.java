@@ -15,6 +15,7 @@ public interface VoucherRepository extends JpaRepository<VoucherEntity, String> 
     
     // Tìm voucher theo mã code (VD: KHUYENMAI20)
     Optional<VoucherEntity> findByCode(String code);
+    Optional<VoucherEntity> findByCodeIgnoreCase(String code);
 
     // Lấy danh sách các voucher ĐANG CÓ HIỆU LỰC (còn hạn, còn lượt, trạng thái ACTIVE)
     @Query("SELECT v FROM VoucherEntity v WHERE v.status = 'ACTIVE' " +

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Plus, Minus, QrCode, Banknote, CheckCircle, AlertCircle, ExternalLink, ShieldCheck, Ticket } from 'lucide-react';
 import { useClientStore, selectTotalAmount } from '../../store/clientStore';
-import { useAdminStore } from '../../../admin/store/adminStore';
+import { voucherApi } from '../../../shared/api/voucherApi';
+import type { VoucherInfo } from '../../../shared/types';
 import type { OrderMode, ClientPaymentMethod, VnPayPaymentInfo } from '../../../shared/types/client';
 import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
@@ -35,19 +36,34 @@ export const ClientCart: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Voucher states
-  const { vouchers } = useAdminStore();
+  const [availableVouchers, setAvailableVouchers] = useState<VoucherInfo[]>([]);
   const [voucherCode, setVoucherCode] = useState('');
-  const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
+  const [appliedVoucher, setAppliedVoucher] = useState<VoucherInfo | null>(null);
+  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
   const [voucherMsg, setVoucherMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const activeVouchers = useMemo(() => {
-    return (vouchers || []).filter((v: any) => v.status === 'ACTIVE' || v.status === 'active');
-  }, [vouchers]);
+  // Tải danh sách voucher đang có hiệu lực từ backend API
+  useEffect(() => {
+    let isMounted = true;
+    voucherApi.getAvailableVouchers()
+      .then((data) => {
+        if (isMounted) setAvailableVouchers(data || []);
+      })
+      .catch((err) => {
+        console.warn('Không tải được danh sách voucher gợi ý:', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   const discountAmount = useMemo(() => {
     if (!appliedVoucher) return 0;
+    // Kiểm tra điều kiện đơn hàng tối thiểu
+    if (totalAmount < appliedVoucher.minOrderAmount) {
+      return 0;
+    }
     let discount = 0;
-    if (appliedVoucher.discountType === 'PERCENTAGE' || appliedVoucher.discountType === 'percentage') {
+    const isPercentage = appliedVoucher.discountType === 'PERCENTAGE' || appliedVoucher.discountType === 'percentage';
+    if (isPercentage) {
       discount = totalAmount * (Number(appliedVoucher.discountValue) / 100);
       if (appliedVoucher.maxDiscountAmount) {
         discount = Math.min(discount, Number(appliedVoucher.maxDiscountAmount));
@@ -60,23 +76,29 @@ export const ClientCart: React.FC = () => {
 
   const finalAmount = Math.max(0, totalAmount - discountAmount);
 
-  const handleApplyVoucher = () => {
-    const selected = activeVouchers.find((v: any) => v.code.toUpperCase() === voucherCode.trim().toUpperCase());
-    if (!selected) {
-      setAppliedVoucher(null);
-      setVoucherMsg({ text: 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn.', type: 'error' });
+  // Áp dụng voucher thông qua xác thực Server-side bảo mật cao
+  const handleApplyVoucher = async () => {
+    const code = voucherCode.trim().toUpperCase();
+    if (!code) {
+      setVoucherMsg({ text: 'Vui lòng nhập mã khuyến mãi.', type: 'error' });
       return;
     }
-    if (totalAmount < (Number(selected.minOrderAmount) || 0)) {
+
+    setIsValidatingVoucher(true);
+    setVoucherMsg(null);
+    try {
+      const validated = await voucherApi.validateVoucher(code, totalAmount);
+      setAppliedVoucher(validated);
+      setVoucherMsg({ text: `Áp dụng mã [${validated.code}] thành công!`, type: 'success' });
+    } catch (err: any) {
       setAppliedVoucher(null);
       setVoucherMsg({
-        text: `Đơn hàng tối thiểu ${Number(selected.minOrderAmount).toLocaleString('vi-VN')}đ để áp dụng mã này.`,
+        text: err.message || 'Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện.',
         type: 'error',
       });
-      return;
+    } finally {
+      setIsValidatingVoucher(false);
     }
-    setAppliedVoucher(selected);
-    setVoucherMsg({ text: `Áp dụng mã ${selected.code} thành công!`, type: 'success' });
   };
 
   // Payment modal state (VNPAY-QR & VietQR)
@@ -720,17 +742,17 @@ export const ClientCart: React.FC = () => {
                   type="button"
                   className="c-btn c-btn-primary"
                   style={{ padding: '0 20px', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem' }}
-                  disabled={!voucherCode.trim()}
+                  disabled={!voucherCode.trim() || isValidatingVoucher}
                   onClick={handleApplyVoucher}
                 >
-                  Áp dụng
+                  {isValidatingVoucher ? 'Đang kiểm tra...' : 'Áp dụng'}
                 </button>
               </div>
 
               {/* Danh sách các mã có sẵn để bấm chọn nhanh */}
-              {activeVouchers.length > 0 && (
+              {availableVouchers.length > 0 && (
                 <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {activeVouchers.map((v: any) => (
+                  {availableVouchers.map((v) => (
                     <div
                       key={v.id}
                       onClick={() => {
@@ -748,7 +770,7 @@ export const ClientCart: React.FC = () => {
                         fontWeight: 600,
                         transition: 'all 0.15s ease',
                       }}
-                      title={v.name}
+                      title={`${v.name} (Đơn tối thiểu: ${v.minOrderAmount.toLocaleString('vi-VN')}đ)`}
                     >
                       🎁 {v.code}
                     </div>

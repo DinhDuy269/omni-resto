@@ -3,6 +3,7 @@ import { menuApi } from '../pages/menu/menuApi';
 import { tableApi } from '../../shared/api/tableApi';
 import { orderApi } from '../../shared/api/orderApi';
 import { staffApi } from '../../shared/api/staffApi';
+import { voucherApi } from '../../shared/api/voucherApi';
 import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, OrderStatus, VoucherInfo } from '../../shared/types/admin';
 
 export const DISH_CATEGORIES = [
@@ -82,7 +83,10 @@ interface AdminState {
   clearAllServiceRequests: () => void;
 
   // Actions - Vouchers
-  toggleVoucherStatus: (id: string, status: VoucherInfo['status']) => void;
+  addVoucher: (voucher: Partial<VoucherInfo>) => Promise<VoucherInfo>;
+  updateVoucher: (id: string, voucher: Partial<VoucherInfo>) => Promise<VoucherInfo>;
+  deleteVoucher: (id: string) => Promise<void>;
+  toggleVoucherStatus: (id: string, status: VoucherInfo['status']) => Promise<void>;
 }
 
 /**
@@ -171,11 +175,12 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchInitialData: async () => {
     set({ isLoading: true, loadError: null });
 
-    const [menu, tables, orders, staff] = await Promise.allSettled([
+    const [menu, tables, orders, staff, vouchers] = await Promise.allSettled([
       menuApi.getMenuItems(),
       tableApi.getAll(),
       orderApi.getAll(),
       staffApi.getAll(),
+      voucherApi.getVouchers(),
     ]);
 
     const failed: string[] = [];
@@ -207,6 +212,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
     if (staff.status === 'fulfilled') patch.staff_list = staff.value;
     else failed.push('nhân sự');
+
+    if (vouchers.status === 'fulfilled') patch.vouchers = vouchers.value;
+    else failed.push('khuyến mãi');
 
     if (failed.length > 0) {
       console.error('Không tải được từ backend:', failed.join(', '));
@@ -326,11 +334,37 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     })),
   clearAllServiceRequests: () => set({ service_requests: [] }),
 
-  // Action Bật/Tắt trạng thái Voucher
-  toggleVoucherStatus: (id, status) =>
+  // Action Quản lý Voucher với Backend API
+  addVoucher: async (voucherData) => {
+    const created = await voucherApi.createVoucher(voucherData);
+    set((state) => ({ vouchers: [created, ...state.vouchers] }));
+    return created;
+  },
+  updateVoucher: async (id, voucherData) => {
+    const updated = await voucherApi.updateVoucher(id, voucherData);
     set((state) => ({
-      vouchers: state.vouchers.map((v) => (v.id === id ? { ...v, status } : v)),
-    })),
+      vouchers: state.vouchers.map((v) => (v.id === id ? updated : v)),
+    }));
+    return updated;
+  },
+  deleteVoucher: async (id) => {
+    await voucherApi.deleteVoucher(id);
+    set((state) => ({
+      vouchers: state.vouchers.filter((v) => v.id !== id),
+    }));
+  },
+  toggleVoucherStatus: async (id, status) => {
+    const prev = get().vouchers;
+    // Optimistic UI update
+    set({ vouchers: prev.map((v) => (v.id === id ? { ...v, status } : v)) });
+    try {
+      await voucherApi.updateStatus(id, status);
+    } catch (err) {
+      // Revert if API fails
+      set({ vouchers: prev });
+      throw err;
+    }
+  },
 }));
 
 /**
