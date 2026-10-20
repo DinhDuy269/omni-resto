@@ -58,18 +58,18 @@ export const ClientCart: React.FC = () => {
   const discountAmount = useMemo(() => {
     if (!appliedVoucher) return 0;
     // Kiểm tra điều kiện đơn hàng tối thiểu
-    if (totalAmount < appliedVoucher.minOrderAmount) {
+    if (totalAmount < appliedVoucher.min_order_amount) {
       return 0;
     }
     let discount = 0;
-    const isPercentage = appliedVoucher.discountType === 'PERCENTAGE' || appliedVoucher.discountType === 'percentage';
+    const isPercentage = appliedVoucher.discount_type === 'PERCENTAGE' || appliedVoucher.discount_type === 'percentage';
     if (isPercentage) {
-      discount = totalAmount * (Number(appliedVoucher.discountValue) / 100);
-      if (appliedVoucher.maxDiscountAmount) {
-        discount = Math.min(discount, Number(appliedVoucher.maxDiscountAmount));
+      discount = totalAmount * (Number(appliedVoucher.discount_value) / 100);
+      if (appliedVoucher.max_discount_amount) {
+        discount = Math.min(discount, Number(appliedVoucher.max_discount_amount));
       }
     } else {
-      discount = Number(appliedVoucher.discountValue) || 0;
+      discount = Number(appliedVoucher.discount_value) || 0;
     }
     return Math.min(discount, totalAmount);
   }, [appliedVoucher, totalAmount]);
@@ -780,7 +780,7 @@ export const ClientCart: React.FC = () => {
                         transition: 'all 0.2s',
                         height: 'fit-content',
                       }}
-                      title={`${v.name} (Đơn tối thiểu: ${v.minOrderAmount.toLocaleString('vi-VN')}đ)`}
+                      title={`${v.name} (Đơn tối thiểu: ${v.min_order_amount.toLocaleString('vi-VN')}đ)`}
                     >
                       🎁 {v.code}
                     </div>

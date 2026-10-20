@@ -29,14 +29,14 @@ export const VoucherManagement: React.FC = () => {
     code: '',
     name: '',
     description: '',
-    discountType: 'FIXED_AMOUNT' as DiscountType,
-    discountValue: 0,
-    maxDiscountAmount: 0,
-    minOrderAmount: 0,
-    totalQuantity: 100,
-    usageLimitPerUser: 1,
-    startDate: new Date().toISOString().slice(0, 10),
-    endDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+    discount_type: 'FIXED_AMOUNT' as DiscountType,
+    discount_value: 0,
+    max_discount_amount: 0,
+    min_order_amount: 0,
+    total_quantity: 100,
+    usage_limit_per_user: 1,
+    start_date: new Date().toISOString().slice(0, 10),
+    end_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     status: 'ACTIVE' as VoucherStatus,
   };
 
@@ -55,19 +55,18 @@ export const VoucherManagement: React.FC = () => {
       code: v.code,
       name: v.name,
       description: v.description || '',
-      discountType: v.discountType,
-      discountValue: v.discountValue,
-      maxDiscountAmount: v.maxDiscountAmount || 0,
-      minOrderAmount: v.minOrderAmount,
-      totalQuantity: v.totalQuantity,
-      usageLimitPerUser: v.usageLimitPerUser,
-      startDate: v.startDate ? v.startDate.slice(0, 10) : '',
-      endDate: v.endDate ? v.endDate.slice(0, 10) : '',
+      discount_type: v.discount_type,
+      discount_value: v.discount_value,
+      max_discount_amount: v.max_discount_amount || 0,
+      min_order_amount: v.min_order_amount,
+      total_quantity: v.total_quantity,
+      usage_limit_per_user: v.usage_limit_per_user,
+      start_date: v.start_date ? v.start_date.slice(0, 10) : '',
+      end_date: v.end_date ? v.end_date.slice(0, 10) : '',
       status: v.status,
     });
   };
 
-  // Xử lý tạo mới voucher
   // Xử lý tạo mới voucher
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,27 +74,27 @@ export const VoucherManagement: React.FC = () => {
 
     try {
       // Đảm bảo định dạng chuẩn ISO LocalDateTime (YYYY-MM-DDTHH:mm:ss)
-      const formattedStartDate = voucherForm.startDate.includes('T')
-        ? voucherForm.startDate
-        : `${voucherForm.startDate}T00:00:00`;
+      const formattedStartDate = voucherForm.start_date.includes('T')
+        ? voucherForm.start_date
+        : `${voucherForm.start_date}T00:00:00`;
 
-      const formattedEndDate = voucherForm.endDate.includes('T')
-        ? voucherForm.endDate
-        : `${voucherForm.endDate}T23:59:59`;
+      const formattedEndDate = voucherForm.end_date.includes('T')
+        ? voucherForm.end_date
+        : `${voucherForm.end_date}T23:59:59`;
 
       const payload: Partial<VoucherInfo> = {
         ...voucherForm,
         code: voucherForm.code.trim().toUpperCase(),
-        discountValue: Number(voucherForm.discountValue),
-        maxDiscountAmount:
-          voucherForm.discountType === 'PERCENTAGE' && Number(voucherForm.maxDiscountAmount) > 0
-            ? Number(voucherForm.maxDiscountAmount)
+        discount_value: Number(voucherForm.discount_value),
+        max_discount_amount:
+          voucherForm.discount_type === 'PERCENTAGE' && Number(voucherForm.max_discount_amount) > 0
+            ? Number(voucherForm.max_discount_amount)
             : undefined,
-        minOrderAmount: Number(voucherForm.minOrderAmount) || 0,
-        totalQuantity: Number(voucherForm.totalQuantity) || 0,
-        usageLimitPerUser: Number(voucherForm.usageLimitPerUser) || 1,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
+        min_order_amount: Number(voucherForm.min_order_amount) || 0,
+        total_quantity: Number(voucherForm.total_quantity) || 0,
+        usage_limit_per_user: Number(voucherForm.usage_limit_per_user) || 1,
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
       };
 
       const created = await voucherApi.createVoucher(payload);
@@ -116,14 +115,14 @@ export const VoucherManagement: React.FC = () => {
       const payload: Partial<VoucherInfo> = {
         ...voucherForm,
         code: voucherForm.code.trim().toUpperCase(),
-        discountValue: Number(voucherForm.discountValue),
-        maxDiscountAmount:
-          voucherForm.discountType === 'PERCENTAGE' && Number(voucherForm.maxDiscountAmount) > 0
-            ? Number(voucherForm.maxDiscountAmount)
+        discount_value: Number(voucherForm.discount_value),
+        max_discount_amount:
+          voucherForm.discount_type === 'PERCENTAGE' && Number(voucherForm.max_discount_amount) > 0
+            ? Number(voucherForm.max_discount_amount)
             : undefined,
-        minOrderAmount: Number(voucherForm.minOrderAmount) || 0,
-        totalQuantity: Number(voucherForm.totalQuantity) || 0,
-        usageLimitPerUser: Number(voucherForm.usageLimitPerUser) || 1,
+        min_order_amount: Number(voucherForm.min_order_amount) || 0,
+        total_quantity: Number(voucherForm.total_quantity) || 0,
+        usage_limit_per_user: Number(voucherForm.usage_limit_per_user) || 1,
       };
 
       const updated = await voucherApi.updateVoucher(editingVoucher.id, payload);
@@ -252,8 +251,8 @@ export const VoucherManagement: React.FC = () => {
               <label className="form-label">Hình Thức Giảm*</label>
               <select
                 className="form-select"
-                value={voucherForm.discountType}
-                onChange={(e) => setVoucherForm({ ...voucherForm, discountType: e.target.value as DiscountType })}
+                value={voucherForm.discount_type}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discount_type: e.target.value as DiscountType })}
               >
                 <option value="FIXED_AMOUNT">Giảm Tiền Mặt (VNĐ)</option>
                 <option value="PERCENTAGE">Giảm Theo Phần Trăm (%)</option>
@@ -262,15 +261,15 @@ export const VoucherManagement: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label">
-                {voucherForm.discountType === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
+                {voucherForm.discount_type === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
               </label>
               <input
                 type="number"
                 className="form-input"
                 min={0}
                 required
-                value={voucherForm.discountValue}
-                onChange={(e) => setVoucherForm({ ...voucherForm, discountValue: Number(e.target.value) })}
+                value={voucherForm.discount_value}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discount_value: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -282,10 +281,10 @@ export const VoucherManagement: React.FC = () => {
                 type="number"
                 className="form-input"
                 min={0}
-                disabled={voucherForm.discountType !== 'PERCENTAGE'}
-                placeholder={voucherForm.discountType !== 'PERCENTAGE' ? 'Không áp dụng' : 'VD: 50000'}
-                value={voucherForm.maxDiscountAmount}
-                onChange={(e) => setVoucherForm({ ...voucherForm, maxDiscountAmount: Number(e.target.value) })}
+                disabled={voucherForm.discount_type !== 'PERCENTAGE'}
+                placeholder={voucherForm.discount_type !== 'PERCENTAGE' ? 'Không áp dụng' : 'VD: 50000'}
+                value={voucherForm.max_discount_amount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, max_discount_amount: Number(e.target.value) })}
               />
             </div>
 
@@ -295,8 +294,8 @@ export const VoucherManagement: React.FC = () => {
                 type="number"
                 className="form-input"
                 min={0}
-                value={voucherForm.minOrderAmount}
-                onChange={(e) => setVoucherForm({ ...voucherForm, minOrderAmount: Number(e.target.value) })}
+                value={voucherForm.min_order_amount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, min_order_amount: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -309,8 +308,8 @@ export const VoucherManagement: React.FC = () => {
                 className="form-input"
                 min={1}
                 required
-                value={voucherForm.totalQuantity}
-                onChange={(e) => setVoucherForm({ ...voucherForm, totalQuantity: Number(e.target.value) })}
+                value={voucherForm.total_quantity}
+                onChange={(e) => setVoucherForm({ ...voucherForm, total_quantity: Number(e.target.value) })}
               />
             </div>
 
@@ -321,8 +320,8 @@ export const VoucherManagement: React.FC = () => {
                 className="form-input"
                 min={1}
                 required
-                value={voucherForm.usageLimitPerUser}
-                onChange={(e) => setVoucherForm({ ...voucherForm, usageLimitPerUser: Number(e.target.value) })}
+                value={voucherForm.usage_limit_per_user}
+                onChange={(e) => setVoucherForm({ ...voucherForm, usage_limit_per_user: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -334,8 +333,8 @@ export const VoucherManagement: React.FC = () => {
                 type="date"
                 className="form-input"
                 required
-                value={voucherForm.startDate}
-                onChange={(e) => setVoucherForm({ ...voucherForm, startDate: e.target.value })}
+                value={voucherForm.start_date}
+                onChange={(e) => setVoucherForm({ ...voucherForm, start_date: e.target.value })}
               />
             </div>
 
@@ -345,8 +344,8 @@ export const VoucherManagement: React.FC = () => {
                 type="date"
                 className="form-input"
                 required
-                value={voucherForm.endDate}
-                onChange={(e) => setVoucherForm({ ...voucherForm, endDate: e.target.value })}
+                value={voucherForm.end_date}
+                onChange={(e) => setVoucherForm({ ...voucherForm, end_date: e.target.value })}
               />
             </div>
           </div>
@@ -392,8 +391,8 @@ export const VoucherManagement: React.FC = () => {
               <label className="form-label">Hình Thức Giảm*</label>
               <select
                 className="form-select"
-                value={voucherForm.discountType}
-                onChange={(e) => setVoucherForm({ ...voucherForm, discountType: e.target.value as DiscountType })}
+                value={voucherForm.discount_type}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discount_type: e.target.value as DiscountType })}
               >
                 <option value="FIXED_AMOUNT">Giảm Tiền Mặt (VNĐ)</option>
                 <option value="PERCENTAGE">Giảm Theo Phần Trăm (%)</option>
@@ -402,15 +401,15 @@ export const VoucherManagement: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label">
-                {voucherForm.discountType === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
+                {voucherForm.discount_type === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
               </label>
               <input
                 type="number"
                 className="form-input"
                 min={0}
                 required
-                value={voucherForm.discountValue}
-                onChange={(e) => setVoucherForm({ ...voucherForm, discountValue: Number(e.target.value) })}
+                value={voucherForm.discount_value}
+                onChange={(e) => setVoucherForm({ ...voucherForm, discount_value: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -422,9 +421,9 @@ export const VoucherManagement: React.FC = () => {
                 type="number"
                 className="form-input"
                 min={0}
-                disabled={voucherForm.discountType !== 'PERCENTAGE'}
-                value={voucherForm.maxDiscountAmount}
-                onChange={(e) => setVoucherForm({ ...voucherForm, maxDiscountAmount: Number(e.target.value) })}
+                disabled={voucherForm.discount_type !== 'PERCENTAGE'}
+                value={voucherForm.max_discount_amount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, max_discount_amount: Number(e.target.value) })}
               />
             </div>
 
@@ -434,8 +433,8 @@ export const VoucherManagement: React.FC = () => {
                 type="number"
                 className="form-input"
                 min={0}
-                value={voucherForm.minOrderAmount}
-                onChange={(e) => setVoucherForm({ ...voucherForm, minOrderAmount: Number(e.target.value) })}
+                value={voucherForm.min_order_amount}
+                onChange={(e) => setVoucherForm({ ...voucherForm, min_order_amount: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -448,8 +447,8 @@ export const VoucherManagement: React.FC = () => {
                 className="form-input"
                 min={1}
                 required
-                value={voucherForm.totalQuantity}
-                onChange={(e) => setVoucherForm({ ...voucherForm, totalQuantity: Number(e.target.value) })}
+                value={voucherForm.total_quantity}
+                onChange={(e) => setVoucherForm({ ...voucherForm, total_quantity: Number(e.target.value) })}
               />
             </div>
 
@@ -460,8 +459,8 @@ export const VoucherManagement: React.FC = () => {
                 className="form-input"
                 min={1}
                 required
-                value={voucherForm.usageLimitPerUser}
-                onChange={(e) => setVoucherForm({ ...voucherForm, usageLimitPerUser: Number(e.target.value) })}
+                value={voucherForm.usage_limit_per_user}
+                onChange={(e) => setVoucherForm({ ...voucherForm, usage_limit_per_user: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -473,8 +472,8 @@ export const VoucherManagement: React.FC = () => {
                 type="date"
                 className="form-input"
                 required
-                value={voucherForm.startDate}
-                onChange={(e) => setVoucherForm({ ...voucherForm, startDate: e.target.value })}
+                value={voucherForm.start_date}
+                onChange={(e) => setVoucherForm({ ...voucherForm, start_date: e.target.value })}
               />
             </div>
 
@@ -484,8 +483,8 @@ export const VoucherManagement: React.FC = () => {
                 type="date"
                 className="form-input"
                 required
-                value={voucherForm.endDate}
-                onChange={(e) => setVoucherForm({ ...voucherForm, endDate: e.target.value })}
+                value={voucherForm.end_date}
+                onChange={(e) => setVoucherForm({ ...voucherForm, end_date: e.target.value })}
               />
             </div>
           </div>

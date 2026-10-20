@@ -16,19 +16,19 @@ export const getValidateVoucherSchema = () => {
       .trim()
       .required('Tên chương trình không được để trống'),
       
-    discountValue: yup
+    discount_value: yup
       .number()
       .typeError('Giá trị giảm phải là số')
       .required('Vui lòng nhập giá trị giảm')
       .min(0, 'Giá trị giảm không được âm'),
       
-    startDate: yup
+    start_date: yup
       .date()
       .required('Vui lòng chọn ngày bắt đầu'),
       
-    endDate: yup
+    end_date: yup
       .date()
-      .min(yup.ref('startDate'), 'Ngày kết thúc phải diễn ra sau ngày bắt đầu')
+      .min(yup.ref('start_date'), 'Ngày kết thúc phải diễn ra sau ngày bắt đầu')
       .required('Vui lòng chọn ngày kết thúc'),
   });
 };
