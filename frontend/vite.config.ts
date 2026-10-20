@@ -18,10 +18,26 @@ export default defineConfig({
       '/ws': {
         target: 'http://localhost:8080',
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (err: any) => {
+            // Ngăn chặn in stack trace khi socket bị client/trình duyệt ngắt đột ngột (F5, HMR, close tab)
+            if (['ECONNRESET', 'ECONNABORTED', 'EPIPE'].includes(err?.code)) {
+              return;
+            }
+          });
+        },
       },
       '/ws-raw': {
         target: 'http://localhost:8080',
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (err: any) => {
+            // Ngăn chặn in stack trace khi socket bị client/trình duyệt ngắt đột ngột (F5, HMR, close tab)
+            if (['ECONNRESET', 'ECONNABORTED', 'EPIPE'].includes(err?.code)) {
+              return;
+            }
+          });
+        },
       },
     },
   },

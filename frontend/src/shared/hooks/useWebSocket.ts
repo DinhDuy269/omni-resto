@@ -72,7 +72,17 @@ export const useWebSocket = (
     return () => {
       isMounted = false;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      if (socketRef.current) socketRef.current.close();
+      if (socketRef.current) {
+        // Thực hiện Graceful Disconnect theo chuẩn RFC 6455
+        // Tránh ngắt đột ngột khi socket đang trong quá trình CONNECTING gây ra ECONNABORTED
+        if (socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.close(1000, 'Component unmounted');
+        } else if (socketRef.current.readyState === WebSocket.CONNECTING) {
+          socketRef.current.onopen = () => {
+            socketRef.current?.close(1000, 'Component unmounted');
+          };
+        }
+      }
     };
   }, []);
 
