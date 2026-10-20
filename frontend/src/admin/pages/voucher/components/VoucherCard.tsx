@@ -10,9 +10,9 @@ interface Props {
 }
 
 export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }) => {
-  const isPercentage = voucher.discountType === 'PERCENTAGE' || voucher.discountType === 'percentage';
-  const isActive = voucher.status === 'ACTIVE' || voucher.status === 'active';
-  const isExpired = voucher.status === 'EXPIRED' || voucher.status === 'expired';
+  const isPercentage = voucher.discountType === 'PERCENTAGE' || (voucher.discountType as any) === 'percentage';
+  const isActive = voucher.status === 'ACTIVE' || (voucher.status as any) === 'active';
+  const isExpired = voucher.status === 'EXPIRED' || (voucher.status as any) === 'expired';
 
   const usagePercent = voucher.totalQuantity > 0 
     ? Math.round((voucher.usedQuantity / voucher.totalQuantity) * 100) 
@@ -30,11 +30,12 @@ export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }
           isActive ? 'var(--success)' : isExpired ? 'var(--danger)' : 'var(--text-muted)'
         }`,
         transition: 'transform 0.2s, box-shadow 0.2s',
-        minWidth: 0,
+        minWidth: 0, // Tránh thẻ card bị phình ngang quá container grid
       }}
     >
       {/* Header: Code & Status */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', minWidth: 0 }}>
+        {/* Khối chứa mã code có xử lý co giãn và cắt chữ nếu quá dài */}
         <div style={{ minWidth: 0, flex: 1 }}>
           <div
             title={voucher.code}
@@ -59,6 +60,8 @@ export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }
             {voucher.code}
           </div>
         </div>
+
+        {/* StatusBadge giữ nguyên kích thước không bị bẹp */}
         <div style={{ flexShrink: 0 }}>
           <StatusBadge status={voucher.status} size="sm" />
         </div>
@@ -66,6 +69,7 @@ export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }
 
       {/* Body: Info */}
       <div style={{ minWidth: 0 }}>
+        {/* Tên voucher: Giới hạn tối đa 2 dòng, tự động ... nếu vượt quá */}
         <h4
           title={voucher.name}
           style={{
@@ -78,11 +82,13 @@ export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            minHeight: '2.8em',
+            minHeight: '2.8em', // Đảm bảo các card đều nhau về chiều cao dòng tiêu đề
           }}
         >
           {voucher.name}
         </h4>
+
+        {/* Giá trị giảm */}
         <div style={{ fontSize: '0.875rem', color: 'var(--danger)', fontWeight: 800, marginBottom: '10px' }}>
           Giảm {voucher.discountValue.toLocaleString('vi-VN')} {isPercentage ? '%' : 'đ'}
           {voucher.maxDiscountAmount && isPercentage && (
