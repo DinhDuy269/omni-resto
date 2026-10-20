@@ -12,7 +12,8 @@ const WINNING_INDEX = 50; // Vị trí món ăn trúng thưởng trong mảng b�
 const TOTAL_ITEMS = 65;   // Tổng số phần tử kết xuất để băng chuyền không bị cụt
 
 const ClientGacha: React.FC = () => {
-    const { menuItems } = useAdminStore();
+    const { menu_items } = useAdminStore();
+    const menuItems = menu_items || [];
     const { addToCart, openCart } = useClientStore();
 
     const availableItems = useMemo(() => {
@@ -117,7 +118,7 @@ const ClientGacha: React.FC = () => {
             addToCart({
                 menuItemId: winner.id,
                 name: winner.name,
-                price: winner.basePrice,
+                price: Number(winner.base_price) || 0,
                 image: winner.image || '',
                 category: winner.category
             }, 1);
@@ -218,7 +219,7 @@ const ClientGacha: React.FC = () => {
                         </h3>
                         
                         <p style={{ fontSize: '1.5rem', color: 'var(--c-primary)', fontWeight: '900', marginBottom: '28px' }}>
-                            {winner.basePrice.toLocaleString('vi-VN')}đ
+                            {(Number(winner.base_price) || 0).toLocaleString('vi-VN')}đ
                         </p>
                         
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
