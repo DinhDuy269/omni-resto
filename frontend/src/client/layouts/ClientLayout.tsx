@@ -5,6 +5,7 @@ import { useClientStore, selectTotalItems, selectTotalAmount, selectHasActiveOrd
 import { CartDrawer } from '../components/CartDrawer';
 import { ClientActiveOrderBar } from '../components/ClientActiveOrderBar';
 import { ClientAiChatWidget } from '../components/chat/ClientAiChatWidget';
+import { ClientGachaFloatingButton } from '../components/ClientGachaFloatingButton';
 import { apiClient } from '../../shared/api/client';
 import { useWebSocket } from '../../shared/hooks/useWebSocket';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
@@ -14,6 +15,7 @@ const NAV_LINKS = [
   { to: '/client/menu',        label: 'Thực đơn' },
   { to: '/client/orders',      label: 'Đơn hàng' },
   { to: '/client/reservation', label: 'Đặt bàn' },
+  { to: '/client/gacha',       label: 'Vòng quay 🎲' },
   { to: '/client/events',      label: 'Sự kiện'  },
   { to: '/client/about',       label: 'Giới thiệu' },
 ];
@@ -321,6 +323,9 @@ export const ClientLayout: React.FC = () => {
 
       {/* ── OmniBot AI Culinary Assistant Widget ── */}
       <ClientAiChatWidget />
+
+      {/* ── Floating Gacha Minigame Launcher ── */}
+      <ClientGachaFloatingButton />
     </div>
   );
 };
