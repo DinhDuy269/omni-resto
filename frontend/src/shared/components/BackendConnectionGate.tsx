@@ -62,24 +62,6 @@ export const BackendConnectionGate: React.FC<Props> = ({ children }) => {
         <div style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 600 }}>
           Đang kết nối tới OmniResto Backend...
         </div>
-        <button
-          id="offline-demo-btn"
-          onClick={() => setIsConnected(true)}
-          style={{
-            marginTop: 6,
-            padding: '8px 18px',
-            borderRadius: 8,
-            border: '1px solid #cbd5e1',
-            background: '#f8fafc',
-            color: '#0f172a',
-            fontSize: '0.825rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-          }}
-        >
-          ✨ Tiếp tục với dữ liệu mẫu (Chế độ Demo)
-        </button>
         <style>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }

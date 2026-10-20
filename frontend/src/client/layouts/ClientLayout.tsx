@@ -15,7 +15,7 @@ const NAV_LINKS = [
   { to: '/client/menu',        label: 'Thực đơn' },
   { to: '/client/orders',      label: 'Đơn hàng' },
   { to: '/client/reservation', label: 'Đặt bàn' },
-  { to: '/client/gacha',       label: 'Vòng quay 🎲' },
+  { to: '/client/gacha',       label: 'Vòng quay' },
   { to: '/client/events',      label: 'Sự kiện'  },
   { to: '/client/about',       label: 'Giới thiệu' },
 ];
