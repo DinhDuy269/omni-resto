@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
-import { ShoppingCart, UtensilsCrossed, CheckCircle, CalendarDays } from 'lucide-react';
+import { ShoppingCart, UtensilsCrossed, CheckCircle, CalendarDays, User } from 'lucide-react';
 import { useClientStore, selectTotalItems, selectTotalAmount, selectHasActiveOrders } from '../store/clientStore';
 import { CartDrawer } from '../components/CartDrawer';
 import { ClientActiveOrderBar } from '../components/ClientActiveOrderBar';
@@ -89,6 +89,23 @@ export const ClientLayout: React.FC = () => {
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
   const hasActiveOrder = useClientStore(selectHasActiveOrders);
+
+  // Phiên đăng nhập khách hàng
+  const [currentUser, setCurrentUser] = useState<{ id?: string; fullName?: string; name?: string; phone?: string; email?: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('customer') || localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem('customer');
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    setCurrentUser(null);
+  };
 
   // Lắng nghe sự kiện cập nhật trạng thái đơn hàng thời gian thực từ Server (Admin duyệt, bếp nấu, hoàn tất)
   useWebSocket((event) => {
@@ -194,6 +211,69 @@ export const ClientLayout: React.FC = () => {
               <CalendarDays size={16} />
               <span>Đặt Bàn</span>
             </Link>
+
+            {/* Nút Đăng nhập / Thông tin Tài khoản */}
+            {currentUser ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: '#fff7ed',
+                    border: '1px solid #ffedd5',
+                    color: '#c2410c',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    maxWidth: 130,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={currentUser.email || currentUser.phone}
+                >
+                  👤 {currentUser.fullName || currentUser.name || currentUser.phone || 'Hội viên'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
+                    color: '#64748b',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                  title="Đăng xuất"
+                >
+                  Thoát
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  backgroundColor: '#ffffff',
+                  border: '1.5px solid #e2e8f0',
+                  color: '#1e293b',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '0.84rem',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <User size={15} />
+                <span>Đăng nhập</span>
+              </Link>
+            )}
+
             <button
               id="client-cart-button"
               className={`client-cart-btn${totalItems > 0 ? ' client-cart-btn--active' : ''}`}

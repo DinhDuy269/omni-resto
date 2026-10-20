@@ -115,6 +115,8 @@ public class SecurityConfig {
                 .requestMatchers(eventApiPatterns()).permitAll()
                 // 14. Newsletter (NewsletterController)
                 .requestMatchers(newsletterApiPatterns()).permitAll()
+                // 15. Customer Authentication & Management (CustomerAuthController)
+                .requestMatchers(customerAuthApiPatterns()).permitAll()
                 // Infrastructure / Static / Docs
                 .requestMatchers(websocketPatterns()).permitAll()
                 .requestMatchers(swaggerPatterns()).permitAll()
@@ -274,6 +276,17 @@ public class SecurityConfig {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/uploads/**"),
                 new AntPathRequestMatcher("/error")
+        };
+    }
+    // region customer-auth (CustomerAuthController)
+    private static RequestMatcher[] customerAuthApiPatterns() {
+        return new RequestMatcher[] {
+                new AntPathRequestMatcher("/api/v1/auth/customer"),
+                new AntPathRequestMatcher("/api/v1/auth/customer/**"),
+                new AntPathRequestMatcher("/api/v1/customer/auth"),
+                new AntPathRequestMatcher("/api/v1/customer/auth/**"),
+                new AntPathRequestMatcher("/api/customers"),
+                new AntPathRequestMatcher("/api/customers/**")
         };
     }
     // endregion

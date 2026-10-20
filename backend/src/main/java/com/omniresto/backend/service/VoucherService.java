@@ -73,7 +73,7 @@ public class VoucherService {
             throw new BadRequestException("Ngày kết thúc phải diễn ra sau ngày bắt đầu khuyến mãi.");
         }
 
-        if (request.getDiscountType() == DiscountType.percentage || request.getDiscountType() == DiscountType.PERCENTAGE) {
+        if (request.getDiscountType() == DiscountType.PERCENTAGE) {
             if (request.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
                 throw new BadRequestException("Phần trăm giảm giá không thể vượt quá 100%.");
             }
@@ -121,7 +121,7 @@ public class VoucherService {
             throw new BadRequestException("Ngày kết thúc phải diễn ra sau ngày bắt đầu khuyến mãi.");
         }
 
-        if (request.getDiscountType() == DiscountType.percentage || request.getDiscountType() == DiscountType.PERCENTAGE) {
+        if (request.getDiscountType() == DiscountType.PERCENTAGE) {
             if (request.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
                 throw new BadRequestException("Phần trăm giảm giá không thể vượt quá 100%.");
             }

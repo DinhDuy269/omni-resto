@@ -24,7 +24,11 @@ import ClientAbout from '../client/pages/about/ClientAbout';
 import ClientCheckIn from '../client/pages/scan/ClientCheckIn';
 import { VnPayReturn } from '../client/pages/payment/VnPayReturn';
 import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
+import CustomersPage from '../admin/pages/customers';
 import ClientGacha from '../client/pages/gacha/ClientGacha';
+import { AuthPage } from '../client/pages/auth/AuthPage';
+import LoginPage from '../client/pages/login';
+import RegisterPage from '../client/pages/register';
 
 /** Normalizes uppercase or mixed-case paths (e.g. /Client -> /client) seamlessly */
 const PathCaseNormalizer: React.FC = () => {
@@ -58,6 +62,7 @@ export const AppRouter: React.FC = () => {
           <Route path="reservations" element={<ReservationManagement />} />
           <Route path="kds" element={<KitchenDisplaySystem />} />
           <Route path="vouchers" element={<VoucherManagement />} />
+          <Route path="customers" element={<CustomersPage />} />
           <Route
             path="reports"
             element={
@@ -102,6 +107,13 @@ export const AppRouter: React.FC = () => {
           <Route path="payment/vnpay-return" element={<VnPayReturn />} />
           <Route path="*" element={<Navigate to="/client" replace />} />
         </Route>
+
+        {/* ══════════════════════════════════════════════════
+            AUTH FLOW — Customer Login, Register, OTP
+            ══════════════════════════════════════════════════ */}
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
         {/* Global fallback */}
         <Route path="*" element={<Navigate to="/admin" replace />} />

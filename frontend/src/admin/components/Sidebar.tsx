@@ -40,6 +40,7 @@ export const Sidebar: React.FC = () => {
     {
       section: 'QUẢN TRỊ & PHÂN TÍCH',
       items: [
+        { label: 'Hội Viên & Khách Hàng', path: '/admin/customers', icon: Users },
         { label: 'Nhân Sự & Phân Quyền', path: '/admin/staff', icon: Users },
         { label: 'Báo Cáo Doanh Thu', path: '/admin/reports', icon: BarChart3 },
         { label: 'Cấu Hình Hệ Thống', path: '/admin/settings', icon: Settings },
