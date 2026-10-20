@@ -68,11 +68,21 @@ export const VoucherManagement: React.FC = () => {
   };
 
   // Xử lý tạo mới voucher
+  // Xử lý tạo mới voucher
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!voucherForm.code.trim() || !voucherForm.name.trim()) return;
 
     try {
+      // Đảm bảo định dạng chuẩn ISO LocalDateTime (YYYY-MM-DDTHH:mm:ss)
+      const formattedStartDate = voucherForm.startDate.includes('T')
+        ? voucherForm.startDate
+        : `${voucherForm.startDate}T00:00:00`;
+
+      const formattedEndDate = voucherForm.endDate.includes('T')
+        ? voucherForm.endDate
+        : `${voucherForm.endDate}T23:59:59`;
+
       const payload: Partial<VoucherInfo> = {
         ...voucherForm,
         code: voucherForm.code.trim().toUpperCase(),
@@ -84,13 +94,16 @@ export const VoucherManagement: React.FC = () => {
         minOrderAmount: Number(voucherForm.minOrderAmount) || 0,
         totalQuantity: Number(voucherForm.totalQuantity) || 0,
         usageLimitPerUser: Number(voucherForm.usageLimitPerUser) || 1,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
       };
 
       const created = await voucherApi.createVoucher(payload);
       setVouchers([created, ...allVouchers]);
       setIsAddModalOpen(false);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tạo khuyến mãi!');
+      // Hiển thị chi tiết lỗi backend trả về (nếu có) thay vì alert chung chung
+      alert(err.response?.data?.message || err.message || 'Lỗi khi tạo khuyến mãi!');
     }
   };
 

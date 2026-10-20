@@ -7,6 +7,8 @@ import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
 import { createVnPayPayment, processVnPayDirectPayment } from '../../../shared/api/vnpayApi';
 import { useAdminStore } from '../../../admin/store/adminStore';
+import { voucherApi } from '../../../shared/api/voucherApi';
+import type { VoucherInfo } from '../../../shared/types';
 
 export const ClientCart: React.FC = () => {
   const navigate = useNavigate();
@@ -56,47 +58,98 @@ export const ClientCart: React.FC = () => {
 
   // Lấy danh sách voucher đang hoạt động
   // Voucher Logic
-  const activeVouchers = useMemo(() => {
-    return vouchers?.filter(v => v.status === 'ACTIVE' || v.status === 'active') || [];
-  }, [vouchers]);
+  // 1. Quản lý danh sách voucher lấy trực tiếp từ API backend cho Client
+  const [activeVouchers, setActiveVouchers] = useState<VoucherInfo[]>([]);
 
+  // Tải danh sách voucher đang hoạt động khi vào trang Giỏ hàng
+  useEffect(() => {
+    voucherApi
+      .getVouchers('ACTIVE')
+      .then((data) => {
+        setActiveVouchers(data || []);
+      })
+      .catch((err) => {
+        console.error('Không thể tải danh sách voucher:', err);
+      });
+  }, []);
+
+  // 2. Tính toán số tiền được giảm giá
   const discountAmount = useMemo(() => {
     if (!appliedVoucher) return 0;
     let discount = 0;
 
-    if (appliedVoucher.discountType === 'PERCENTAGE' || appliedVoucher.discountType === 'percentage') {
-      discount = totalAmount * (appliedVoucher.discountValue / 100);
-      if (appliedVoucher.maxDiscountAmount) {
-        discount = Math.min(discount, appliedVoucher.maxDiscountAmount);
+    const isPercentage =
+      appliedVoucher.discountType === 'PERCENTAGE' ||
+      (appliedVoucher.discountType as any) === 'percentage';
+
+    if (isPercentage) {
+      discount = totalAmount * (Number(appliedVoucher.discountValue) / 100);
+      if (appliedVoucher.maxDiscountAmount && Number(appliedVoucher.maxDiscountAmount) > 0) {
+        discount = Math.min(discount, Number(appliedVoucher.maxDiscountAmount));
       }
     } else {
-      discount = appliedVoucher.discountValue;
+      discount = Number(appliedVoucher.discountValue) || 0;
     }
 
     return Math.min(discount, totalAmount);
   }, [appliedVoucher, totalAmount]);
 
-  const finalAmount = totalAmount - discountAmount;
+  // 3. Tổng tiền sau khi trừ giảm giá
+  const finalAmount = Math.max(0, totalAmount - discountAmount);
 
-  const handleApplyVoucher = () => {
+  // 4. Hàm áp dụng voucher: Gọi trực tiếp API validate từ Backend
+  const handleApplyVoucher = async () => {
     const codeToApply = voucherCode.trim().toUpperCase();
-    const selected = activeVouchers.find(v => v.code.toUpperCase() === codeToApply);
-
-    if (!selected) {
-      setAppliedVoucher(null);
-      setVoucherMsg({ text: 'Mã voucher không tồn tại hoặc đã hết hạn.', type: 'error' });
+    if (!codeToApply) {
+      setVoucherMsg({ text: 'Vui lòng nhập mã voucher.', type: 'error' });
       return;
     }
 
-    if (totalAmount < selected.minOrderAmount) {
+    // 1. Kiểm tra nhanh trong danh sách activeVouchers đã tải về
+    const foundVoucher = activeVouchers.find(
+      (v) => v.code.toUpperCase() === codeToApply
+    );
+
+    if (!foundVoucher) {
       setAppliedVoucher(null);
-      setVoucherMsg({ text: `Đơn hàng chưa đạt mức tối thiểu ${selected.minOrderAmount.toLocaleString('vi-VN')}đ để áp dụng mã này.`, type: 'error' });
+      setVoucherMsg({
+        text: 'Mã voucher không tồn tại hoặc không còn hiệu lực.',
+        type: 'error',
+      });
       return;
     }
 
-    setAppliedVoucher(selected);
-    setVoucherMsg({ text: `Áp dụng mã ${selected.code} thành công!`, type: 'success' });
+    // 2. Chặn ngay nếu đơn hàng chưa đạt giá trị tối thiểu
+    if (totalAmount < foundVoucher.minOrderAmount) {
+      setAppliedVoucher(null);
+      setVoucherMsg({
+        text: `Đơn hàng chưa đạt tối thiểu ${foundVoucher.minOrderAmount.toLocaleString('vi-VN')}đ để dùng mã này.`,
+        type: 'error',
+      });
+      return;
+    }
+
+    // 3. Khi đã đủ điều kiện, gọi API để máy chủ xác nhận
+    try {
+      const validated = await voucherApi.validateVoucher(codeToApply, totalAmount);
+      setAppliedVoucher(validated);
+      setVoucherMsg({
+        text: `Áp dụng mã ${validated.code} thành công!`,
+        type: 'success',
+      });
+    } catch (err: any) {
+      setAppliedVoucher(null);
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        'Không thể áp dụng mã khuyến mãi.';
+      setVoucherMsg({
+        text: errorMsg,
+        type: 'error',
+      });
+    }
   };
+
   // Auto-sync session state
   useEffect(() => {
     if (tableSession?.sessionToken) {
@@ -721,7 +774,16 @@ export const ClientCart: React.FC = () => {
               </div>
 
               {activeVouchers.length > 0 && (
-                <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{
+                  marginTop: 12,
+                  display: 'flex',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                  maxHeight: '112px',    /* Giới hạn độ cao đúng bằng 3 dòng voucher */
+                  overflowY: 'auto',     /* Tự động tạo thanh cuộn dọc khi vượt quá 3 dòng */
+                  paddingRight: '4px',   /* Tạo khoảng cách đệm nhẹ cho scrollbar */
+                  alignContent: 'flex-start'
+                }}>
                   {activeVouchers.map(v => (
                     <div
                       key={v.id}
@@ -734,7 +796,8 @@ export const ClientCart: React.FC = () => {
                         border: voucherCode === v.code ? '1px solid var(--c-primary)' : '1px solid #e2e8f0',
                         background: voucherCode === v.code ? '#fff7ed' : '#f8fafc',
                         color: voucherCode === v.code ? 'var(--c-primary)' : '#475569',
-                        fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s'
+                        fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s',
+                        height: 'fit-content'
                       }}
                       title={v.name}
                     >
@@ -916,7 +979,7 @@ export const ClientCart: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>Tổng cộng</span>
                 <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--c-primary)' }}>
-                  {totalAmount.toLocaleString('vi-VN')}đ
+                  {finalAmount.toLocaleString('vi-VN')}đ
                 </span>
               </div>
             </div>
