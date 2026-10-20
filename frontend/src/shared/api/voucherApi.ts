@@ -1,32 +1,6 @@
 import { apiClient, transformAxiosErrorResponse } from './client';
 import type { VoucherInfo, VoucherStatus } from '../types';
 
-/**
- * Hàm chuẩn hóa DTO Voucher từ Backend (hỗ trợ cả camelCase và snake_case)
- */
-function normalizeVoucherResponse(v: any): VoucherInfo {
-  return {
-    id: v.id,
-    code: v.code || '',
-    name: v.name || '',
-    description: v.description || '',
-    discountType: (v.discountType || v.discount_type || 'FIXED_AMOUNT').toUpperCase(),
-    discountValue: Number(v.discountValue ?? v.discount_value ?? 0),
-    maxDiscountAmount: v.maxDiscountAmount != null || v.max_discount_amount != null
-      ? Number(v.maxDiscountAmount ?? v.max_discount_amount)
-      : undefined,
-    minOrderAmount: Number(v.minOrderAmount ?? v.min_order_amount ?? 0),
-    totalQuantity: Number(v.totalQuantity ?? v.total_quantity ?? 0),
-    usedQuantity: Number(v.usedQuantity ?? v.used_quantity ?? 0),
-    usageLimitPerUser: Number(v.usageLimitPerUser ?? v.usage_limit_per_user ?? 1),
-    startDate: v.startDate || v.start_date || '',
-    endDate: v.endDate || v.end_date || '',
-    status: (v.status ? v.status.toUpperCase() : 'INACTIVE') as VoucherStatus,
-    isWelcomeVoucher: Boolean(v.isWelcomeVoucher ?? v.is_welcome_voucher),
-    createdAt: v.createdAt || v.created_at || new Date().toISOString(),
-  };
-}
-
 export const voucherApi = {
   /**
    * Lấy danh sách voucher cho Admin (hỗ trợ lọc status: ACTIVE, INACTIVE, EXPIRED, ALL)
@@ -36,8 +10,8 @@ export const voucherApi = {
       const url = status && status.toUpperCase() !== 'ALL'
         ? `/vouchers?status=${encodeURIComponent(status.toUpperCase())}`
         : '/vouchers';
-      const res = await apiClient.get<any[]>(url);
-      return (res.data || []).map(normalizeVoucherResponse);
+      const res = await apiClient.get<VoucherInfo[]>(url);
+      return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -48,8 +22,8 @@ export const voucherApi = {
    */
   getAvailableVouchers: async (): Promise<VoucherInfo[]> => {
     try {
-      const res = await apiClient.get<any[]>('/vouchers/available');
-      return (res.data || []).map(normalizeVoucherResponse);
+      const res = await apiClient.get<VoucherInfo[]>('/vouchers/available');
+      return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -60,8 +34,8 @@ export const voucherApi = {
    */
   getVoucherById: async (id: string): Promise<VoucherInfo> => {
     try {
-      const res = await apiClient.get<any>(`/vouchers/${id}`);
-      return normalizeVoucherResponse(res.data);
+      const res = await apiClient.get<VoucherInfo>(`/vouchers/${id}`);
+      return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -72,8 +46,8 @@ export const voucherApi = {
    */
   createVoucher: async (voucherData: Partial<VoucherInfo>): Promise<VoucherInfo> => {
     try {
-      const res = await apiClient.post<any>('/vouchers', voucherData);
-      return normalizeVoucherResponse(res.data);
+      const res = await apiClient.post<VoucherInfo>('/vouchers', voucherData);
+      return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -84,8 +58,8 @@ export const voucherApi = {
    */
   updateVoucher: async (id: string, voucherData: Partial<VoucherInfo>): Promise<VoucherInfo> => {
     try {
-      const res = await apiClient.put<any>(`/vouchers/${id}`, voucherData);
-      return normalizeVoucherResponse(res.data);
+      const res = await apiClient.put<VoucherInfo>(`/vouchers/${id}`, voucherData);
+      return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
@@ -119,8 +93,8 @@ export const voucherApi = {
   validateVoucher: async (code: string, orderAmount: number): Promise<VoucherInfo> => {
     try {
       const cleanCode = encodeURIComponent(code.trim().toUpperCase());
-      const res = await apiClient.get<any>(`/vouchers/validate?code=${cleanCode}&orderAmount=${orderAmount}`);
-      return normalizeVoucherResponse(res.data);
+      const res = await apiClient.get<VoucherInfo>(`/vouchers/validate?code=${cleanCode}&orderAmount=${orderAmount}`);
+      return res.data;
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }
