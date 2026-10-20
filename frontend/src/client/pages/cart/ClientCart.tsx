@@ -692,11 +692,13 @@ export const ClientCart: React.FC = () => {
 
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ flex: 1 }}>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Nhập mã voucher..."
                     className="form-control"
                     value={voucherCode}
                     onChange={(e) => {
-                      setVoucherCode(e.target.value);
+                      setVoucherCode(e.target.value.toUpperCase());
                       setVoucherMsg(null);
                     }}
                     style={{
@@ -706,31 +708,53 @@ export const ClientCart: React.FC = () => {
                       border: '1px solid #cbd5e1',
                       padding: '10px 14px',
                       background: '#f8fafc',
-                      cursor: 'pointer',
                       outline: 'none',
                       fontSize: '0.85rem',
-                      color: voucherCode ? '#0f172a' : '#64748b'
+                      color: '#0f172a',
+                      boxSizing: 'border-box',
                     }}
-                  >
-                    <option value="">-- Chọn mã khuyến mãi --</option>
-                    {activeVouchers.map((v: any) => (
-                      <option key={v.id} value={v.code}>
-                        🎁 {v.code} - {v.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <button
                   type="button"
                   className="c-btn c-btn-primary"
                   style={{ padding: '0 20px', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem' }}
-                  disabled={!voucherCode}
+                  disabled={!voucherCode.trim()}
                   onClick={handleApplyVoucher}
                 >
                   Áp dụng
                 </button>
               </div>
+
+              {/* Danh sách các mã có sẵn để bấm chọn nhanh */}
+              {activeVouchers.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {activeVouchers.map((v: any) => (
+                    <div
+                      key={v.id}
+                      onClick={() => {
+                        setVoucherCode(v.code);
+                        setVoucherMsg(null);
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 100,
+                        border: voucherCode === v.code ? '1.5px solid var(--c-primary)' : '1px solid #cbd5e1',
+                        background: voucherCode === v.code ? 'rgba(232, 93, 38, 0.1)' : '#f8fafc',
+                        color: voucherCode === v.code ? 'var(--c-primary)' : '#334155',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        transition: 'all 0.15s ease',
+                      }}
+                      title={v.name}
+                    >
+                      🎁 {v.code}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {voucherMsg && (
                 <div style={{

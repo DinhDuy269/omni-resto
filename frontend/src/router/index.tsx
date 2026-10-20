@@ -24,6 +24,7 @@ import ClientAbout from '../client/pages/about/ClientAbout';
 import ClientCheckIn from '../client/pages/scan/ClientCheckIn';
 import { VnPayReturn } from '../client/pages/payment/VnPayReturn';
 import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
+import ClientGacha from '../client/pages/gacha/ClientGacha';
 
 /** Normalizes uppercase or mixed-case paths (e.g. /Client -> /client) seamlessly */
 const PathCaseNormalizer: React.FC = () => {
@@ -89,6 +90,7 @@ export const AppRouter: React.FC = () => {
           <Route path="menu" element={<ClientMenu />} />
           <Route path="cart" element={<ClientCart />} />
           <Route path="orders" element={<ClientOrdersPage />} />
+          <Route path="gacha" element={<ClientGacha />} />
           <Route path="order/:orderId" element={<ClientOrderTracking />} />
           {/* Route Khách hàng đặt bàn trực tuyến */}
           <Route path="reservation" element={<ReservationPage />} />
