@@ -3,7 +3,7 @@ import { reservationApi, type TableItem, type ReservationItem } from '../../api/
 import { 
   Calendar, Users, Phone, User, Mail, 
   FileText, CheckCircle2, Clock, AlertCircle,
-  Armchair, ArrowLeft, Utensils
+  Armchair, ArrowLeft, Utensils, PhoneCall
 } from 'lucide-react';
 import './ReservationPage.css';
 
@@ -186,7 +186,7 @@ export default function ReservationPage(): React.ReactElement {
         return;
       }
     } catch {
-      // Tiếp tục để backend kiểm tra nếu bước check trước đó gặp sự cố mạng
+      // Tiếp tục để backend kiểm tra
     }
 
     setLoading(true);
@@ -232,11 +232,31 @@ export default function ReservationPage(): React.ReactElement {
 
   return (
     <div className="res-container">
+      {/* ── TOP HEADER ── */}
       <div className="res-top-header">
         <h1 className="res-main-title">Đặt Bàn Trực Tuyến</h1>
         <p className="res-main-subtitle">Thưởng thức ẩm thực trọn vẹn trong không gian ấm cúng tại OmniResto</p>
       </div>
 
+      {/* ── BANNER HOTLINE ĐOÀN ĐÔNG (> 8 NGƯỜI) ── */}
+      <div className="res-large-group-banner">
+        <div className="banner-left">
+          <div className="banner-icon-circle">
+            <PhoneCall size={22} />
+          </div>
+          <div>
+            <h4 className="banner-title">Quý khách dự định đi đoàn đông?</h4>
+            <p className="banner-desc">
+              Nếu quý khách đi quá 8 người, xin hãy liên hệ số hotline để nhà hàng ghép bàn cho quý khách!
+            </p>
+          </div>
+        </div>
+        <a href="tel:02438259999" className="banner-hotline-btn">
+          <Phone size={15} /> Hotline: 024 3825 9999
+        </a>
+      </div>
+
+      {/* ── VIEW 1: CHỌN BÀN ── */}
       {currentView === 'tables' && (
         <div className="res-box">
           <div className="table-selection-header">
@@ -290,6 +310,7 @@ export default function ReservationPage(): React.ReactElement {
         </div>
       )}
 
+      {/* ── VIEW 2: FORM ĐIỀN THÔNG TIN ── */}
       {currentView === 'form' && selectedTable && (
         <div className="res-box res-form-card">
           {successBooking ? (
@@ -425,7 +446,9 @@ export default function ReservationPage(): React.ReactElement {
                       onChange={handleChange}
                       className="res-field-input"
                     />
-                    <small className="field-hint">Tối đa {selectedTable.capacity} người theo sức chứa của bàn</small>
+                    <small className="field-hint">
+                      * Sức chứa tối đa bàn này: {selectedTable.capacity} người. (Nếu quý khách đi quá 8 người xin hãy liên hệ số hotline để nhà hàng ghép bàn cho quý khách).
+                    </small>
                   </div>
 
                   <div className="res-field-group">
