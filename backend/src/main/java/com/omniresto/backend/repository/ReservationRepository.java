@@ -1,6 +1,8 @@
 package com.omniresto.backend.repository;
 
 import com.omniresto.backend.domain.ReservationEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,19 +17,15 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 
     Optional<ReservationEntity> findByReservationCode(String reservationCode);
 
-    // 👉 1. Lấy toàn bộ đơn sắp xếp theo thời gian tạo mới nhất lên đầu tiên (F5 không bị trôi)
     List<ReservationEntity> findAllByOrderByCreatedAtDesc();
 
-    // 👉 2. Lấy đơn theo trạng thái (PENDING, CONFIRMED, ...) sắp xếp mới nhất lên đầu tiên
     List<ReservationEntity> findByStatusOrderByCreatedAtDesc(String status);
 
-    // [Chống Spam] Tìm các đơn đặt bàn đang còn hiệu lực (PENDING hoặc CONFIRMED) theo số điện thoại
     @Query("SELECT r FROM ReservationEntity r " +
             "WHERE r.customerPhone = :phone " +
             "AND r.status IN ('PENDING', 'CONFIRMED')")
     List<ReservationEntity> findActiveReservationsByPhone(@Param("phone") String phone);
 
-    // Kiểm tra bàn có bị trùng lịch trong khoảng thời gian [startTime, endTime] hay không
     @Query("SELECT r FROM ReservationEntity r WHERE r.table.id = :tableId " +
             "AND r.status IN ('CONFIRMED', 'SEATED') " +
             "AND r.reservationTime BETWEEN :startTime AND :endTime " +
@@ -39,9 +37,45 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
             @Param("excludeReservationId") String excludeReservationId
     );
 
-    // Tìm các đơn đặt bàn chưa nhận bàn (PENDING hoặc CONFIRMED) đã quá giờ hẹn
     @Query("SELECT r FROM ReservationEntity r " +
             "WHERE r.status IN ('PENDING', 'CONFIRMED') " +
             "AND r.reservationTime < :threshold")
     List<ReservationEntity> findExpiredReservations(@Param("threshold") LocalDateTime threshold);
+
+    // Query phân trang kết hợp lọc ca (tính theo phút trong ngày), trạng thái, ngày và từ khóa tìm kiếm
+    @Query(
+            value = "SELECT r FROM ReservationEntity r WHERE " +
+                    "(:status IS NULL OR :status = '' OR r.status = :status) " +
+                    "AND (:search IS NULL OR :search = '' OR " +
+                    "     LOWER(r.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+                    "     r.customerPhone LIKE CONCAT('%', :search, '%') OR " +
+                    "     LOWER(r.reservationCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                    "AND (:startDate IS NULL OR r.reservationTime >= :startDate) " +
+                    "AND (:endDate IS NULL OR r.reservationTime <= :endDate) " +
+                    "AND (:isShiftFilter = false OR " +
+                    "     (:isOvernight = false AND (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) >= :startMinute AND (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) < :endMinute) OR " +
+                    "     (:isOvernight = true AND ((HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) >= :startMinute OR (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) < :endMinute)))",
+            countQuery = "SELECT COUNT(r) FROM ReservationEntity r WHERE " +
+                    "(:status IS NULL OR :status = '' OR r.status = :status) " +
+                    "AND (:search IS NULL OR :search = '' OR " +
+                    "     LOWER(r.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+                    "     r.customerPhone LIKE CONCAT('%', :search, '%') OR " +
+                    "     LOWER(r.reservationCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                    "AND (:startDate IS NULL OR r.reservationTime >= :startDate) " +
+                    "AND (:endDate IS NULL OR r.reservationTime <= :endDate) " +
+                    "AND (:isShiftFilter = false OR " +
+                    "     (:isOvernight = false AND (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) >= :startMinute AND (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) < :endMinute) OR " +
+                    "     (:isOvernight = true AND ((HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) >= :startMinute OR (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) < :endMinute)))"
+    )
+    Page<ReservationEntity> findReservationsPaged(
+            @Param("status") String status,
+            @Param("search") String search,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("isShiftFilter") boolean isShiftFilter,
+            @Param("isOvernight") boolean isOvernight,
+            @Param("startMinute") Integer startMinute,
+            @Param("endMinute") Integer endMinute,
+            Pageable pageable
+    );
 }

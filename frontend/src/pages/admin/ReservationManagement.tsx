@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { reservationApi } from '../../api/reservationApi';
 import {
   Plus,
@@ -12,7 +12,11 @@ import {
   Users,
   Volume2,
   X,
-  Check
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import './ReservationManagement.css';
 
@@ -38,6 +42,8 @@ interface ReservationItem {
   specialNotes?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  shift?: string;
+  shiftName?: string;
 }
 
 interface AssignModalState {
@@ -56,6 +62,30 @@ interface OfflineFormState {
   tableIds: string[];
   specialNotes: string;
   seatedImmediately: boolean;
+}
+
+interface ShiftConfig {
+  id: string;
+  label: string;
+  timeRange: string;
+}
+
+// Chỉ giữ lại Tất Cả, Ca Sáng, Ca Trưa và Ca Tối
+const OPERATING_SHIFTS: ShiftConfig[] = [
+  { id: 'ALL', label: 'Tất Cả Ca', timeRange: 'Toàn bộ' },
+  { id: 'MORNING', label: 'Ca Sáng', timeRange: '06:00 - 10:30' },
+  { id: 'NOON', label: 'Ca Trưa', timeRange: '10:30 - 14:30' },
+  { id: 'EVENING', label: 'Ca Tối', timeRange: '16:30 - 22:00' },
+];
+
+function getShiftFromReservationTime(dateTimeStr: string): string {
+  if (!dateTimeStr) return '';
+  const date = new Date(dateTimeStr);
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  if (minutes >= 360 && minutes < 630) return 'MORNING';  // 06:00 - 10:30
+  if (minutes >= 630 && minutes < 870) return 'NOON';     // 10:30 - 14:30
+  if (minutes >= 990 && minutes < 1320) return 'EVENING'; // 16:30 - 22:00
+  return '';
 }
 
 function extractErrorMessage(err: unknown): string {
@@ -124,6 +154,10 @@ export default function ReservationManagement(): React.ReactElement {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
+  const [selectedShift, setSelectedShift] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
   const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
   const [toastAlert, setToastAlert] = useState<ReservationItem | null>(null);
 
@@ -146,7 +180,6 @@ export default function ReservationManagement(): React.ReactElement {
     seatedImmediately: false,
   });
 
-  // Phát sóng sang các tab Client để cập nhật tức thì 0ms
   const notifyClientTabs = useCallback(() => {
     try {
       const channel = new BroadcastChannel('omni_reservation_channel');
@@ -157,7 +190,6 @@ export default function ReservationManagement(): React.ReactElement {
     }
   }, []);
 
-  // Không gọi setState đồng bộ trước await trong hàm này
   const loadData = useCallback(async () => {
     try {
       const [resData, tablesData] = await Promise.all([
@@ -199,7 +231,6 @@ export default function ReservationManagement(): React.ReactElement {
       };
     }
 
-    // Đưa lệnh gọi loadData vào microtask để tránh cảnh báo cascading renders
     const initTimer = setTimeout(() => {
       loadData();
     }, 0);
@@ -348,11 +379,28 @@ export default function ReservationManagement(): React.ReactElement {
   const occupiedTables = tables.filter((t) => t.status?.toLowerCase() === 'occupied').length;
   const pendingReservations = reservations.filter((r) => r.status === 'PENDING').length;
 
-  const filteredReservations = reservations.filter((r) =>
-    r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.customerPhone.includes(searchTerm) ||
-    r.reservationCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReservations = useMemo(() => {
+    return reservations.filter((r) => {
+      const matchesSearch =
+        r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.customerPhone.includes(searchTerm) ||
+        r.reservationCode.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const itemShift = r.shift || getShiftFromReservationTime(r.reservationTime);
+      const matchesShift = selectedShift === 'ALL' || itemShift === selectedShift;
+
+      return matchesSearch && matchesShift;
+    });
+  }, [reservations, searchTerm, selectedShift]);
+
+  const totalItems = filteredReservations.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+  const paginatedReservations = useMemo(() => {
+    return filteredReservations.slice(startIndex, endIndex);
+  }, [filteredReservations, startIndex, endIndex]);
 
   const assignTotalCapacity = tables
     .filter((t) => assignModal.selectedTableIds.includes(t.id))
@@ -364,7 +412,7 @@ export default function ReservationManagement(): React.ReactElement {
 
   return (
     <div className="adm-res-container">
-      {/* ── TOAST THÔNG BÁO TĨNH GÓC PHẢI MÀN HÌNH ── */}
+      {/* ── TOAST REALTIME GÓC PHẢI MÀN HÌNH ── */}
       {toastAlert && (
         <div className="adm-toast-card">
           <div className="adm-toast-icon-wrap">
@@ -574,6 +622,38 @@ export default function ReservationManagement(): React.ReactElement {
       {/* ── BẢNG DANH SÁCH ĐƠN ── */}
       {activeMode === 'list' && (
         <div className="adm-card-wrapper">
+          {/* THANH LỌC CA VẬN HÀNH: SÁNG / TRƯA / TỐI */}
+          <div className="shift-filter-toolbar">
+            <span className="shift-filter-label">
+              <Clock size={15} color="#059669" /> Lọc Ca Làm Việc:
+            </span>
+            <div className="shift-chips-scroll">
+              {OPERATING_SHIFTS.map((shift) => {
+                const isActive = selectedShift === shift.id;
+                const count = reservations.filter((r) => {
+                  const s = r.shift || getShiftFromReservationTime(r.reservationTime);
+                  return shift.id === 'ALL' || s === shift.id;
+                }).length;
+
+                return (
+                  <button
+                    key={shift.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedShift(shift.id);
+                      setCurrentPage(1);
+                    }}
+                    className={`shift-chip-btn ${isActive ? 'active' : ''}`}
+                  >
+                    <span>{shift.label}</span>
+                    <span className="shift-chip-time">({shift.timeRange})</span>
+                    <span className="shift-chip-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="list-toolbar">
             <div className="status-tab-group">
               {[
@@ -586,7 +666,10 @@ export default function ReservationManagement(): React.ReactElement {
                 <button
                   key={tab.value}
                   type="button"
-                  onClick={() => setFilterStatus(tab.value)}
+                  onClick={() => {
+                    setFilterStatus(tab.value);
+                    setCurrentPage(1);
+                  }}
                   className={`status-tab-btn ${filterStatus === tab.value ? 'active' : ''}`}
                 >
                   {tab.label}
@@ -600,7 +683,10 @@ export default function ReservationManagement(): React.ReactElement {
                 type="text"
                 placeholder="Tìm tên khách, SĐT, mã phiếu..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="search-input-field"
               />
             </div>
@@ -612,7 +698,7 @@ export default function ReservationManagement(): React.ReactElement {
                 <tr>
                   <th>Mã Phiếu</th>
                   <th>Khách Hàng</th>
-                  <th>Thời Gian Dùng</th>
+                  <th>Thời Gian & Ca</th>
                   <th className="text-center">Số Khách</th>
                   <th>Bàn Phục Vụ</th>
                   <th>Trạng Thái</th>
@@ -620,13 +706,18 @@ export default function ReservationManagement(): React.ReactElement {
                 </tr>
               </thead>
               <tbody>
-                {filteredReservations.length === 0 ? (
+                {paginatedReservations.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="empty-table-cell">Không tìm thấy đơn đặt bàn nào</td>
+                    <td colSpan={7} className="empty-table-cell" style={{ textAlign: 'center', padding: '36px', color: '#9ca3af' }}>
+                      Không tìm thấy đơn đặt bàn nào theo tiêu chí đã chọn
+                    </td>
                   </tr>
                 ) : (
-                  filteredReservations.map((r) => {
+                  paginatedReservations.map((r) => {
                     const isMulti = r.tableNo && r.tableNo.includes('+');
+                    const shiftKey = (r.shift || getShiftFromReservationTime(r.reservationTime)).toLowerCase();
+                    const shiftConfig = OPERATING_SHIFTS.find((s) => s.id.toLowerCase() === shiftKey);
+
                     return (
                       <tr key={r.id}>
                         <td className="code-font">{r.reservationCode}</td>
@@ -636,9 +727,14 @@ export default function ReservationManagement(): React.ReactElement {
                         </td>
                         <td>
                           <div>{new Date(r.reservationTime).toLocaleDateString('vi-VN')}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>
+                          <div style={{ fontSize: '0.8rem', color: '#111827', fontWeight: 700 }}>
                             {new Date(r.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                           </div>
+                          {shiftConfig && shiftConfig.id !== 'ALL' && (
+                            <span className={`badge-shift badge-shift-${shiftKey}`}>
+                              {shiftConfig.label}
+                            </span>
+                          )}
                         </td>
                         <td className="text-center" style={{ fontWeight: 700 }}>
                           {r.partySize} {r.partySize > 10 && <span title="Đoàn đông ghép bàn" style={{ color: '#d97706' }}>★</span>}
@@ -698,6 +794,92 @@ export default function ReservationManagement(): React.ReactElement {
               </tbody>
             </table>
           </div>
+
+          {/* ── FOOTER PHÂN TRANG ── */}
+          {totalItems > 0 && (
+            <div className="adm-pagination-bar">
+              <div className="pagination-stats-info">
+                Hiển thị <strong>{startIndex + 1} - {endIndex}</strong> trên tổng số <strong>{totalItems}</strong> đơn
+              </div>
+
+              <div className="pagination-nav-group">
+                <div className="pagination-size-box">
+                  <span>Số hàng:</span>
+                  <select
+                    className="pagination-size-select"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={15}>15 / trang</option>
+                    <option value={20}>20 / trang</option>
+                  </select>
+                </div>
+
+                <div className="pagination-btn-cluster">
+                  <button
+                    type="button"
+                    className="page-btn"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(1)}
+                    title="Trang đầu"
+                  >
+                    <ChevronsLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="page-btn"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    title="Trang trước"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((page) => Math.abs(page - currentPage) <= 1 || page === 1 || page === totalPages)
+                    .map((page, idx, arr) => {
+                      const showEllipsis = idx > 0 && page - arr[idx - 1] > 1;
+                      return (
+                        <React.Fragment key={page}>
+                          {showEllipsis && <span style={{ padding: '0 4px', color: '#9ca3af' }}>...</span>}
+                          <button
+                            type="button"
+                            className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+
+                  <button
+                    type="button"
+                    className="page-btn"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    title="Trang sau"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="page-btn"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    title="Trang cuối"
+                  >
+                    <ChevronsRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

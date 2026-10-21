@@ -1,18 +1,38 @@
-import axios from 'axios';
+import { apiClient, transformAxiosErrorResponse } from '../shared/api/client';
+import type { ApiResponse } from '../shared/types/common';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+export type OperatingShiftType = 'MORNING' | 'NOON' | 'BREAK' | 'EVENING' | 'CLOSED';
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+export interface TableItem {
+  id: string;
+  tableNo: string;
+  capacity: number;
+  status: string;
+}
+
+export interface ReservationItem {
+  id: string;
+  reservationCode: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  partySize: number;
+  reservationTime: string;
+  status: string;
+  tableId?: string | null;
+  tableNo?: string | null;
+  tableCapacity?: number | null;
+  specialNotes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  shift?: string;
+  shiftName?: string;
+}
 
 export interface OnlineReservationPayload {
   customerName: string;
   customerPhone: string;
-  customerEmail?: string | null;
+customerEmail?: string | null;
   partySize: number;
   reservationTime: string;
   tableId?: string | null;
@@ -22,73 +42,156 @@ export interface OnlineReservationPayload {
 export interface OfflineReservationPayload {
   customerName: string;
   customerPhone: string;
-  customerEmail?: string | null;
+  customerEmail?: string;
   partySize: number;
   reservationTime: string;
-  tableId?: string | null;
-  tableIds?: string[]; // Danh sách các bàn ghép khi đoàn đông gọi hotline
-  specialNotes?: string | null;
+  tableId?: string;
+  tableIds?: string[];
+  specialNotes?: string;
   seatedImmediately?: boolean;
 }
 
-export interface AssignTablePayload {
-  tableIds: string[]; // Mảng các bàn cần gán/ghép
+export interface SpringPage<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  numberOfElements: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
 }
 
-const RESERVATION_ENDPOINT = '/tables/reservations';
+export interface ReservationPagedParams {
+  page?: number;
+  size?: number;
+  status?: string;
+  shift?: string;
+  search?: string;
+  date?: string;
+}
 
 export const reservationApi = {
-  // 1. Khách đặt bàn trực tuyến (Tối đa 10 người)
-  createOnline: async (data: OnlineReservationPayload) => {
-    const res = await api.post(`${RESERVATION_ENDPOINT}/online`, data);
-    return res.data;
+  // 1. Kiểm tra SĐT có đơn đặt bàn đang chờ phục vụ hay không (Chống spam real-time)
+  checkActivePhone: async (phone: string): Promise<boolean> => {
+    try {
+      const res = await apiClient.get<ApiResponse<boolean>>('/tables/reservations/check-phone', {
+        params: { phone: phone.trim() },
+      });
+      return res.data?.data === true;
+    } catch {
+      return false;
+    }
   },
 
-  // 2. Nhân viên tạo đơn đặt bàn Offline (Hotline đoàn đông hoặc khách vãng lai)
-  createOffline: async (data: OfflineReservationPayload) => {
-    const res = await api.post(`${RESERVATION_ENDPOINT}/offline`, data);
-    return res.data;
+  // 2. Khách đặt bàn trực tuyến (Online)
+  createOnline: async (payload: OnlineReservationPayload): Promise<ApiResponse<ReservationItem>> => {
+    try {
+      const res = await apiClient.post<ApiResponse<ReservationItem>>('/tables/reservations/online', payload);
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
   },
 
-  // 3. Lấy danh sách đặt bàn
-  getAll: async (status: string = '') => {
-    const res = await api.get(RESERVATION_ENDPOINT, {
-      params: status ? { status } : {},
-    });
-    return res.data;
+  // 3. Lấy toàn bộ danh sách đơn đặt bàn
+  getAll: async (status?: string): Promise<ApiResponse<ReservationItem[]>> => {
+    try {
+      const res = await apiClient.get<ApiResponse<ReservationItem[]>>('/tables/reservations', {
+        params: status && status !== 'ALL' && status.trim() !== '' ? { status } : undefined,
+      });
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
   },
 
-  // 4. Tra cứu thông tin đặt bàn qua mã code
-  trackByCode: async (code: string) => {
-    const res = await api.get(`${RESERVATION_ENDPOINT}/track/${code}`);
-    return res.data;
+  // 4. Lấy danh sách toàn bộ bàn ăn
+  getTables: async (): Promise<ApiResponse<TableItem[]>> => {
+    try {
+      const res = await apiClient.get<ApiResponse<TableItem[]>>('/tables/reservations/tables');
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
   },
 
-  // 5. Nhân viên gán/ghép nhiều bàn cho đơn PENDING
-  assignTable: async (reservationId: string, tableIds: string[]) => {
-    const res = await api.put(`${RESERVATION_ENDPOINT}/${reservationId}/assign-table`, { tableIds });
-    return res.data;
+  // 5. Tạo đơn đặt bàn Hotline / Đoàn đông (Offline)
+  createOffline: async (payload: OfflineReservationPayload): Promise<ApiResponse<ReservationItem>> => {
+    try {
+      const res = await apiClient.post<ApiResponse<ReservationItem>>('/tables/reservations/offline', payload);
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
   },
 
-  // 6. Khách đến quán nhận bàn (Check-in -> SEATED)
-  checkIn: async (reservationId: string) => {
-    const res = await api.put(`${RESERVATION_ENDPOINT}/${reservationId}/check-in`);
-    return res.data;
+  // 6. Xếp bàn
+  assignTable: async (id: string, tableIds: string[]): Promise<ApiResponse<ReservationItem>> => {
+    try {
+      const res = await apiClient.put<ApiResponse<ReservationItem>>(
+        `/tables/reservations/${id}/assign-table`,
+        { tableIds }
+      );
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
   },
 
-  // 7. Hủy đơn đặt bàn kèm lý do
-  cancel: async (reservationId: string, reason: string = '') => {
-    const res = await api.put(`${RESERVATION_ENDPOINT}/${reservationId}/cancel`, null, {
-      params: { reason },
-    });
-    return res.data;
+  // 7. Nhận bàn (Check-in SEATED)
+  checkIn: async (id: string): Promise<ApiResponse<ReservationItem>> => {
+    try {
+      const res = await apiClient.put<ApiResponse<ReservationItem>>(`/tables/reservations/${id}/check-in`);
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
   },
 
-  // 8. Lấy danh sách sơ đồ bàn
-  getTables: async () => {
-    const res = await api.get(`${RESERVATION_ENDPOINT}/tables`);
-    return res.data;
+  // 8. Hủy đơn đặt bàn
+  cancel: async (id: string, reason?: string): Promise<ApiResponse<ReservationItem>> => {
+    try {
+      const res = await apiClient.put<ApiResponse<ReservationItem>>(`/tables/reservations/${id}/cancel`, null, {
+        params: reason ? { reason } : undefined,
+      });
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  // 9. Tra cứu theo mã đơn
+  getByCode: async (code: string): Promise<ApiResponse<ReservationItem>> => {
+    try {
+      const res = await apiClient.get<ApiResponse<ReservationItem>>(`/tables/reservations/track/${code}`);
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  // 10. Phân trang & lọc ca cho Admin
+  getPaged: async (params: ReservationPagedParams): Promise<ApiResponse<SpringPage<ReservationItem>>> => {
+    try {
+      const queryParams: Record<string, string | number> = {
+        page: params.page ?? 0,
+        size: params.size ?? 10,
+      };
+
+      if (params.status && params.status !== 'ALL') queryParams.status = params.status;
+      if (params.shift && params.shift !== 'ALL') queryParams.shift = params.shift;
+      if (params.search && params.search.trim() !== '') queryParams.search = params.search.trim();
+      if (params.date) queryParams.date = params.date;
+
+      const res = await apiClient.get<ApiResponse<SpringPage<ReservationItem>>>(
+        '/tables/reservations/paged',
+        { params: queryParams }
+      );
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
   },
 };
-
-export default reservationApi;

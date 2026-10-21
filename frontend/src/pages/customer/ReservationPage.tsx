@@ -1,33 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { reservationApi } from '../../api/reservationApi';
+import { reservationApi, type TableItem, type ReservationItem } from '../../api/reservationApi';
 import { 
   Calendar, Users, Phone, User, Mail, 
   FileText, CheckCircle2, Clock, AlertCircle,
   Armchair, ArrowLeft, Utensils
 } from 'lucide-react';
 import './ReservationPage.css';
-
-interface TableItem {
-  id: string;
-  tableNo: string;
-  capacity: number;
-  status: string;
-}
-
-interface ReservationDetail {
-  id: string;
-  reservationCode: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string | null;
-  partySize: number;
-  reservationTime: string;
-  status: string;
-  tableId?: string | null;
-  tableNo?: string | null;
-  tableCapacity?: number | null;
-  specialNotes?: string | null;
-}
 
 interface BookingFormState {
   customerName: string;
@@ -40,9 +18,12 @@ interface BookingFormState {
 }
 
 function extractErrorMessage(err: unknown): string {
-  if (typeof err === 'object' && err !== null && 'response' in err) {
-    const res = (err as { response?: { data?: { message?: string } } }).response;
-    if (res?.data?.message) return res.data.message;
+  if (typeof err === 'object' && err !== null) {
+    const anyErr = err as Record<string, any>;
+    if (anyErr.response?.data?.message) return anyErr.response.data.message;
+    if (anyErr.data?.message) return anyErr.data.message;
+    if (anyErr.error_description) return anyErr.error_description;
+    if (anyErr.message) return anyErr.message;
   }
   if (err instanceof Error) return err.message;
   return 'Đặt bàn không thành công!';
@@ -76,7 +57,7 @@ export default function ReservationPage(): React.ReactElement {
   const [selectedTable, setSelectedTable] = useState<TableItem | null>(null);
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [successBooking, setSuccessBooking] = useState<ReservationDetail | null>(null);
+  const [successBooking, setSuccessBooking] = useState<ReservationItem | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const [formData, setFormData] = useState<BookingFormState>({
@@ -155,6 +136,28 @@ export default function ReservationPage(): React.ReactElement {
         setErrorMsg('');
       }
     }
+
+    if (name === 'customerPhone' && errorMsg.includes('Số điện thoại')) {
+      setErrorMsg('');
+    }
+  };
+
+  const handlePhoneBlur = async () => {
+    const cleanPhone = formData.customerPhone.trim().replace(/[\s.-]+/g, '');
+    const vnPhoneRegex = /^(0|\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    
+    if (vnPhoneRegex.test(cleanPhone)) {
+      try {
+        const hasActive = await reservationApi.checkActivePhone(cleanPhone);
+        if (hasActive) {
+          setErrorMsg('⚠️ Số điện thoại này hiện đang có đơn đặt bàn chưa hoàn tất. Vui lòng không đặt trùng lặp!');
+        } else if (errorMsg.includes('Số điện thoại này hiện đang có đơn')) {
+          setErrorMsg('');
+        }
+      } catch {
+        // Bỏ qua lỗi kết nối ở bước blur
+      }
+    }
   };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
@@ -176,12 +179,24 @@ export default function ReservationPage(): React.ReactElement {
       return;
     }
 
+    try {
+      const hasActive = await reservationApi.checkActivePhone(cleanPhone);
+      if (hasActive) {
+        setErrorMsg('⚠️ Số điện thoại này hiện đang có đơn đặt bàn chưa hoàn tất. Vui lòng không đặt trùng lặp!');
+        return;
+      }
+    } catch {
+      // Tiếp tục để backend kiểm tra nếu bước check trước đó gặp sự cố mạng
+    }
+
     setLoading(true);
 
     try {
       const fullDateTime = `${formData.reservationDate}T${formData.reservationTime}:00`;
       const tableNote = `[Khách chọn: Bàn ${selectedTable.tableNo} (${selectedTable.capacity} chỗ)]`;
-      const combinedNotes = formData.specialNotes ? `${tableNote} - ${formData.specialNotes.trim()}` : tableNote;
+      const combinedNotes = formData.specialNotes 
+        ? `${tableNote} - ${formData.specialNotes.trim()}` 
+        : tableNote;
 
       const payload = {
         customerName: formData.customerName.trim(),
@@ -194,7 +209,7 @@ export default function ReservationPage(): React.ReactElement {
       };
 
       const res = await reservationApi.createOnline(payload);
-      setSuccessBooking(res.data);
+      setSuccessBooking(res.data ?? null);
 
       fetchTables();
 
@@ -376,6 +391,7 @@ export default function ReservationPage(): React.ReactElement {
                       required
                       value={formData.customerPhone}
                       onChange={handleChange}
+                      onBlur={handlePhoneBlur}
                       placeholder="0988111222"
                       className="res-field-input"
                     />

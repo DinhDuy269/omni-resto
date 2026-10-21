@@ -2,6 +2,7 @@ package com.omniresto.backend.service;
 
 import com.omniresto.backend.domain.ReservationEntity;
 import com.omniresto.backend.domain.TableEntity;
+import com.omniresto.backend.domain.enums.OperatingShift;
 import com.omniresto.backend.domain.enums.TableStatus;
 import com.omniresto.backend.model.reservation.request.AssignTableRequest;
 import com.omniresto.backend.model.reservation.request.OfflineReservationRequest;
@@ -11,11 +12,15 @@ import com.omniresto.backend.repository.ReservationRepository;
 import com.omniresto.backend.repository.TableRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,39 +74,66 @@ public class ReservationService {
 
     /**
      * 1. Khách đặt bàn trực tuyến:
-     * Gán bàn khách chọn vào đơn để Admin thấy lịch, nhưng TUYỆT ĐỐI KHÔNG KHÓA BÀN trong database.
-     * Bàn vật lý vẫn là AVAILABLE 100% để người khác vẫn chọn được!
+     * - Tự động kiểm tra chống spam theo số điện thoại (chặn nếu còn đơn PENDING hoặc CONFIRMED)
+     * - Kiểm tra tính hợp lệ của thời gian đặt bàn
+     * - Gán bàn khách chọn vào đơn nhưng KHÔNG KHÓA BÀN trong database (vẫn là AVAILABLE)
+     * - Phát sự kiện Realtime SSE thông báo tới màn hình Admin
      */
     @Transactional
     public ReservationResponse createOnlineReservation(OnlineReservationRequest request) {
+        String phone = request.getCustomerPhone() != null ? request.getCustomerPhone().trim() : "";
+
+        // 1. Chống Spam: Kiểm tra số điện thoại có đơn đặt bàn đang chờ phục vụ hay không
+        if (!phone.isBlank()) {
+            List<ReservationEntity> activeReservations = reservationRepository.findActiveReservationsByPhone(phone);
+            if (!activeReservations.isEmpty()) {
+                ReservationEntity active = activeReservations.get(0);
+                throw new RuntimeException("Số điện thoại " + phone + " hiện đang có đơn đặt bàn ("
+                        + active.getReservationCode()
+                        + ") chưa hoàn tất. Vui lòng không đặt trùng lặp!");
+            }
+        }
+
+        // 2. Kiểm tra thời gian đặt bàn không được ở trong quá khứ
+        if (request.getReservationTime() != null && request.getReservationTime().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Thời gian đặt bàn không hợp lệ (không thể chọn thời gian trong quá khứ)!");
+        }
+
+        // 3. Xử lý gán bàn (nếu khách có chọn bàn cụ thể)
         TableEntity assignedTable = null;
         String initialStatus = "PENDING";
 
         if (request.getTableId() != null && !request.getTableId().isBlank()) {
-            assignedTable = tableRepository.findById(request.getTableId())
+            assignedTable = tableRepository.findById(request.getTableId().trim())
                     .orElseThrow(() -> new RuntimeException("Bàn bạn chọn không tồn tại!"));
 
-            // Tự động chuyển đơn thành CONFIRMED để Admin có sẵn nút "Nhận Bàn"
+            // Đơn có bàn chọn trước chuyển sang CONFIRMED để Admin có sẵn nút "Nhận Bàn"
             initialStatus = "CONFIRMED";
 
             // LƯU Ý: KHÔNG gọi table.setStatus(...) và KHÔNG save table tại đây!
         }
 
+        // 4. Tạo entity và lưu vào cơ sở dữ liệu
         ReservationEntity entity = ReservationEntity.builder()
                 .reservationCode(generateReservationCode("RSV-ONL"))
                 .customerName(request.getCustomerName().trim())
-                .customerPhone(request.getCustomerPhone().trim())
-                .customerEmail(request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null)
+                .customerPhone(phone)
+                .customerEmail(request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank()
+                        ? request.getCustomerEmail().trim()
+                        : null)
                 .partySize(request.getPartySize())
                 .reservationTime(request.getReservationTime())
                 .status(initialStatus)
                 .table(assignedTable)
-                .specialNotes(request.getSpecialNotes())
+                .specialNotes(request.getSpecialNotes() != null ? request.getSpecialNotes().trim() : null)
                 .build();
 
         ReservationEntity saved = reservationRepository.save(entity);
         ReservationResponse response = toResponse(saved);
+
+        // 5. Phát sóng Realtime SSE và đọc loa thông báo tới Admin
         sseService.broadcastNewReservation(response);
+
         return response;
     }
 
@@ -177,6 +209,53 @@ public class ReservationService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt bàn với mã: " + code));
         return toResponse(entity);
+    }
+
+    /**
+     * Phương thức phân trang và lọc ca vận hành mới cho Admin:
+     * Hỗ trợ tìm kiếm theo tên/sđt/mã, lọc theo trạng thái, ngày hẹn và ca làm việc.
+     */
+    @Transactional(readOnly = true)
+    public Page<ReservationResponse> getReservationsPaged(
+            String status,
+            String search,
+            LocalDate date,
+            OperatingShift shift,
+            Pageable pageable
+    ) {
+        String cleanStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status))
+                ? status.trim().toUpperCase()
+                : null;
+
+        String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
+
+        LocalDateTime startDate = (date != null) ? date.atStartOfDay() : null;
+        LocalDateTime endDate = (date != null) ? date.atTime(LocalTime.MAX) : null;
+
+        boolean isShiftFilter = (shift != null);
+        boolean isOvernight = false;
+        Integer startMinute = null;
+        Integer endMinute = null;
+
+        if (isShiftFilter) {
+            startMinute = shift.getStartTime().getHour() * 60 + shift.getStartTime().getMinute();
+            endMinute = shift.getEndTime().getHour() * 60 + shift.getEndTime().getMinute();
+            isOvernight = startMinute > endMinute; // Đối với ca CLOSED: 22:00 -> 06:00
+        }
+
+        Page<ReservationEntity> entityPage = reservationRepository.findReservationsPaged(
+                cleanStatus,
+                cleanSearch,
+                startDate,
+                endDate,
+                isShiftFilter,
+                isOvernight,
+                startMinute,
+                endMinute,
+                pageable
+        );
+
+        return entityPage.map(this::toResponse);
     }
 
     /**
@@ -315,6 +394,14 @@ public class ReservationService {
             totalCapacity = entity.getTable().getCapacity();
         }
 
+        // Tự động gán thông tin Ca làm việc từ thời gian đặt bàn
+        OperatingShift shift = null;
+        String shiftName = null;
+        if (entity.getReservationTime() != null) {
+            shift = OperatingShift.fromTime(entity.getReservationTime().toLocalTime());
+            shiftName = shift.getName() + " (" + shift.getTimeRange() + ")";
+        }
+
         return ReservationResponse.builder()
                 .id(entity.getId())
                 .reservationCode(entity.getReservationCode())
@@ -330,6 +417,13 @@ public class ReservationService {
                 .specialNotes(entity.getSpecialNotes())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .shift(shift)
+                .shiftName(shiftName)
                 .build();
+    }
+    // Kiểm tra số điện thoại có đang dính đơn đặt bàn active nào không
+    public boolean hasActiveBookingByPhone(String phone) {
+        if (phone == null || phone.isBlank()) return false;
+        return !reservationRepository.findActiveReservationsByPhone(phone.trim()).isEmpty();
     }
 }

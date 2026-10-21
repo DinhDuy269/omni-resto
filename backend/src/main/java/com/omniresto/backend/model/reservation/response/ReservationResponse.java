@@ -1,5 +1,6 @@
 package com.omniresto.backend.model.reservation.response;
 
+import com.omniresto.backend.domain.enums.OperatingShift;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,4 +25,8 @@ public class ReservationResponse {
     private String specialNotes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Bổ sung thông tin ca phục vụ
+    private OperatingShift shift;
+    private String shiftName;
 }
