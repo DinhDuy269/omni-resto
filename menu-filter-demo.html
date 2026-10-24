@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>OmniResto — Haute Gastronomy Curated Navigation | Apex Redesign</title>
+
+  <!-- Luxury Typography: Cormorant Garamond (Serif Pháp cổ điển), Playfair Display & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ══════════════════════════════════════════════════════════════════════════
+       1. LUXURY DESIGN TOKENS (HAUTE COUTURE PALETTE: NOIR & CHAMPAGNE GOLD)
+       ══════════════════════════════════════════════════════════════════════════ */
+    :root {
+      /* Mode Noir (Mặc định) */
+      --bg-canvas: #07080B;
+      --bg-surface-glass: rgba(16, 19, 28, 0.75);
+      --bg-card: #0D1017;
+      --bg-card-border: rgba(212, 175, 55, 0.16);
+      
+      --gold-primary: #D4AF37;
+      --gold-champagne: #F5E6B8;
+      --gold-amber: #E5A93C;
+      --gold-bronze: #8C6D23;
+      --gold-glow: rgba(212, 175, 55, 0.35);
+      --gold-line: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.6), transparent);
+
+      --text-prime: #F9F9FB;
+      --text-secondary: #A3AEC4;
+      --text-tertiary: #5A657D;
+
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+      --ease-lux: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-spring: cubic-bezier(0.34, 1.5, 0.64, 1);
+      --shadow-floating: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(212, 175, 55, 0.12);
+    }
+
+    /* Mode Alabaster Imperial (Bản Sáng Xa Hoa) */
+    [data-theme="light"] {
+      --bg-canvas: #F9F6F0;
+      --bg-surface-glass: rgba(255, 255, 255, 0.85);
+      --bg-card: #FFFFFF;
+      --bg-card-border: rgba(184, 150, 46, 0.22);
+
+      --gold-primary: #B8860B;
+      --gold-champagne: #4A3B18;
+      --gold-amber: #996515;
+      --gold-glow: rgba(184, 134, 11, 0.25);
+      --gold-line: linear-gradient(90deg, transparent, rgba(184, 134, 11, 0.4), transparent);
+
+      --text-prime: #161412;
+      --text-secondary: #5C5248;
+      --text-tertiary: #968B7E;
+      --shadow-floating: 0 20px 45px rgba(50, 40, 30, 0.08), 0 0 25px rgba(212, 175, 55, 0.15);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-prime);
+      font-family: var(--font-sans);
+      min-height: 200vh; /* Giả lập cuộn trang để kiểm chứng độ mượt Sticky */
+      overflow-x: hidden;
+      transition: background-color 0.5s var(--ease-lux), color 0.5s var(--ease-lux);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       2. TOP BAR & ATELIER IDENTITY
+       ══════════════════════════════════════════════════════════════════════════ */
+    .atelier-header {
+      padding: 24px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+      background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.07) 0%, transparent 70%);
+      position: relative;
+      z-index: 20;
+    }
+
+    .brand-crown-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-insignia {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--gold-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 80%);
+      position: relative;
+    }
+
+    .brand-insignia svg {
+      width: 22px;
+      height: 22px;
+      color: var(--gold-champagne);
+    }
+
+    .brand-logotype {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #FFFFFF 0%, var(--gold-champagne) 50%, var(--gold-amber) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+
+    [data-theme="light"] .brand-logotype {
+      background: linear-gradient(135deg, #1C1917 0%, var(--gold-primary) 60%, var(--gold-amber) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtext {
+      font-family: var(--font-serif);
+      font-size: 0.82rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold-primary);
+      margin-top: 4px;
+      display: block;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Theme Switcher Button */
+    .theme-pill-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 999px;
+      padding: 8px 18px;
+      color: var(--gold-champagne);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s var(--ease-lux);
+    }
+
+    .theme-pill-btn:hover {
+      background: rgba(212, 175, 55, 0.15);
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       3. HAUTE GASTRONOMY CURATED NAVIGATION (THE APEX REDESIGN)
+       ══════════════════════════════════════════════════════════════════════════ */
+    .curated-sticky-wrapper {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 20px 48px;
+      transition: padding 0.4s var(--ease-lux);
+    }
+
+    .is-scrolled .curated-sticky-wrapper {
+      padding: 10px 48px;
+    }
+
+    /* Đảo Điều Hướng Điêu Khắc (The Sculptural Navigation Island) */
+    .sculptural-island {
+      max-width: 1240px;
+      margin: 0 auto;
+      background: var(--bg-surface-glass);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 28px;
+      box-shadow: var(--shadow-floating);
+      padding: 16px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s var(--ease-lux);
+    }
+
+    /* Vệt sáng viền vàng kim trên đỉnh đảo */
+    .sculptural-island::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 1px;
+      background: var(--gold-line);
+      pointer-events: none;
+    }
+
+    /* ── TẦNG 1: CHRONO GASTRONOMIQUE (DÒNG THỜI GIAN ẨM THỰC) ── */
+    .chrono-tier {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .chrono-dial-cluster {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .chrono-dial-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 8px 18px;
+      border-radius: 999px;
+      color: var(--text-secondary);
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+      transition: all 0.3s var(--ease-lux);
+      position: relative;
+    }
+
+    .chrono-dial-btn:hover {
+      color: var(--gold-champagne);
+    }
+
+    .chrono-dial-btn.active {
+      color: var(--gold-champagne);
+      background: rgba(212, 175, 55, 0.1);
+      border-color: rgba(212, 175, 55, 0.4);
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.15), inset 0 0 10px rgba(212, 175, 55, 0.08);
+      font-weight: 700;
+    }
+
+    .chrono-hour {
+      font-family: var(--font-sans);
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      opacity: 0.7;
+      text-transform: uppercase;
+    }
+
+    .chrono-pulse-sparkle {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold-primary);
+      box-shadow: 0 0 10px var(--gold-primary);
+      animation: pulseSparkle 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseSparkle {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.5); opacity: 1; }
+    }
+
+    /* Thanh Tìm Kiếm Monocle Tinh Giản */
+    .monocle-search {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(212, 175, 55, 0.22);
+      border-radius: 999px;
+      padding: 8px 18px;
+      flex: 0 1 300px;
+      min-width: 220px;
+      transition: all 0.35s var(--ease-lux);
+    }
+
+    .monocle-search:focus-within {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 25px var(--gold-glow);
+      flex: 0 1 340px;
+    }
+
+    .monocle-search input {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      color: var(--text-prime);
+      width: 100%;
+    }
+
+    .monocle-search input::placeholder {
+      font-family: var(--font-serif);
+      font-style: italic;
+      color: var(--text-tertiary);
+      font-size: 0.95rem;
+    }
+
+    /* ── TẦNG 2: CURATED CATEGORY RIBBON (DẢI LỤA PHÂN HẠNG DANH MỤC) ── */
+    .ribbon-tier {
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid rgba(212, 175, 55, 0.08);
+    }
+
+    .ribbon-scroll-track {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      width: 100%;
+      padding: 6px 16px 10px;
+      /* Mép mờ Gradient Feathering triệt tiêu hoàn toàn nút tròn */
+      mask-image: linear-gradient(to right, transparent 0%, black 30px, black calc(100% - 30px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30px, black calc(100% - 30px), transparent 100%);
+    }
+
+    .ribbon-scroll-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Tab Danh Mục: Phong Cách Tạp Chí Nghệ Thuật (Haute Typography) */
+    .ribbon-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+      padding: 6px 4px;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      transition: color 0.3s var(--ease-lux);
+      flex-shrink: 0;
+    }
+
+    .ribbon-tab:hover {
+      color: var(--gold-champagne);
+    }
+
+    .ribbon-tab.active {
+      color: var(--gold-champagne);
+      font-weight: 700;
+    }
+
+    /* Số thứ tự phân hạng La Mã / Thượng Lưu (thay cho số đếm ngoặc đơn thô cứng) */
+    .ribbon-roman-num {
+      font-family: var(--font-sans);
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--gold-primary);
+      opacity: 0.8;
+      letter-spacing: 0.05em;
+      transform: translateY(-5px);
+    }
+
+    /* Vệt Chỉ Báo Trượt Vàng Kim (Liquid Gold Sliding Underline) */
+    .liquid-sliding-indicator {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold-primary), var(--gold-champagne), var(--gold-primary), transparent);
+      box-shadow: 0 0 12px var(--gold-glow);
+      border-radius: 999px;
+      pointer-events: none;
+      transition: transform 0.4s var(--ease-spring), width 0.4s var(--ease-spring);
+      will-change: transform, width;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       4. LUXURY DIETARY & TASTING NOTES (BỘ LỌC PHỤ TINH CHỌN)
+       ══════════════════════════════════════════════════════════════════════════ */
+    .curated-tags-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(212, 175, 55, 0.06);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tasting-pill {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(212, 175, 55, 0.14);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: 0.74rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.25s var(--ease-lux);
+    }
+
+    .tasting-pill:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-champagne);
+    }
+
+    .tasting-pill.selected {
+      background: rgba(212, 175, 55, 0.14);
+      border-color: var(--gold-primary);
+      color: var(--gold-champagne);
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       5. SAMPLE HAUTE GASTRONOMY SHOWCASE CARDS
+       ══════════════════════════════════════════════════════════════════════════ */
+    .atelier-catalog {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 36px 48px 120px;
+    }
+
+    .catalog-meta-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+      padding-bottom: 14px;
+    }
+
+    .meta-live-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      color: var(--gold-primary);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .curated-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 36px;
+    }
+
+    /* Thẻ Món Ăn Điêu Khắc (Haute Gastronomy Card) */
+    .haute-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 24px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.4s var(--ease-lux);
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .haute-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--gold-primary);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 30px var(--gold-glow);
+    }
+
+    .card-vignette {
+      position: relative;
+      height: 250px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .card-vignette img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.92) contrast(1.08);
+      transition: transform 0.8s var(--ease-lux);
+    }
+
+    .haute-card:hover .card-vignette img {
+      transform: scale(1.1);
+    }
+
+    .card-provenance-tag {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(7, 8, 11, 0.85);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-champagne);
+      font-family: var(--font-sans);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+    }
+
+    .card-atelier-body {
+      padding: 26px 28px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .card-category-rubric {
+      font-family: var(--font-sans);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold-primary);
+      margin-bottom: 8px;
+    }
+
+    .card-dish-name {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--text-prime);
+      margin-bottom: 12px;
+    }
+
+    .card-poetic-desc {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      flex: 1;
+      font-style: italic;
+    }
+
+    .card-atelier-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(212, 175, 55, 0.12);
+      padding-top: 18px;
+    }
+
+    .card-tasting-price {
+      font-family: var(--font-serif);
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--gold-champagne);
+      letter-spacing: 0.02em;
+    }
+
+    .card-order-action {
+      background: transparent;
+      border: 1px solid var(--gold-primary);
+      border-radius: 999px;
+      padding: 8px 22px;
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold-champagne);
+      cursor: pointer;
+      transition: all 0.3s var(--ease-lux);
+    }
+
+    .haute-card:hover .card-order-action {
+      background: var(--gold-primary);
+      color: #050608;
+      box-shadow: 0 0 20px var(--gold-glow);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .atelier-header, .curated-sticky-wrapper, .atelier-catalog {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      .brand-logotype { font-size: 1.25rem; }
+      .sculptural-island { padding: 14px 18px; border-radius: 20px; }
+      .ribbon-tab { font-size: 1.1rem; }
+      .curated-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Atelier Header -->
+  <header class="atelier-header">
+    <div class="brand-crown-group">
+      <div class="brand-insignia">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-logotype">OmniResto</h1>
+        <span class="brand-subtext">Haute Gastronomy Atelier &bull; 2026</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <!-- Dark / Light Haute Couture Toggle -->
+      <button class="theme-pill-btn" id="theme-toggle" onclick="toggleTheme()">
+        <span id="theme-icon">☀️</span>
+        <span id="theme-text">Mode Alabaster</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       THE APEX SCULPTURAL NAVIGATION ISLAND
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <section class="curated-sticky-wrapper" id="sticky-stage">
+    <div class="sculptural-island">
+      
+      <!-- Tier 1: Chrono Gastronomique (Swiss Watch Horology Time Dial) -->
+      <div class="chrono-tier">
+        <div class="chrono-dial-cluster" role="tablist">
+          <button class="chrono-dial-btn active" onclick="selectPeriod('ALL', this)">
+            <span class="chrono-pulse-sparkle"></span>
+            <span>Tất cả nhịp thời gian</span>
+          </button>
+          <button class="chrono-dial-btn" onclick="selectPeriod('MORNING', this)">
+            <span>Aube &bull; Sáng</span>
+            <span class="chrono-hour">06:00 &mdash; 10:30</span>
+          </button>
+          <button class="chrono-dial-btn" onclick="selectPeriod('NOON', this)">
+            <span>Zénith &bull; Trưa</span>
+            <span class="chrono-hour">10:30 &mdash; 14:30</span>
+          </button>
+          <button class="chrono-dial-btn" onclick="selectPeriod('EVENING', this)">
+            <span>Crépuscule &bull; Tối & Lẩu</span>
+            <span class="chrono-hour">16:30 &mdash; 22:00</span>
+          </button>
+          <button class="chrono-dial-btn" onclick="selectPeriod('ALL_DAY', this)">
+            <span>Infusion &bull; Cả ngày</span>
+          </button>
+        </div>
+
+        <!-- Monocle Search (Khớp Tiếng Việt Không Dấu) -->
+        <div class="monocle-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold-primary)" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            id="curated-search" 
+            placeholder="Tìm kiếm phong vị (Wagyu, Truffle, Caviar...)" 
+            oninput="handleSearch(this.value)"
+          />
+        </div>
+      </div>
+
+      <!-- Tier 2: Curated Category Ribbon with Liquid Gold Sliding Underline -->
+      <div class="ribbon-tier">
+        <div class="ribbon-scroll-track" id="ribbon-track">
+          <!-- Active Sliding Underline Indicator -->
+          <div class="liquid-sliding-indicator" id="liquid-indicator"></div>
+
+          <button class="ribbon-tab active" onclick="selectCategory('ALL', this)">
+            <span>Toàn Bộ Thực Đơn</span>
+            <span class="ribbon-roman-num">I</span>
+          </button>
+          <button class="ribbon-tab" onclick="selectCategory('pho', this)">
+            <span>Phở & Thang Nước Thượng Phẩm</span>
+            <span class="ribbon-roman-num">II</span>
+          </button>
+          <button class="ribbon-tab" onclick="selectCategory('com', this)">
+            <span>Cơm Tấm Mật Ong & Món Mặn</span>
+            <span class="ribbon-roman-num">III</span>
+          </button>
+          <button class="ribbon-tab" onclick="selectCategory('banhmi', this)">
+            <span>Bánh Mì Điểm Tâm Kinh Kỳ</span>
+            <span class="ribbon-roman-num">IV</span>
+          </button>
+          <button class="ribbon-tab" onclick="selectCategory('lau', this)">
+            <span>Yến Tiệc Lẩu & Món Nhắm</span>
+            <span class="ribbon-roman-num">V</span>
+          </button>
+          <button class="ribbon-tab" onclick="selectCategory('drink', this)">
+            <span>Trà Hoa & Điểm Tâm Tráng Miệng</span>
+            <span class="ribbon-roman-num">VI</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tier 3: Luxury Dietary & Tasting Notes Pills -->
+      <div class="curated-tags-row">
+        <button class="tasting-pill" onclick="toggleTag('VEGAN', this)">🌱 Thuần Chay (Végane)</button>
+        <button class="tasting-pill" onclick="toggleTag('SPICY', this)">🌶️ Cay Nồng (Piment)</button>
+        <button class="tasting-pill" onclick="toggleTag('SIGNATURE', this)">✨ Bếp Trưởng Khuyên Dùng</button>
+        <button class="tasting-pill" onclick="toggleTag('WINE', this)">🍷 Thức Uống Kết Hợp</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       SAMPLE HAUTE GASTRONOMY CATALOG
+       ══════════════════════════════════════════════════════════════════════════ */
+  <main class="atelier-catalog">
+    
+    <div class="catalog-meta-bar">
+      <span>Bộ sưu tập gồm <strong id="dish-counter" style="color: var(--gold-champagne)">6</strong> tác phẩm ẩm thực độc bản</span>
+      <div class="meta-live-status">
+        <span class="chrono-pulse-sparkle"></span>
+        <span>Bếp Mở Phục Vụ Trực Tiếp</span>
+      </div>
+    </div>
+
+    <div class="curated-grid" id="dish-gallery">
+      <!-- Dish 1 -->
+      <article class="haute-card" data-cat="pho" data-period="MORNING NOON" data-tags="SIGNATURE">
+        <div class="card-vignette">
+          <span class="card-provenance-tag">Miyazaki A5 &bull; Truffle</span>
+          <img src="https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80" alt="Phở Bò Wagyu" />
+        </div>
+        <div class="card-atelier-body">
+          <span class="card-category-rubric">Thang Nước Thượng Phẩm</span>
+          <h3 class="card-dish-name">Phở Bò Wagyu A5 & Truffle Đen Périgord</h3>
+          <p class="card-poetic-desc">&ldquo;Nước dùng kết tinh 36 giờ ninh tủy bò thảo mộc cổ truyền, từng thớ thịt Wagyu tan mịn như lụa quyện hương nấm đen quý tộc.&rdquo;</p>
+          <div class="card-atelier-footer">
+            <span class="card-tasting-price">485,000 ₫</span>
+            <button class="card-order-action">Thưởng Thức</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Dish 2 -->
+      <article class="haute-card" data-cat="com" data-period="NOON" data-tags="SIGNATURE">
+        <div class="card-vignette">
+          <span class="card-provenance-tag">Sườn Than Hoa &bull; Mật Ong Rừng</span>
+          <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80" alt="Cơm Tấm Sườn" />
+        </div>
+        <div class="card-atelier-body">
+          <span class="card-category-rubric">Món Mặn Cung Đình</span>
+          <h3 class="card-dish-name">Cơm Tấm Cốt Lết Tây Bắc Nướng Xém Cạnh</h3>
+          <p class="card-poetic-desc">&ldquo;Sườn heo thảo dược ủ mật ong hoa bạc hà nướng trên than củi Binchotan, chả cua bể hấp trứng béo ngậy.&rdquo;</p>
+          <div class="card-atelier-footer">
+            <span class="card-tasting-price">285,000 ₫</span>
+            <button class="card-order-action">Thưởng Thức</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Dish 3 -->
+      <article class="haute-card" data-cat="banhmi" data-period="MORNING" data-tags="SPICY">
+        <div class="card-vignette">
+          <span class="card-provenance-tag">Điểm Tâm Pháp &bull; Việt</span>
+          <img src="https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=800&q=80" alt="Bánh Mì Chảo" />
+        </div>
+        <div class="card-atelier-body">
+          <span class="card-category-rubric">Điểm Tâm Kinh Kỳ</span>
+          <h3 class="card-dish-name">Bánh Mì Chảo Gan Ngỗng & Pate Cột Đèn</h3>
+          <p class="card-poetic-desc">&ldquo;Sự hòa quyện diễm lệ giữa gan ngỗng Foie Gras áp chảo sốt tiêu lốt Phú Quốc và vỏ bánh mì nướng giòn rụm.&rdquo;</p>
+          <div class="card-atelier-footer">
+            <span class="card-tasting-price">245,000 ₫</span>
+            <button class="card-order-action">Thưởng Thức</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Dish 4 -->
+      <article class="haute-card" data-cat="lau" data-period="EVENING" data-tags="WINE SPICY">
+        <div class="card-vignette">
+          <span class="card-provenance-tag">Hải Vị Sông Hồng</span>
+          <img src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80" alt="Lẩu Riêu Cua" />
+        </div>
+        <div class="card-atelier-body">
+          <span class="card-category-rubric">Yến Tiệc Đêm</span>
+          <h3 class="card-dish-name">Set Lẩu Riêu Cua Biển & Bắp Bò Úc Thượng Hạng</h3>
+          <p class="card-poetic-desc">&ldquo;Vị chua thanh tao nhã từ giấm bỗng nếp cái hoa vàng, gạch cua sông thơm bùi sánh đặc bên làn khói nghi ngút.&rdquo;</p>
+          <div class="card-atelier-footer">
+            <span class="card-tasting-price">880,000 ₫</span>
+            <button class="card-order-action">Thưởng Thức</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Dish 5 -->
+      <article class="haute-card" data-cat="drink" data-period="ALL_DAY" data-tags="VEGAN">
+        <div class="card-vignette">
+          <span class="card-provenance-tag">Trà Sen Tây Hồ</span>
+          <img src="https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80" alt="Trà Sen Vàng" />
+        </div>
+        <div class="card-atelier-body">
+          <span class="card-category-rubric">Trà Hoa & Điểm Tâm</span>
+          <h3 class="card-dish-name">Trà Sen Cổ Thụ & Ganache Vàng Lá 24K</h3>
+          <p class="card-poetic-desc">&ldquo;Trà ướp gạo sen bách diệp hái trong sương sớm, phục vụ cùng viên chocolate Valrhona dát vàng lá thủ công.&rdquo;</p>
+          <div class="card-atelier-footer">
+            <span class="card-tasting-price">180,000 ₫</span>
+            <button class="card-order-action">Thưởng Thức</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Dish 6 -->
+      <article class="haute-card" data-cat="pho" data-period="MORNING NOON EVENING" data-tags="VEGAN">
+        <div class="card-vignette">
+          <span class="card-provenance-tag">Nấm Rừng Sapa</span>
+          <img src="https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=800&q=80" alt="Phở Chay Nấm" />
+        </div>
+        <div class="card-atelier-body">
+          <span class="card-category-rubric">Thang Nước Thuần Chay</span>
+          <h3 class="card-dish-name">Phở Thanh Trúc Nấm Tùng Nhung Hữu Cơ</h3>
+          <p class="card-poetic-desc">&ldquo;Nước hầm củ quả tự nhiên ngọt thanh như suối nguồn, nấm tùng nhung Matsutake nướng xém thơm lừng.&rdquo;</p>
+          <div class="card-atelier-footer">
+            <span class="card-tasting-price">220,000 ₫</span>
+            <button class="card-order-action">Thưởng Thức</button>
+          </div>
+        </div>
+      </article>
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       INTERACTION SCRIPTS (SLIDING INDICATOR & DIACRITICS FILTER)
+       ══════════════════════════════════════════════════════════════════════════ */
+  <script>
+    // 1. Sticky detector
+    window.addEventListener('scroll', () => {
+      const stage = document.getElementById('sticky-stage');
+      if (window.scrollY > 40) {
+        stage.classList.add('is-scrolled');
+      } else {
+        stage.classList.remove('is-scrolled');
+      }
+    });
+
+    // 2. Liquid Gold Sliding Indicator Physics
+    const indicator = document.getElementById('liquid-indicator');
+    const ribbonTrack = document.getElementById('ribbon-track');
+
+    function updateSlidingIndicator(activeTab) {
+      if (!activeTab || !indicator) return;
+      const trackRect = ribbonTrack.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+
+      const leftOffset = tabRect.left - trackRect.left + ribbonTrack.scrollLeft;
+      const width = tabRect.width;
+
+      indicator.style.width = `${width}px`;
+      indicator.style.transform = `translateX(${leftOffset}px)`;
+    }
+
+    // Initialize indicator on page load
+    window.addEventListener('load', () => {
+      const initialTab = document.querySelector('.ribbon-tab.active');
+      if (initialTab) updateSlidingIndicator(initialTab);
+    });
+
+    // 3. Filtering State & Diacritics Matching
+    let activePeriod = 'ALL';
+    let activeCategory = 'ALL';
+    let activeTag = null;
+    let searchQuery = '';
+
+    function removeVietnameseTones(str) {
+      if (!str) return '';
+      return str.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, m => m === 'đ' ? 'd' : 'D')
+        .toLowerCase()
+        .trim();
+    }
+
+    function selectPeriod(period, btn) {
+      activePeriod = period;
+      document.querySelectorAll('.chrono-dial-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterDishes();
+    }
+
+    function selectCategory(cat, btn) {
+      activeCategory = cat;
+      document.querySelectorAll('.ribbon-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateSlidingIndicator(btn);
+      filterDishes();
+    }
+
+    function toggleTag(tag, btn) {
+      if (activeTag === tag) {
+        activeTag = null;
+        btn.classList.remove('selected');
+      } else {
+        document.querySelectorAll('.tasting-pill').forEach(b => b.classList.remove('selected'));
+        activeTag = tag;
+        btn.classList.add('selected');
+      }
+      filterDishes();
+    }
+
+    function handleSearch(val) {
+      searchQuery = val;
+      filterDishes();
+    }
+
+    function filterDishes() {
+      const cards = document.querySelectorAll('.haute-card');
+      let visible = 0;
+      const cleanSearch = removeVietnameseTones(searchQuery);
+
+      cards.forEach(card => {
+        const cat = card.getAttribute('data-cat');
+        const period = card.getAttribute('data-period');
+        const tags = card.getAttribute('data-tags') || '';
+        const content = removeVietnameseTones(card.innerText);
+
+        const matchCat = activeCategory === 'ALL' || cat === activeCategory;
+        const matchPeriod = activePeriod === 'ALL' || period.includes(activePeriod) || period.includes('ALL_DAY');
+        const matchTag = !activeTag || tags.includes(activeTag);
+        const matchSearch = !cleanSearch || content.includes(cleanSearch);
+
+        if (matchCat && matchPeriod && matchTag && matchSearch) {
+          card.style.display = 'flex';
+          visible++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      document.getElementById('dish-counter').textContent = visible;
+    }
+
+    // 4. Dark/Light Mode Theme Toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      if (next === 'light') {
+        icon.textContent = '🌙';
+        text.textContent = 'Mode Noir';
+      } else {
+        icon.textContent = '☀️';
+        text.textContent = 'Mode Alabaster';
+      }
+
+      // Re-align indicator after layout change
+      setTimeout(() => {
+        const activeTab = document.querySelector('.ribbon-tab.active');
+        if (activeTab) updateSlidingIndicator(activeTab);
+      }, 100);
+    }
+  </script>
+</body>
+</html>

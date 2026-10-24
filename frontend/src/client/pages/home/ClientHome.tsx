@@ -1,349 +1,509 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, Utensils, CalendarCheck, Clock, ShieldCheck } from 'lucide-react';
+import {
+  Sparkles,
+  UtensilsCrossed,
+  QrCode,
+  ArrowRight,
+  Star,
+  ChefHat,
+  Clock,
+  ShieldCheck,
+  Flame,
+  CalendarCheck,
+  CreditCard,
+  Plus,
+  Award,
+  Coffee,
+  Sun,
+  Sunset,
+  Wine,
+  Quote,
+} from 'lucide-react';
 import { useAdminStore } from '../../../admin/store/adminStore';
+import { menuApi } from '../../../admin/pages/menu/menuApi';
+import type { MenuItem } from '../../../shared/types/menu';
+import './ClientHome.css';
 
 /**
- * ClientHome — Single Restaurant Landing Page
+ * Danh sách món ăn Signature tiêu biểu (Fallback an toàn khi API chưa tải xong)
  */
-const ClientHome: React.FC = () => {
-  const navigate = useNavigate();
-  const { menu_items } = useAdminStore();
+const FALLBACK_SIGNATURE_DISHES: MenuItem[] = [
+  {
+    id: 'dish-wagyu-pho',
+    name: 'Phở Bò Tái Nạm Wagyu A5 Thượng Hạng',
+    category: 'Món nước',
+    base_price: 185000,
+    description: 'Nước dùng ninh 24h từ xương ống bò tủy, thịt bò Wagyu vân mỡ cẩm thạch mềm tan cùng bánh phở thủ công tươi mới.',
+    image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=800&auto=format&fit=crop&q=80',
+    is_best_seller: true,
+    status: 'AVAILABLE',
+  },
+  {
+    id: 'dish-crab-hotpot',
+    name: 'Set Lẩu Riêu Cua Đồng Bắp Bò Mỹ',
+    category: 'Lẩu & Nướng',
+    base_price: 385000,
+    description: 'Gạch cua đồng Cà Mau béo ngậy, giấm bỗng nếp truyền thống kết hợp bắp bò hoa giòn sần sật và rổ rau đồng quê.',
+    image: 'https://images.unsplash.com/photo-1547928576-a4a33237cbc3?w=800&auto=format&fit=crop&q=80',
+    is_best_seller: true,
+    status: 'AVAILABLE',
+  },
+  {
+    id: 'dish-lotus-tea',
+    name: 'Trà Sen Vàng Long Nhãn Khởi Sắc',
+    category: 'Đồ uống',
+    base_price: 65000,
+    description: 'Trà Ô long ủ lạnh thơm thanh khiết, hạt sen Huế bùi bở hòa quyện cùng cùi nhãn lồng mọng nước và bọt sữa mặn kem béo.',
+    image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&auto=format&fit=crop&q=80',
+    is_best_seller: true,
+    status: 'AVAILABLE',
+  },
+  {
+    id: 'dish-royal-spring-rolls',
+    name: 'Nem Công Chả Phượng Ngũ Sắc Hoàng Triều',
+    category: 'Khai vị',
+    base_price: 145000,
+    description: 'Món ăn cung đình tái hiện tinh xảo với tôm sú tự nhiên, thịt cua biển và sốt chấm ngũ vị độc quyền của bếp trưởng.',
+    image: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop&q=80',
+    is_best_seller: true,
+    status: 'AVAILABLE',
+  },
+];
 
-  const bestSellers = menu_items.filter((m) => m.is_best_seller).slice(0, 4);
+/**
+ * ClientHome — Trang chủ Nền tảng F&B Cao cấp OmniResto
+ * Áp dụng toàn diện Tiêu chuẩn Thiết kế:
+ * - Font Chữ: Plus Jakarta Sans (Display/Heading/CTA) & Inter (Body Text)
+ * - Font Số: Tabular Lining Figures (Giá tiền) & Slashed Zero Mono (Mã đơn/Stats)
+ * - Iconography: Lucide SVG Vectors (Zero Raw Emojis)
+ */
+export const ClientHome: React.FC = () => {
+  const navigate = useNavigate();
+  const { menu_items, setMenuItems } = useAdminStore();
+
+  // Nạp tự động dữ liệu thực đơn từ Backend khi vào trang chủ
+  useEffect(() => {
+    if (menu_items.length === 0) {
+      menuApi
+        .getMenuItems()
+        .then((items) => {
+          if (items && items.length > 0) {
+            setMenuItems(items);
+          }
+        })
+        .catch((err) => {
+          console.warn('Lỗi tải danh mục món ăn trang chủ từ server:', err);
+        });
+    }
+  }, [menu_items.length, setMenuItems]);
+
+  // Lọc món Best Seller thực tế hoặc sử dụng danh mục món Signature
+  const displayDishes = React.useMemo(() => {
+    const fromStore = menu_items.filter((m) => m.is_best_seller || m.status === 'AVAILABLE');
+    if (fromStore.length >= 4) {
+      return fromStore.slice(0, 4);
+    }
+    return FALLBACK_SIGNATURE_DISHES;
+  }, [menu_items]);
+
+  const totalDishesCount = menu_items.length > 0 ? menu_items.length : 36;
 
   return (
-    <div style={{ fontFamily: 'var(--c-font)' }}>
-
+    <div className="ch-page">
       {/* ════════════════════════════════════════════════════════════
-          ZONE 1 — HERO
+          ZONE 1 — HERO SHOWCASE (Fine-Dining Luxury Ambient)
           ════════════════════════════════════════════════════════════ */}
-      <section
-        style={{
-          position: 'relative', overflow: 'hidden',
-          minHeight: '62vh', display: 'flex', alignItems: 'center',
-        }}
-      >
-        {/* Background food image */}
+      <section className="ch-hero" aria-label="Giới thiệu nhà hàng OmniResto">
         <img
           src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1600&auto=format&fit=crop&q=80"
-          alt=""
-          aria-hidden="true"
-          style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', objectPosition: 'center',
-          }}
+          alt="Không gian nhà hàng sang trọng OmniResto"
+          className="ch-hero-bg-img"
+          loading="eager"
         />
+        <div className="ch-hero-overlay-dark" />
+        <div className="ch-hero-overlay-radial" />
 
-        {/* Warm gradient overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(105deg, rgba(18,8,2,0.82) 0%, rgba(18,8,2,0.55) 55%, rgba(18,8,2,0.2) 100%)',
-        }} />
-
-        {/* Subtle texture overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse at 70% 50%, rgba(232,93,38,0.15) 0%, transparent 60%)',
-        }} />
-
-        {/* Hero content */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          maxWidth: 'var(--c-max-w)', margin: '0 auto',
-          padding: '80px 24px', width: '100%',
-        }}>
-          <div style={{ maxWidth: 580 }}>
-            {/* Eyebrow label */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20,
-              background: 'rgba(232,93,38,0.25)', border: '1px solid rgba(232,93,38,0.4)',
-              borderRadius: 'var(--c-r-full)', padding: '5px 16px',
-            }}>
-              <Sparkles size={13} color="var(--c-accent)" strokeWidth={2.5} />
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Nhà hàng ẩm thực cao cấp
+        <div className="ch-hero-container">
+          <div className="ch-hero-content">
+            {/* Eyebrow Pill */}
+            <div className="ch-hero-eyebrow">
+              <Sparkles size={14} color="#fbbf24" strokeWidth={2.4} />
+              <span className="ch-hero-eyebrow-text">
+                Tinh Hoa Ẩm Thực Việt Nam · Michelin Guide Selection
               </span>
             </div>
 
-            {/* Main heading */}
-            <h1 style={{
-              fontFamily: 'var(--c-font-display)',
-              fontSize: 'clamp(2.4rem, 5.5vw, 3.75rem)',
-              fontWeight: 600,
-              fontStyle: 'italic',
-              color: '#fff',
-              lineHeight: 1.1,
-              margin: '0 0 16px',
-              letterSpacing: '-0.01em',
-            }}>
-              Hương Vị Đích Thực<br />
-              <span style={{ color: 'var(--c-accent)', fontStyle: 'normal', fontWeight: 700 }}>Việt Nam</span>
+            {/* Display Heading */}
+            <h1 className="ch-hero-title">
+              Hương Vị Đích Thực <br />
+              <span className="ch-hero-title-accent">Nghệ Thuật Ẩm Thực Đương Đại</span>
             </h1>
 
             {/* Sub-heading */}
-            <p style={{
-              fontSize: 'clamp(0.9375rem, 2vw, 1.125rem)',
-              color: 'rgba(255,255,255,0.82)', lineHeight: 1.65, marginBottom: 32, maxWidth: 460,
-            }}>
-              Đặt bàn và gọi món trực tuyến tại OmniResto. 
-              Trải nghiệm ẩm thực Việt chuẩn vị truyền thống từ nguyên liệu tươi sạch thượng hạng.
+            <p className="ch-hero-desc">
+              Trải nghiệm hành trình vị giác thượng hạng từ nguyên liệu tươi sạch nông trại đến bàn ăn,
+              kết hợp hoàn hảo cùng công nghệ gọi món thông minh và phục vụ chuẩn 5 sao.
             </p>
 
-            {/* CTAs */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 36 }}>
+            {/* Primary Action Cluster */}
+            <div className="ch-hero-actions">
               <button
                 id="hero-order-btn"
-                className="c-btn c-btn-primary c-btn-lg"
+                className="ch-btn-hero-primary"
                 onClick={() => navigate('/client/menu')}
               >
-                🍜 Xem Thực Đơn & Đặt Món
-                <ArrowRight size={18} strokeWidth={2.2} />
+                <UtensilsCrossed size={18} strokeWidth={2.2} />
+                <span>Khám Phá Thực Đơn</span>
+                <ArrowRight size={16} strokeWidth={2.4} />
               </button>
+
               <button
                 id="hero-scan-btn"
-                className="c-btn c-btn-lg"
-                style={{
-                  background: 'rgba(255,255,255,0.12)', color: '#fff',
-                  border: '1.5px solid rgba(255,255,255,0.3)',
-                  backdropFilter: 'blur(8px)',
-                }}
+                className="ch-btn-hero-glass"
                 onClick={() => navigate('/client/scan')}
               >
-                📱 Quét Mã Bàn
+                <QrCode size={18} strokeWidth={2.2} />
+                <span>Quét Mã Tại Bàn</span>
+              </button>
+
+              <button
+                id="hero-reserve-btn"
+                className="ch-btn-hero-glass"
+                onClick={() => navigate('/client/reservation')}
+              >
+                <CalendarCheck size={18} strokeWidth={2.2} />
+                <span>Đặt Bàn VIP</span>
               </button>
             </div>
 
-            {/* Social proof */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
-              {[
-                { icon: '⭐', value: '4.9/5', label: '2,400+ đánh giá' },
-                { icon: '🍲', value: `${menu_items.length}+ món`, label: 'Đặc sắc ẩm thực' },
-                { icon: '⚡', value: '15 phút', label: 'Phục vụ nhanh chóng' },
-              ].map((item) => (
-                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
-                  <div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#fff' }}>{item.value}</div>
-                    <div style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.6)' }}>{item.label}</div>
-                  </div>
+            {/* Trust & Performance Metrics Bar */}
+            <div className="ch-hero-stats">
+              <div className="ch-stat-item">
+                <div className="ch-stat-icon-wrap">
+                  <Star size={16} color="#fbbf24" fill="#fbbf24" strokeWidth={2} />
                 </div>
-              ))}
+                <div>
+                  <div className="ch-stat-val">4.9 / 5.0</div>
+                  <div className="ch-stat-label">2,800+ Thực khách</div>
+                </div>
+              </div>
+
+              <div className="ch-stat-item">
+                <div className="ch-stat-icon-wrap">
+                  <ChefHat size={17} color="#fb923c" strokeWidth={2.2} />
+                </div>
+                <div>
+                  <div className="ch-stat-val">{totalDishesCount}+ Món</div>
+                  <div className="ch-stat-label">Ba miền tuyển chọn</div>
+                </div>
+              </div>
+
+              <div className="ch-stat-item">
+                <div className="ch-stat-icon-wrap">
+                  <Clock size={17} color="#34d399" strokeWidth={2.2} />
+                </div>
+                <div>
+                  <div className="ch-stat-val">15 Phút</div>
+                  <div className="ch-stat-label">Phục vụ nóng hổi</div>
+                </div>
+              </div>
+
+              <div className="ch-stat-item">
+                <div className="ch-stat-icon-wrap">
+                  <ShieldCheck size={17} color="#38bdf8" strokeWidth={2.2} />
+                </div>
+                <div>
+                  <div className="ch-stat-val">100% Sạch</div>
+                  <div className="ch-stat-label">Chứng nhận VietGAP</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════════
-          ZONE 2 — RESTAURANT EXPERIENCE & HIGHLIGHTS
+          ZONE 2 — CULINARY PILLARS (Dịch Vụ & Trải Nghiệm Đẳng Cấp)
           ════════════════════════════════════════════════════════════ */}
-      <section style={{ background: 'var(--c-bg)', padding: '64px 24px' }}>
-        <div style={{ maxWidth: 'var(--c-max-w)', margin: '0 auto' }}>
-          {/* Section header */}
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <span style={{
-              display: 'inline-block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-primary)',
-              letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8,
-            }}>
-              ✨ Trải nghiệm OmniResto
+      <section className="ch-section ch-section--warm">
+        <div className="ch-container">
+          <div className="ch-section-header">
+            <span className="ch-section-tag">
+              <Sparkles size={13} strokeWidth={2.4} />
+              <span>Giá Trị Cốt Lõi</span>
             </span>
-            <h2 style={{
-              fontSize: 'clamp(1.375rem, 3vw, 1.875rem)', fontWeight: 800,
-              color: 'var(--c-text-main)', margin: '0 0 8px',
-            }}>
-              Dịch Vụ Ẩm Thực Đẳng Cấp
+            <h2 className="ch-section-title">
+              Dịch Vụ Ẩm Thực Chuẩn Mực Doanh Nghiệp
             </h2>
-            <p style={{ color: 'var(--c-text-muted)', fontSize: '0.9375rem', maxWidth: 480, margin: '0 auto' }}>
-              Không gian sang trọng, nguyên liệu tươi sạch và quy trình phục vụ chuyên nghiệp
+            <p className="ch-section-desc">
+              Kết hợp hoàn hảo giữa công thức gia truyền ba miền và tiêu chuẩn khắt khe về an toàn thực phẩm.
             </p>
           </div>
 
-          {/* Highlights grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 24,
-          }}>
-            {[
-              {
-                icon: Utensils,
-                title: 'Ẩm Thực Tinh Hoa',
-                desc: 'Thực đơn đa dạng với công thức gia truyền, kết hợp hài hòa phong vị ba miền Bắc - Trung - Nam.',
-                color: 'var(--c-primary)',
-              },
-              {
-                icon: CalendarCheck,
-                title: 'Đặt Bàn Nhanh Chóng',
-                desc: 'Hệ thống giữ chỗ trực tuyến tiện lợi, xác nhận tức thì và hỗ trợ chọn vị trí bàn yêu thích.',
-                color: '#2563eb',
-              },
-              {
-                icon: Clock,
-                title: 'Phục Vụ Nhanh Chuẩn',
-                desc: 'Tích hợp hệ thống màn hình bếp thông minh giúp món ăn luôn nóng hổi và chuẩn vị trong 15 phút.',
-                color: '#16a34a',
-              },
-              {
-                icon: ShieldCheck,
-                title: 'Nguyên Liệu Tươi Sạch',
-                desc: '100% nguyên liệu tự nhiên tươi ngon được tuyển chọn mỗi ngày từ các nông trại đạt chuẩn vệ sinh ATTP.',
-                color: '#d97706',
-              },
-            ].map((feature, idx) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    background: 'var(--c-surface)',
-                    border: '1px solid var(--c-border)',
-                    borderRadius: 'var(--c-r-lg)',
-                    padding: '28px 24px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    boxShadow: 'var(--c-shadow-sm)',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                    (e.currentTarget as HTMLElement).style.boxShadow = 'var(--c-shadow-md)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.transform = 'none';
-                    (e.currentTarget as HTMLElement).style.boxShadow = 'var(--c-shadow-sm)';
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '12px',
-                      backgroundColor: `${feature.color}15`,
-                      color: feature.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Icon size={24} />
-                  </div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--c-text-main)', margin: 0 }}>
-                    {feature.title}
-                  </h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--c-text-muted)', lineHeight: 1.5, margin: 0 }}>
-                    {feature.desc}
-                  </p>
-                </div>
-              );
-            })}
+          <div className="ch-pillars-grid">
+            <div className="ch-pillar-card">
+              <div
+                className="ch-pillar-icon-box"
+                style={{ background: '#fff7ed', color: '#ea580c' }}
+              >
+                <Flame size={24} strokeWidth={2.2} />
+              </div>
+              <h3 className="ch-pillar-title">Ẩm Thực Độc Bản</h3>
+              <p className="ch-pillar-desc">
+                Công thức gia truyền độc quyền, ninh hầm nước dùng chậm suốt 24 giờ để tạo độ ngọt thanh tự nhiên từ xương tủy.
+              </p>
+            </div>
+
+            <div className="ch-pillar-card">
+              <div
+                className="ch-pillar-icon-box"
+                style={{ background: '#eff6ff', color: '#2563eb' }}
+              >
+                <CalendarCheck size={24} strokeWidth={2.2} />
+              </div>
+              <h3 className="ch-pillar-title">Đặt Chỗ & Phòng Riêng</h3>
+              <p className="ch-pillar-desc">
+                Hệ thống đặt bàn trực tuyến thông minh, giữ chỗ ưu tiên các vị trí view ngắm cảnh và phòng VIP tiệc riêng biệt.
+              </p>
+            </div>
+
+            <div className="ch-pillar-card">
+              <div
+                className="ch-pillar-icon-box"
+                style={{ background: '#f0fdf4', color: '#16a34a' }}
+              >
+                <Clock size={24} strokeWidth={2.2} />
+              </div>
+              <h3 className="ch-pillar-title">KDS Bếp Thông Minh 4.0</h3>
+              <p className="ch-pillar-desc">
+                Màn hình điều phối chế biến KDS tự động cân bằng tiến độ, đảm bảo các món ăn luôn lên bàn đúng thứ tự trong 15 phút.
+              </p>
+            </div>
+
+            <div className="ch-pillar-card">
+              <div
+                className="ch-pillar-icon-box"
+                style={{ background: '#fef3c7', color: '#d97706' }}
+              >
+                <ShieldCheck size={24} strokeWidth={2.2} />
+              </div>
+              <h3 className="ch-pillar-title">Nguồn Gốc Minh Bạch</h3>
+              <p className="ch-pillar-desc">
+                Nguyên liệu bò Wagyu, hải sản tươi sống và rau hữu cơ được thu hoạch mỗi sáng, truy xuất nguồn gốc rõ ràng 100%.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════════
-          ZONE 3 — BEST SELLERS
+          ZONE 3 — SIGNATURE BESTSELLERS (Tuyển Tập Mỹ Vị Đặc Sắc)
           ════════════════════════════════════════════════════════════ */}
-      <section style={{ background: 'var(--c-surface)', padding: '64px 24px' }}>
-        <div style={{ maxWidth: 'var(--c-max-w)', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <span style={{
-              display: 'inline-block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-primary)',
-              letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8,
-            }}>
-              🔥 Nổi bật
+      <section className="ch-section ch-section--surface">
+        <div className="ch-container">
+          <div className="ch-section-header">
+            <span className="ch-section-tag">
+              <Flame size={13} strokeWidth={2.4} />
+              <span>Tuyển Chọn Bếp Trưởng</span>
             </span>
-            <h2 style={{
-              fontSize: 'clamp(1.375rem, 3vw, 1.875rem)', fontWeight: 800,
-              color: 'var(--c-text-main)', margin: '0 0 8px',
-            }}>
+            <h2 className="ch-section-title">
               Món Ăn Được Yêu Thích Nhất
             </h2>
-            <p style={{ color: 'var(--c-text-muted)', fontSize: '0.9375rem' }}>
-              Được hàng nghìn thực khách lựa chọn mỗi ngày
+            <p className="ch-section-desc">
+              Những kiệt tác hương vị được hàng nghìn thực khách lựa chọn và đánh giá xuất sắc nhất tại OmniResto.
             </p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: 20,
-          }}>
-            {bestSellers.map((item, i) => (
-              <div
+          <div className="ch-dishes-grid">
+            {displayDishes.map((item) => (
+              <article
                 key={item.id}
-                className="c-animate-fade-up"
-                style={{
-                  background: 'var(--c-bg)', border: '1px solid var(--c-border-light)',
-                  borderRadius: 'var(--c-r-lg)', overflow: 'hidden',
-                  transition: 'all var(--c-t-normal)', cursor: 'pointer',
-                  animationDelay: `${i * 80}ms`,
-                }}
+                className="ch-dish-card"
                 onClick={() => navigate('/client/menu')}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--c-shadow-md)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.transform = '';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '';
-                }}
               >
-                <div style={{ position: 'relative', aspectRatio: '16/10', overflow: 'hidden' }}>
+                <div className="ch-dish-img-wrap">
                   <img
-                    src={item.image}
+                    src={item.image || '/images/food-placeholder.svg'}
                     alt={item.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform var(--c-t-slow)' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.05)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.transform = ''; }}
+                    className="ch-dish-img"
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = '/images/food-placeholder.svg';
+                    }}
                   />
-                  <div style={{
-                    position: 'absolute', top: 10, left: 10,
-                    background: 'var(--c-primary)', color: '#fff',
-                    fontSize: '0.6875rem', fontWeight: 800, fontFamily: 'var(--c-font)',
-                    padding: '3px 10px', borderRadius: 'var(--c-r-full)',
-                    boxShadow: '0 2px 8px rgba(232,93,38,0.4)',
-                  }}>
-                    🔥 Bán chạy
+                  <div className="ch-dish-badge">
+                    <Flame size={11} strokeWidth={2.4} />
+                    <span>Bán chạy</span>
                   </div>
                 </div>
-                <div style={{ padding: '14px 16px' }}>
-                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--c-text-main)', margin: '0 0 4px', lineHeight: 1.3 }}>
-                    {item.name}
-                  </h3>
-                  <p style={{
-                    fontSize: '0.8125rem', color: 'var(--c-text-muted)', margin: '0 0 10px', lineHeight: 1.5,
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                  }}>
-                    {item.description}
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--c-primary)' }}>
+
+                <div className="ch-dish-body">
+                  <div className="ch-dish-meta-row">
+                    <span className="ch-dish-cat">{item.category}</span>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Signature</span>
+                  </div>
+
+                  <h3 className="ch-dish-name">{item.name}</h3>
+                  <p className="ch-dish-desc">{item.description}</p>
+
+                  <div className="ch-dish-footer">
+                    <span className="ch-dish-price">
                       {item.base_price.toLocaleString('vi-VN')}đ
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--c-text-muted)' }}>
-                      {item.category}
-                    </span>
+                    <button
+                      type="button"
+                      className="ch-dish-order-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/client/menu');
+                      }}
+                    >
+                      <Plus size={13} strokeWidth={2.4} />
+                      <span>Chọn món</span>
+                    </button>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
 
-          {/* CTA to full menu */}
-          <div style={{ textAlign: 'center', marginTop: 36 }}>
+          <div style={{ textAlign: 'center' }}>
             <button
               id="view-full-menu-btn"
-              className="c-btn c-btn-outline c-btn-lg"
+              className="ch-btn-hero-primary"
               onClick={() => navigate('/client/menu')}
+              style={{ padding: '12px 28px', fontSize: '0.9rem' }}
             >
-              Xem toàn bộ thực đơn
-              <ArrowRight size={18} strokeWidth={2.2} />
+              <span>Xem Toàn Bộ {totalDishesCount} Món Thực Đơn</span>
+              <ArrowRight size={16} strokeWidth={2.4} />
             </button>
           </div>
         </div>
       </section>
 
+      {/* ════════════════════════════════════════════════════════════
+          ZONE 4 — DIGITAL DINING JOURNEY (Quy Trình Trải Nghiệm 4.0)
+          ════════════════════════════════════════════════════════════ */}
+      <section className="ch-section ch-section--warm" style={{ paddingTop: 40, paddingBottom: 60 }}>
+        <div className="ch-container">
+          <div className="ch-journey-card">
+            <div className="ch-journey-header">
+              <span
+                className="ch-section-tag"
+                style={{ background: 'rgba(234, 88, 12, 0.2)', color: '#fb923c', borderColor: 'rgba(251, 146, 60, 0.4)' }}
+              >
+                <Sparkles size={13} strokeWidth={2.4} />
+                <span>Trải Nghiệm Liền Mạch</span>
+              </span>
+              <h2 className="ch-section-title" style={{ color: '#ffffff' }}>
+                Hành Trình Thưởng Thức Ẩm Thực 4.0
+              </h2>
+              <p className="ch-section-desc" style={{ color: '#94a3b8' }}>
+                Từ lúc bước chân vào nhà hàng tới khi dùng bữa và rời bàn, mọi thao tác đều được tối ưu hóa chuẩn mực số.
+              </p>
+            </div>
+
+            <div className="ch-journey-steps">
+              <div className="ch-step-item">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="ch-step-num-badge">1</div>
+                  <QrCode size={22} color="#fb923c" strokeWidth={2} />
+                </div>
+                <h4 className="ch-step-title">Quét Mã QR Bàn Ăn</h4>
+                <p className="ch-step-desc">
+                  Thực khách ngồi vào bàn và quét mã VietQR để kích hoạt phiên bàn ăn cá nhân hóa ngay trên điện thoại.
+                </p>
+              </div>
+
+              <div className="ch-step-item">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="ch-step-num-badge">2</div>
+                  <Flame size={22} color="#fb923c" strokeWidth={2} />
+                </div>
+                <h4 className="ch-step-title">Theo Dõi Bếp Trực Tiếp</h4>
+                <p className="ch-step-desc">
+                  Đặt món theo từng đợt và theo dõi tiến độ từng món qua radar thời gian thực kết nối với nhà bếp.
+                </p>
+              </div>
+
+              <div className="ch-step-item">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="ch-step-num-badge">3</div>
+                  <CreditCard size={22} color="#fb923c" strokeWidth={2} />
+                </div>
+                <h4 className="ch-step-title">Thanh Toán Không Chờ Đợi</h4>
+                <p className="ch-step-desc">
+                  Hóa đơn chốt đóng băng số tiền để chuyển khoản VietQR tự động hoặc quẹt thẻ POS tức thì tại bàn.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+          ZONE 5 — CHEF PHILOSOPHY & FINAL VIP CTA
+          ════════════════════════════════════════════════════════════ */}
+      <section className="ch-section ch-section--surface" style={{ paddingTop: 20 }}>
+        <div className="ch-container">
+          <div className="ch-quote-card">
+            <div className="ch-quote-avatar-wrap">
+              <img
+                src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=400&auto=format&fit=crop&q=80"
+                alt="Bếp trưởng điều hành OmniResto"
+              />
+            </div>
+            <div className="ch-quote-content">
+              <Quote size={28} className="ch-quote-mark" />
+              <blockquote className="ch-quote-text">
+                &ldquo;Ẩm thực không đơn thuần là sự thỏa mãn vị giác, mà là bản giao hưởng kết nối ký ức văn hóa dân tộc,
+                nguyên liệu thuần khiết và sự trân quý chân thành dành cho mỗi thực khách.&rdquo;
+              </blockquote>
+              <div className="ch-quote-author-block">
+                <div className="ch-quote-author-name">
+                  <span>Lê Minh Tuấn</span>
+                  <span className="ch-quote-author-badge">
+                    <Award size={13} strokeWidth={2.2} />
+                    Executive Chef
+                  </span>
+                </div>
+                <div className="ch-quote-author-title">
+                  Tổng Bếp Trưởng Điều Hành OmniResto
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="ch-bottom-cta">
+            <h3 className="ch-bottom-cta-title">
+              Sẵn Sàng Trải Nghiệm Bữa Tiệc Ẩm Thực Thượng Hạng?
+            </h3>
+            <p className="ch-bottom-cta-desc">
+              Đặt bàn trước để nhận vị trí view đẹp nhất cùng ưu đãi hội viên độc quyền từ OmniResto ngay hôm nay.
+            </p>
+            <div className="ch-bottom-cta-btns">
+              <button
+                className="ch-btn-hero-primary"
+                onClick={() => navigate('/client/reservation')}
+              >
+                <CalendarCheck size={18} strokeWidth={2.2} />
+                <span>Đặt Bàn VIP Trực Tuyến</span>
+              </button>
+              <button
+                className="ch-btn-hero-glass"
+                style={{ background: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
+                onClick={() => navigate('/client/menu')}
+              >
+                <UtensilsCrossed size={18} strokeWidth={2.2} />
+                <span>Khám Phá Menu</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

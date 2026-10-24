@@ -2,12 +2,16 @@ package com.omniresto.backend.model.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -16,10 +20,10 @@ import lombok.NoArgsConstructor;
 public class CustomerRegisterRequest {
 
     @NotBlank(message = "Họ và tên không được để trống")
-    private String fullName;
+    private String fullName; // Tự động map với JSON "full_name" qua Jackson SNAKE_CASE
 
     @NotBlank(message = "Số điện thoại không được để trống")
-    @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không đúng định dạng Việt Nam")
+    @Pattern(regexp = "^(0|\\+84)[3|5|7|8|9]\\d{8}$", message = "Số điện thoại không đúng định dạng Việt Nam")
     private String phone;
 
     @Email(message = "Email không đúng định dạng")
@@ -29,7 +33,9 @@ public class CustomerRegisterRequest {
     @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     private String password;
 
-    @NotBlank(message = "Mã OTP xác minh số điện thoại không được để trống")
-    @Size(min = 6, max = 6, message = "Mã OTP phải bao gồm đúng 6 chữ số")
+    @NotNull(message = "Ngày sinh là thông tin bắt buộc")
+    @Past(message = "Ngày sinh phải ở trong quá khứ")
+    private LocalDate dateOfBirth; // Tự động map với JSON "date_of_birth" qua Jackson SNAKE_CASE
+
     private String otp;
 }

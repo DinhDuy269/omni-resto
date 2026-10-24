@@ -25,6 +25,8 @@ public class OrderRequest {
 
     private PaymentMethod paymentMethod;
 
+    private String voucherCode;
+
     @NotEmpty(message = "Danh sách món ăn không được để trống")
     @Size(max = 50, message = "Không được đặt quá 50 dòng món trong một đơn")
     private List<@Valid OrderItemRequest> items;

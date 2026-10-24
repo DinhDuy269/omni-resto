@@ -20,6 +20,7 @@ export const TableManagement: React.FC = () => {
     resolveServiceRequestsByTable,
   } = useAdminStore();
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [selectedZone, setSelectedZone] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals state
@@ -37,7 +38,19 @@ export const TableManagement: React.FC = () => {
   const filteredTables = tables.filter((t) => {
     const matchesFilter = filterStatus === 'ALL' || t.status === filterStatus;
     const matchesSearch = t.table_no.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+
+    const numMatch = t.table_no.match(/\d+/);
+    const tableNum = numMatch ? parseInt(numMatch[0], 10) : 1;
+    let matchesZone = true;
+    if (selectedZone === 'FLOOR_1') {
+      matchesZone = tableNum <= 6;
+    } else if (selectedZone === 'FLOOR_2') {
+      matchesZone = tableNum > 6 && tableNum <= 12;
+    } else if (selectedZone === 'VIP') {
+      matchesZone = tableNum > 12 || t.table_no.toUpperCase().includes('VIP');
+    }
+
+    return matchesFilter && matchesSearch && matchesZone;
   });
 
   const availableCount = tables.filter((t) => t.status === 'AVAILABLE').length;
@@ -129,8 +142,45 @@ export const TableManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary KPI Badges & Controls */}
-      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      {/* Summary KPI Badges & Zone Controls */}
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '16px 20px' }}>
+        {/* Floor / Zone Segmentation Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Phân Khu Vực:
+            </span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'ALL', label: '🏢 Toàn Bộ Khu Vực' },
+                { id: 'FLOOR_1', label: '🍽️ Tầng 1 (Sảnh Chính)' },
+                { id: 'FLOOR_2', label: '❄️ Tầng 2 (Phòng Lạnh)' },
+                { id: 'VIP', label: '👑 Khu VIP & Sân Vườn' },
+              ].map((zone) => (
+                <button
+                  key={zone.id}
+                  onClick={() => setSelectedZone(zone.id)}
+                  style={{
+                    padding: '5px 12px',
+                    fontSize: '0.8125rem',
+                    fontWeight: selectedZone === zone.id ? 700 : 500,
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid',
+                    borderColor: selectedZone === zone.id ? 'var(--primary)' : 'var(--border-color)',
+                    background: selectedZone === zone.id ? 'var(--primary-subtle)' : 'var(--bg-surface)',
+                    color: selectedZone === zone.id ? 'var(--primary)' : 'var(--text-body)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {zone.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Status Badges Filter */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             className={`btn btn-sm ${filterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}

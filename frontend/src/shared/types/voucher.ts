@@ -40,3 +40,24 @@ export interface VoucherResponse {
   voucher?: VoucherInfo;
   vouchers?: VoucherInfo[];
 }
+
+export interface VoucherItemRequest {
+  menu_item_id: string;
+  quantity: number;
+}
+
+export interface VoucherPreviewRequest {
+  code: string;
+  items: VoucherItemRequest[];
+}
+
+export interface VoucherPreviewResponse {
+  code: string;
+  voucher_name: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  subtotal: number;
+  discount_amount: number;
+  final_amount: number;
+  message: string;
+}

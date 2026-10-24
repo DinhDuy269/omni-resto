@@ -366,7 +366,7 @@ export const MasterMenuManagement: React.FC = () => {
         <div style={{ display: 'flex', gap: '12px' }}>
           <div
             style={{
-              backgroundColor: 'var(--bg-card)',
+              backgroundColor: 'var(--bg-surface)',
               padding: '4px',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-color)',
@@ -780,7 +780,7 @@ export const MasterMenuManagement: React.FC = () => {
                               transition: 'background-color 0.15s ease',
                               backgroundColor: isAvailable ? 'transparent' : 'rgba(239, 68, 68, 0.02)',
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)')}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--border-subtle)')}
                             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = isAvailable ? 'transparent' : 'rgba(239, 68, 68, 0.02)')}
                           >
                             {/* Món ăn & SKU */}
@@ -1009,7 +1009,7 @@ export const MasterMenuManagement: React.FC = () => {
                         alignItems: 'stretch',
                         borderRadius: 'var(--radius-lg)',
                         border: isAvailable ? '1px solid var(--border-color)' : '1px solid #fecaca',
-                        backgroundColor: isAvailable ? 'var(--bg-card)' : '#fffafa',
+                        backgroundColor: isAvailable ? 'var(--bg-surface)' : '#fffafa',
                         transition: 'all 0.2s ease',
                       }}
                     >

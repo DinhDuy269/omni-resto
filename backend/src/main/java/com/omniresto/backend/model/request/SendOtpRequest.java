@@ -13,7 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SendOtpRequest {
 
-    @NotBlank(message = "Số điện thoại không được để trống")
-    @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không đúng định dạng Việt Nam")
+    @com.fasterxml.jackson.annotation.JsonAlias({"email", "username", "identifier"})
     private String phone;
+
+    private String email;
 }

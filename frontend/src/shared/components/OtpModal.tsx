@@ -3,16 +3,19 @@ import React, { useState, useEffect } from 'react';
 interface OtpModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (otpCode: string) => void;
   email?: string;
   phone?: string;
+  purpose?: string;
 }
 
 export const OtpModal: React.FC<OtpModalProps> = ({
   isOpen,
+  onClose: _onClose,
   onSuccess,
   email,
-  phone
+  phone,
+  purpose: _purpose,
 }) => {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [loading, setLoading] = useState(false);
@@ -58,7 +61,7 @@ export const OtpModal: React.FC<OtpModalProps> = ({
     setError('');
     try {
       // Gọi API xác minh OTP tại đây
-      onSuccess();
+      onSuccess(otpValue);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Xác minh thất bại, vui lòng thử lại');
     } finally {

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useClientStore, selectTotalItems, selectTotalAmount } from '../store/clientStore';
+import { checkIsItemAvailableNow } from '../utils/mealPeriodUtils';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const { cart, updateQuantity, removeFromCart } = useClientStore();
   const totalItems  = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
+
+  const hasExpiredItems = cart.some((item) => !checkIsItemAvailableNow(item));
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -160,12 +163,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           ) : (
             cart.map((item) => {
               const itemKey = item.id || item.menu_item_id || '';
+              const isAvailable = checkIsItemAvailableNow(item);
               return (
               <div
                 key={itemKey}
                 style={{
                   display: 'flex', gap: 12, padding: '12px 20px',
                   borderBottom: '1px solid var(--c-border-light)',
+                  background: !isAvailable ? '#fff1f2' : 'transparent',
                   transition: 'background var(--c-t-fast)',
                 }}
               >
@@ -177,6 +182,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     width: 60, height: 60, borderRadius: 'var(--c-r-md)',
                     objectFit: 'cover', flexShrink: 0,
                     border: '1px solid var(--c-border-light)',
+                    filter: !isAvailable ? 'grayscale(80%)' : 'none',
                   }}
                 />
 
@@ -190,6 +196,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   }}>
                     {item.name}
                   </span>
+                  {!isAvailable && (
+                    <span style={{
+                      fontSize: '0.6875rem', color: '#b91c1c', background: '#fee2e2',
+                      padding: '2px 6px', borderRadius: 4, width: 'fit-content', fontWeight: 600,
+                    }}>
+                      ⚠️ Hết giờ phục vụ
+                    </span>
+                  )}
                   <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--c-primary)' }}>
                     {(item.price * item.quantity).toLocaleString('vi-VN')}đ
                   </span>
@@ -282,6 +296,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                 {totalAmount.toLocaleString('vi-VN')}đ
               </strong>
             </div>
+
+            {hasExpiredItems && (
+              <div style={{
+                background: '#fee2e2',
+                color: '#991b1b',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                padding: '8px 12px',
+                borderRadius: 'var(--c-r-md)',
+                marginBottom: 10,
+                lineHeight: 1.3,
+              }}>
+                ⚠️ Có món đã hết giờ phục vụ. Quý khách vui lòng xóa món để tiếp tục!
+              </div>
+            )}
 
             {/* Checkout CTA */}
             <button

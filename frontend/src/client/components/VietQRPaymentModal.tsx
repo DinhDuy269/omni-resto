@@ -150,7 +150,7 @@ export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
         <div
           style={{
             width: '100%',
-            background: 'var(--bg-card)',
+            background: 'var(--bg-surface)',
             padding: '14px 16px',
             borderRadius: '14px',
             fontSize: '0.85rem',
@@ -166,7 +166,7 @@ export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--text-muted)' }}>Số tài khoản:</span>
-            <span style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{accountNumber}</span>
+            <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{accountNumber}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--text-muted)' }}>Chủ tài khoản:</span>
@@ -180,7 +180,7 @@ export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                background: copied ? '#10b981' : 'var(--primary-color)',
+                background: copied ? '#10b981' : 'var(--primary)',
                 color: '#fff',
                 border: 'none',
                 padding: '4px 8px',
@@ -203,7 +203,7 @@ export const VietQRPaymentModal: React.FC<VietQRPaymentModalProps> = ({
               flex: 1,
               padding: '12px',
               borderRadius: '12px',
-              background: 'var(--bg-card)',
+              background: 'var(--bg-surface)',
               color: 'var(--text-muted)',
               fontWeight: 700,
               border: '1px solid var(--border-color)',

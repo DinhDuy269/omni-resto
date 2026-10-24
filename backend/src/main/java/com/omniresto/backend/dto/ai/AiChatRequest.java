@@ -17,4 +17,7 @@ public class AiChatRequest {
     private String tableSessionId;
     private String message;
     private List<ChatMessageDto> history;
+    private String tableNo;
+    private String customerName;
+    private String memberTier;
 }

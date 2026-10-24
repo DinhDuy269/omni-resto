@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Shield, CheckCircle, UserX, Crown } from 'lucide-react';
+import { Plus, Search, Shield, CheckCircle, UserX, Crown, Users, UserCheck, ShieldCheck, UtensilsCrossed } from 'lucide-react';
 import { useAdminStore } from '../../store/adminStore';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Modal } from '../../../shared/components/Modal';
@@ -39,6 +39,10 @@ export const StaffManagement: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
+  const activeStaffCount = staff_list.filter((s) => s.status === 'active').length;
+  const managementCount = staff_list.filter((s) => s.role === 'admin' || s.role === 'store_manager' || s.role === 'cashier').length;
+  const floorStaffCount = staff_list.filter((s) => s.role === 'waiter' || s.role === 'chef').length;
+
   const handleSubmitNewStaff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.full_name || !formData.email) return;
@@ -63,22 +67,74 @@ export const StaffManagement: React.FC = () => {
   };
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)' }}>
-            Quản Lý Nhân Sự & Phân Quyền Vị Trí ({staff_list.length})
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Users size={26} color="var(--primary)" />
+            Quản Lý Nhân Sự & Phân Quyền Vị Trí
           </h2>
-          <p style={{ fontSize: '0.925rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Phân quyền gán trực tiếp theo từng tài khoản vị trí công việc. Tài khoản đăng nhập chỉ được truy cập các tính năng thuộc quyền hạn của mình.
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Kiểm soát quyền truy cập RBAC, ca trực và tài khoản vận hành trên toàn bộ chi nhánh OmniResto.
           </p>
         </div>
 
         <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={19} />
-          Cấp Tài Khoản Mới
+          <Plus size={18} />
+          <span>Cấp Tài Khoản Mới</span>
         </button>
+      </div>
+
+      {/* Executive KPI Stats Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(59, 130, 246, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+            <Users size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng Nhân Viên</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text-main)', fontVariantNumeric: 'tabular-nums' }}>
+              {staff_list.length} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>nhân sự</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(16, 185, 129, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--success)' }}>
+            <UserCheck size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Đang Hoạt Động</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>
+              {activeStaffCount} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>sẵn sàng</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(139, 92, 246, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--purple)' }}>
+            <ShieldCheck size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Quản Trị & Thu Ngân</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--purple)', fontVariantNumeric: 'tabular-nums' }}>
+              {managementCount} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>tài khoản</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(245, 158, 11, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--warning)' }}>
+            <UtensilsCrossed size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Phục Vụ & Bếp KDS</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--warning)', fontVariantNumeric: 'tabular-nums' }}>
+              {floorStaffCount} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>vận hành</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filter Bar */}

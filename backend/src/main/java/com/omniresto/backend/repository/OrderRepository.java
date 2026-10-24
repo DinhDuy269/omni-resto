@@ -39,4 +39,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
     List<OrderEntity> findByTableSessionIdWithItems(@Param("tableSessionId") String tableSessionId);
 
     List<OrderEntity> findByTableSessionIdOrderByCreatedAtDesc(String tableSessionId);
+
+    long countByCustomerIdAndStatusNot(String customerId, OrderStatus status);
+
+    List<OrderEntity> findByCustomerIdOrderByCreatedAtDesc(String customerId);
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Store, Calendar, ChevronDown, User, Package, LogOut, HelpCircle } from 'lucide-react';
+import { Bell, Store, Calendar, ChevronDown, User, Package, LogOut, HelpCircle, Zap } from 'lucide-react';
 import { Modal } from '../../shared/components/Modal';
 import { useAdminStore } from '../store/adminStore';
 import './Header.css';
@@ -8,7 +8,7 @@ interface HeaderProps {
   onQuickAction?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = () => {
+export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
   const { service_requests, resolveServiceRequest, clearAllServiceRequests, orders } = useAdminStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -71,8 +71,20 @@ export const Header: React.FC<HeaderProps> = () => {
           </div>
         </div>
 
-        {/* Right: Date, Notifications & User Profile Dropdown */}
+        {/* Right: Date, Notifications, Quick Actions & User Profile Dropdown */}
         <div className="header-right">
+          {onQuickAction && (
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={onQuickAction}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+              title="Phím tắt thao tác nhanh toàn hệ thống"
+            >
+              <Zap size={14} />
+              <span>Thao Tác Nhanh</span>
+            </button>
+          )}
+
           <div className="date-badge">
             <Calendar size={15} color="var(--primary)" />
             <span>{todayStr}</span>

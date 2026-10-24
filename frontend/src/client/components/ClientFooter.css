@@ -1,0 +1,477 @@
+/* ==========================================================================
+   OmniResto - Universal Luxury Client Footer
+   Typography: Plus Jakarta Sans (Headings/Buttons/Numerics) + Inter (Body/Links)
+   Icons: 100% Pure Lucide SVG Vectors & Brand SVGs (Zero Emojis)
+   Numbers: Tabular Lining Figures for Phone, Hours, Year
+   ========================================================================== */
+
+.client-footer-root {
+  background: #090d16;
+  color: #94a3b8;
+  font-family: var(--c-font, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  border-top: 1px solid rgba(251, 146, 60, 0.18);
+  position: relative;
+  overflow: hidden;
+  margin-top: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ambient Radial Glow in Footer Background */
+.client-footer-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 220px;
+  background: radial-gradient(ellipse at top, rgba(234, 88, 12, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.client-footer-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 1: UPPER TRUST RIBBON (4 Cam kết Chuẩn Fine-Dining)
+   ═════════════════════════════════════════════════════════════ */
+.client-footer-ribbon {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 36px 0 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ribbon-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ribbon-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(234, 88, 12, 0.12);
+  border: 1px solid rgba(234, 88, 12, 0.28);
+  color: #fb923c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ribbon-title {
+  font-family: var(--c-font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+
+.ribbon-desc {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 2: MAIN 4-COLUMN FOOTER GRID
+   ═════════════════════════════════════════════════════════════ */
+.client-footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.3fr 1.3fr;
+  gap: 44px;
+  padding: 56px 0 44px;
+}
+
+/* Column Headings */
+.footer-col-title {
+  font-family: var(--c-font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-col-title-accent {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ea580c;
+  display: inline-block;
+}
+
+/* Col 1: Brand Info */
+.footer-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.footer-brand-logo-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.35);
+}
+
+.footer-brand-name-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-brand-name {
+  font-family: var(--c-font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.footer-brand-badge {
+  font-family: var(--c-font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: #fb923c;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.footer-brand-desc {
+  font-size: 0.86rem;
+  line-height: 1.68;
+  color: #94a3b8;
+  margin: 0 0 22px;
+}
+
+/* Social Buttons */
+.footer-social-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-social-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.footer-social-btn:hover {
+  background: rgba(234, 88, 12, 0.2);
+  border-color: rgba(234, 88, 12, 0.45);
+  color: #fb923c;
+  transform: translateY(-2px);
+}
+
+.footer-social-svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+/* Col 2: Navigation Links */
+.footer-nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.footer-nav-link {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.footer-nav-link:hover {
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
+.footer-nav-bullet {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(234, 88, 12, 0.6);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.footer-nav-link:hover .footer-nav-bullet {
+  opacity: 1;
+}
+
+/* Col 3: Contact Info */
+.footer-contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.footer-contact-icon {
+  color: #ea580c;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.footer-contact-link {
+  color: #94a3b8;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.footer-contact-link:hover {
+  color: #fb923c;
+}
+
+.footer-numeric-val {
+  font-family: var(--c-font-numeric, 'Plus Jakarta Sans', sans-serif);
+  font-variant-numeric: tabular-nums lining-nums;
+  -webkit-font-feature-settings: "tnum" 1, "lnum" 1;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+/* Col 4: Newsletter VIP Form */
+.footer-newsletter-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 22px 20px;
+}
+
+.footer-newsletter-desc {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  line-height: 1.58;
+  margin: 0 0 16px;
+}
+
+.footer-newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-input-wrap {
+  position: relative;
+}
+
+.footer-newsletter-input {
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.6);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-family: var(--c-font, 'Inter', sans-serif);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.footer-newsletter-input:focus {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.18);
+}
+
+.footer-newsletter-input::placeholder {
+  color: #64748b;
+}
+
+.footer-newsletter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-family: var(--c-font-button, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.footer-newsletter-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+.footer-newsletter-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.footer-newsletter-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(22, 163, 74, 0.12);
+  border: 1px solid rgba(22, 163, 74, 0.3);
+  color: #4ade80;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 3: BOTTOM LEGAL & STATUS BAR
+   ═════════════════════════════════════════════════════════════ */
+.client-footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px 0;
+}
+
+.footer-bottom-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.footer-copyright {
+  font-family: var(--c-font, 'Inter', sans-serif);
+}
+
+.footer-legal-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.footer-legal-link {
+  color: #64748b;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.footer-legal-link:hover {
+  color: #cbd5e1;
+}
+
+.footer-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+.status-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: footerDotPulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+@keyframes footerDotPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT BREAKPOINTS
+   ═════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .client-footer-ribbon {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  .client-footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 36px;
+  }
+}
+
+@media (max-width: 640px) {
+  .client-footer-ribbon {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 28px 0;
+  }
+  .client-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 36px 0 28px;
+  }
+  .footer-bottom-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .footer-legal-links {
+    gap: 12px;
+  }
+}

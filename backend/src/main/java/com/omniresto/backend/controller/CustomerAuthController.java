@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping({"/api/v1/auth/customer", "/api/v1/customer/auth", "/api/customers"})
+@RequestMapping({"/api/v1/auth/customer", "/api/v1/customer/auth", "/api/customers", "/api/auth"})
 @RequiredArgsConstructor
 public class CustomerAuthController {
 
@@ -49,13 +49,45 @@ public class CustomerAuthController {
         return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công!"));
     }
 
-    // 5. Lấy danh sách thành viên (Dành cho Admin/Quản lý)
+    // 5. Xác minh OTP Đăng ký
+    @PostMapping("/verify-register-otp")
+    public ResponseEntity<Map<String, Object>> verifyRegisterOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        boolean valid = customerAuthService.verifyOtp(request, com.omniresto.backend.domain.enums.OtpPurpose.REGISTER_VERIFICATION);
+        return ResponseEntity.ok(Map.of("valid", valid, "message", "Xác thực OTP thành công!"));
+    }
+
+    // 6. Xác minh OTP Quên mật khẩu
+    @PostMapping("/verify-reset-otp")
+    public ResponseEntity<Map<String, Object>> verifyResetOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        boolean valid = customerAuthService.verifyOtp(request, com.omniresto.backend.domain.enums.OtpPurpose.PASSWORD_RESET);
+        return ResponseEntity.ok(Map.of("valid", valid, "message", "Xác thực OTP thành công!"));
+    }
+
+    // 7. Đặt lại mật khẩu mới
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        customerAuthService.forgotPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Mật khẩu đã được cập nhật thành công!"));
+    }
+
+    // 8. Gửi lại mã OTP
+    @PostMapping("/resend-otp")
+    public ResponseEntity<Map<String, String>> resendOtp(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phone,
+            @RequestParam(defaultValue = "PASSWORD_RESET") com.omniresto.backend.domain.enums.OtpPurpose purpose) {
+        String target = email != null && !email.isBlank() ? email : phone;
+        customerAuthService.resendOtp(target, purpose);
+        return ResponseEntity.ok(Map.of("message", "Mã OTP đã được gửi lại thành công!"));
+    }
+
+    // 9. Lấy danh sách thành viên (Dành cho Admin/Quản lý)
     @GetMapping("/admin/customers")
-    public ResponseEntity<List<CustomerEntity>> getAllCustomersForAdmin() {
-        List<CustomerEntity> customers = customerAuthService.getAllCustomersForAdmin();
+    public ResponseEntity<List<CustomerResponse>> getAllCustomersForAdmin() {
+        List<CustomerResponse> customers = customerAuthService.getAllCustomerResponses();
         return ResponseEntity.ok(customers);
     }
-    // 6. Khóa / mở khóa tài khoản (Admin)
+    // 10. Khóa / mở khóa tài khoản (Admin)
     @PatchMapping("/admin/customers/{id}/status")
     public ResponseEntity<CustomerResponse> updateCustomerStatus(
             @PathVariable String id, @RequestParam CustomerStatus status) {

@@ -131,4 +131,21 @@ class AiChatbotControllerTest {
 
         verify(aiChatbotService, times(1)).chat(any());
     }
+
+    @Test
+    @DisplayName("Streaming: Gọi POST /stream-chat trả về SseEmitter thành công")
+    void testStreamChatReturnsSseEmitter() {
+        when(tableSessionService.validateAndTouchSession("valid_token"))
+                .thenReturn(new TableSessionEntity());
+        when(rateLimiter.tryAcquire("table:valid_token")).thenReturn(true);
+
+        AiChatRequest request = new AiChatRequest();
+        request.setMessage("Gợi ý món ngon");
+
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter =
+                aiChatbotController.streamChat("valid_token", null, request, servletRequest);
+
+        assertNotNull(emitter);
+        verify(aiChatbotService, times(1)).streamChat(eq(request), eq(emitter));
+    }
 }

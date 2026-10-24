@@ -112,6 +112,8 @@ export interface ClientOrderDraft {
   notes?: string;
   payment_method?: ClientPaymentMethod;
   paymentMethod?: ClientPaymentMethod;
+  voucher_code?: string;
+  voucherCode?: string;
 }
 
 export type PlacedOrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';

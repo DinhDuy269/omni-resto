@@ -88,7 +88,7 @@ export const voucherApi = {
   },
 
   /**
-   * Kiểm tra và áp dụng mã voucher cho đơn hàng (Client)
+   * Kiểm tra và áp dụng mã voucher cho đơn hàng (Client - legacy)
    */
   validateVoucher: async (code: string, orderAmount: number): Promise<VoucherInfo> => {
     try {
@@ -99,4 +99,17 @@ export const voucherApi = {
       throw transformAxiosErrorResponse(error);
     }
   },
+
+  /**
+   * Xem trước và thẩm định mã voucher cho giỏ hàng thành viên (Client - Two-phase validation)
+   */
+  previewVoucher: async (payload: { code: string; items: { menu_item_id: string; quantity: number }[] }): Promise<import('../types').VoucherPreviewResponse> => {
+    try {
+      const res = await apiClient.post<import('../types').VoucherPreviewResponse>('/vouchers/validate', payload);
+      return res.data;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
 };
+

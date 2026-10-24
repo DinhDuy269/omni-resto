@@ -7,27 +7,29 @@ export type CustomerStatus = 'active' | 'inactive';
 
 export interface CustomerResponse {
   id: string;
-  fullName: string;
+  full_name: string;
   email: string;
   phone: string;
-  dateOfBirth?: string;
-  membershipTier: MembershipTier;
-  loyaltyPoints: number;
+  date_of_birth: string;
+  membership_tier: MembershipTier;
+  loyalty_points: number;
   status: CustomerStatus;
-  createdAt: string;
+  created_at: string;
+  token?: string;
+  // Alias tương thích ngược nếu component UI truy cập fullName
+  fullName?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
-// PHẦN ĐĂNG KÝ KHÁCH HÀNG (thêm vào đây)
+// PHẦN ĐĂNG KÝ KHÁCH HÀNG (Thuần snake_case theo chuẩn Backend)
 // ─────────────────────────────────────────────────────────────
 
 export interface CustomerRegisterPayload {
-  fullName: string;
+  full_name: string;
   email: string;
   phone: string;
   password: string;
-  dateOfBirth?: string;
-  // thêm field nào bạn cần nữa thì bổ sung
+  date_of_birth: string; // Ngày sinh bắt buộc
 }
 
 // ─────────────────────────────────────────────────────────────

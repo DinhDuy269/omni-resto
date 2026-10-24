@@ -36,7 +36,11 @@ public class StaffKeyAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String staffKey = request.getHeader("X-Staff-Key");
-        if (staffKey != null && !staffKey.isBlank() && isKeyValid(staffKey, configuredStaffKey)) {
+        String authHeader = request.getHeader("Authorization");
+        boolean hasBearerToken = authHeader != null && authHeader.startsWith("Bearer ");
+
+        // Nếu request không có Bearer token từ khách hàng, kiểm tra xác thực bằng X-Staff-Key
+        if (!hasBearerToken && staffKey != null && !staffKey.isBlank() && isKeyValid(staffKey, configuredStaffKey)) {
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     "STAFF_ADMIN_USER",
                     null,

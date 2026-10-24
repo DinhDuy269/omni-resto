@@ -1,0 +1,798 @@
+/* ==========================================================================
+   OmniResto - Client Home Page (Luxury Fine-Dining Architecture)
+   Typography: Plus Jakarta Sans (Display/Buttons/Numbers) + Inter (Body)
+   Numbers: Tabular Lining Figures (Prices) + Monospaced Slashed Zero (Codes)
+   Icons: Pure Lucide SVG Vectors (Zero Emojis)
+   ========================================================================== */
+
+.ch-page {
+  font-family: var(--c-font, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  color: var(--c-text-body, #334155);
+  background-color: var(--c-bg, #fffbf7);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 1: HERO SHOWCASE (Fine-Dining Luxury Ambient)
+   ═════════════════════════════════════════════════════════════ */
+.ch-hero {
+  position: relative;
+  min-height: 82vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background-color: #0c0a09;
+}
+
+.ch-hero-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.03);
+  transition: transform 10s ease-out;
+}
+
+.ch-hero:hover .ch-hero-bg-img {
+  transform: scale(1.08);
+}
+
+.ch-hero-overlay-dark {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg,
+      rgba(12, 10, 9, 0.92) 0%,
+      rgba(12, 10, 9, 0.78) 50%,
+      rgba(12, 10, 9, 0.45) 100%);
+}
+
+.ch-hero-overlay-radial {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 75% 40%, rgba(234, 88, 12, 0.22) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.ch-hero-container {
+  position: relative;
+  z-index: 2;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 96px 24px 80px;
+  width: 100%;
+}
+
+.ch-hero-content {
+  max-width: 660px;
+}
+
+/* Eyebrow Pill */
+.ch-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 6px 16px;
+  border-radius: 9999px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.ch-hero-eyebrow-text {
+  font-family: var(--c-font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #fcd34d;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Main Heading — Luxury Fine-Dining Soft Editorial Serif (Native Vietnamese) */
+.client-layout h1.ch-hero-title,
+.ch-hero-title {
+  font-family: 'Playfair Display', 'Lora', Georgia, 'Times New Roman', serif !important;
+  font-size: clamp(2.65rem, 5.5vw, 4.3rem);
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.15;
+  margin: 0 0 22px;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ch-hero-title-accent {
+  font-family: 'Playfair Display', 'Lora', Georgia, 'Times New Roman', serif !important;
+  font-style: italic;
+  font-weight: 600;
+  background: linear-gradient(135deg, #fffbeb 0%, #fed7aa 25%, #fb923c 65%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  padding-right: 8px;
+  filter: drop-shadow(0 2px 16px rgba(234, 88, 12, 0.32));
+}
+
+/* Subtitle — Clean High-Legibility Inter */
+.ch-hero-desc {
+  font-family: var(--c-font, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: clamp(0.98rem, 1.4vw, 1.12rem);
+  font-weight: 400;
+  color: #cbd5e1;
+  line-height: 1.72;
+  margin: 0 0 36px;
+  max-width: 560px;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hero CTAs */
+.ch-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 46px;
+}
+
+.ch-btn-hero-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  color: #ffffff;
+  border: none;
+  padding: 13px 26px;
+  border-radius: 9999px;
+  font-family: var(--c-font-button, var(--c-font-display));
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -4px rgba(234, 88, 12, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.ch-btn-hero-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -4px rgba(234, 88, 12, 0.65);
+}
+
+.ch-btn-hero-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 13px 22px;
+  border-radius: 9999px;
+  font-family: var(--c-font-button, var(--c-font-display));
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.ch-btn-hero-glass:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-2px);
+}
+
+/* Stats / Trust Badges Bar */
+.ch-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 16px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  max-width: 600px;
+}
+
+.ch-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ch-stat-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ch-stat-val {
+  font-family: var(--c-font-numeric, var(--c-font-display));
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.ch-stat-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.3;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 2: CULINARY PILLARS (Trải nghiệm Nhà Hàng Đẳng Cấp)
+   ═════════════════════════════════════════════════════════════ */
+.ch-section {
+  padding: 80px 24px;
+}
+
+.ch-section--warm {
+  background-color: var(--c-bg, #fffbf7);
+}
+
+.ch-section--surface {
+  background-color: #ffffff;
+}
+
+.ch-container {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.ch-section-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 48px;
+}
+
+.ch-section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--c-font-display, var(--c-font));
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #ea580c;
+  background: #fff7ed;
+  border: 1px solid rgba(234, 88, 12, 0.25);
+  padding: 4px 14px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.ch-section-title {
+  font-family: var(--c-font-display, var(--c-font));
+  font-size: clamp(1.65rem, 3.2vw, 2.35rem);
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin: 0 0 12px;
+}
+
+.ch-section-desc {
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Pillars Grid */
+.ch-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+}
+
+.ch-pillar-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 30px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.ch-pillar-card:hover {
+  transform: translateY(-5px);
+  border-color: #cbd5e1;
+  box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.09);
+}
+
+.ch-pillar-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.ch-pillar-card:hover .ch-pillar-icon-box {
+  transform: scale(1.08);
+}
+
+.ch-pillar-title {
+  font-family: var(--c-font-display, var(--c-font));
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.ch-pillar-desc {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 3: SIGNATURE BESTSELLERS (Mỹ Vị Tuyển Chọn)
+   ═════════════════════════════════════════════════════════════ */
+.ch-dishes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 24px;
+  margin-bottom: 42px;
+}
+
+.ch-dish-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.ch-dish-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.09);
+  border-color: #cbd5e1;
+}
+
+.ch-dish-img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background-color: #f1f5f9;
+}
+
+.ch-dish-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ch-dish-card:hover .ch-dish-img {
+  transform: scale(1.07);
+}
+
+.ch-dish-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  color: #ffffff;
+  font-family: var(--c-font-display, var(--c-font));
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
+}
+
+.ch-dish-body {
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.ch-dish-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ch-dish-cat {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #ea580c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ch-dish-name {
+  font-family: var(--c-font-display, var(--c-font));
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+}
+
+.ch-dish-desc {
+  font-size: 0.84rem;
+  color: #64748b;
+  line-height: 1.55;
+  margin: 0 0 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.ch-dish-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.ch-dish-price {
+  font-family: var(--c-font-numeric, var(--c-font-display));
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #ea580c;
+  letter-spacing: -0.02em;
+}
+
+.ch-dish-order-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-family: var(--c-font-button, var(--c-font-display));
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ch-dish-card:hover .ch-dish-order-btn {
+  background: #ea580c;
+  color: #ffffff;
+  border-color: #ea580c;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 4: DIGITAL DINING JOURNEY (Trải Nghiệm Ẩm Thực 4.0)
+   ═════════════════════════════════════════════════════════════ */
+.ch-journey-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 24px;
+  padding: 56px 40px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 48px -10px rgba(15, 23, 42, 0.35);
+}
+
+.ch-journey-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.ch-journey-header {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 46px;
+  position: relative;
+  z-index: 1;
+}
+
+.ch-journey-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.ch-step-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 18px;
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: all 0.25s ease;
+}
+
+.ch-step-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(251, 146, 60, 0.4);
+  transform: translateY(-4px);
+}
+
+.ch-step-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(234, 88, 12, 0.25);
+  border: 1px solid rgba(234, 88, 12, 0.5);
+  color: #fb923c;
+  font-family: var(--c-font-numeric, var(--c-font-display));
+  font-weight: 900;
+  font-size: 0.95rem;
+}
+
+.ch-step-title {
+  font-family: var(--c-font-display, var(--c-font));
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.ch-step-desc {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 5: CULINARY PHILOSOPHY (Bản Giao Hưởng Vị Giác)
+   ═════════════════════════════════════════════════════════════ */
+.ch-quote-card {
+  background: linear-gradient(135deg, #ffffff 0%, #fffbf7 100%);
+  border: 1.5px solid #fed7aa;
+  border-radius: 24px;
+  padding: 42px 40px;
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  box-shadow: 0 12px 36px rgba(234, 88, 12, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02);
+  position: relative;
+  overflow: hidden;
+}
+
+.ch-quote-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ch-quote-avatar-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 3px solid #ea580c;
+  padding: 3px;
+  background: #ffffff;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.22);
+}
+
+.ch-quote-avatar-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.ch-quote-content {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.ch-quote-mark {
+  color: #ea580c;
+  opacity: 0.35;
+  margin-bottom: 6px;
+  transform: scaleX(-1);
+  display: block;
+}
+
+.ch-quote-text {
+  font-family: 'Playfair Display', 'Lora', Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.24rem, 2.2vw, 1.58rem);
+  font-weight: 600;
+  font-style: italic;
+  color: #0f172a;
+  line-height: 1.65;
+  margin: 0 0 18px;
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ch-quote-author-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-left: 3px solid #ea580c;
+  padding-left: 14px;
+}
+
+.ch-quote-author-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--c-font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ch-quote-author-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #ea580c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.ch-quote-author-title {
+  font-family: var(--c-font, 'Inter', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ZONE 6: BOTTOM VIP CTA BANNER (Chốt Khách Đặt Bàn / Xem Menu)
+   ═════════════════════════════════════════════════════════════ */
+.ch-bottom-cta {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1.5px solid #fed7aa;
+  border-radius: 24px;
+  padding: 48px 36px;
+  text-align: center;
+  margin-top: 56px;
+  box-shadow: 0 10px 30px rgba(234, 88, 12, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.ch-bottom-cta-title {
+  font-family: var(--c-font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: clamp(1.45rem, 3.2vw, 2.1rem);
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 12px;
+  letter-spacing: -0.028em;
+  line-height: 1.25;
+  text-wrap: balance;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ch-bottom-cta-desc {
+  font-family: var(--c-font, 'Inter', sans-serif);
+  font-size: 0.98rem;
+  font-weight: 400;
+  color: #7c2d12;
+  margin: 0 auto 30px;
+  max-width: 540px;
+  line-height: 1.68;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+
+.ch-bottom-cta-btns {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ch-hero {
+    min-height: auto;
+    padding: 30px 0;
+  }
+
+  .ch-hero-container {
+    padding: 60px 18px 48px;
+  }
+
+  .ch-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ch-btn-hero-primary,
+  .ch-btn-hero-glass {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .ch-journey-card {
+    padding: 36px 20px;
+  }
+
+  .ch-quote-card {
+    padding: 28px 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+}

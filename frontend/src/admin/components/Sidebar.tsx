@@ -53,10 +53,13 @@ export const Sidebar: React.FC = () => {
       {/* Brand Header */}
       <div className="sidebar-header">
         <div className="sidebar-logo-icon">
-          <Flame size={24} />
+          <Flame size={22} />
         </div>
         <div>
-          <span className="sidebar-brand-title">OmniResto</span>
+          <span className="sidebar-brand-title">
+            OmniResto
+            <span className="sidebar-brand-badge">HQ</span>
+          </span>
         </div>
       </div>
 
@@ -77,16 +80,7 @@ export const Sidebar: React.FC = () => {
                   <Icon size={19} />
                   <span style={{ flex: 1 }}>{item.label}</span>
                   {item.badge !== undefined && (
-                    <span
-                      style={{
-                        backgroundColor: 'var(--danger)',
-                        color: '#ffffff',
-                        fontSize: '0.725rem',
-                        fontWeight: 700,
-                        padding: '1px 7px',
-                        borderRadius: 'var(--radius-full)',
-                      }}
-                    >
+                    <span className="sidebar-badge">
                       {item.badge}
                     </span>
                   )}

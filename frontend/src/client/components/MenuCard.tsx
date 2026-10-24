@@ -265,11 +265,12 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
             letter-spacing: 0.06em;
           }
           .menu-card__name {
-            font-family: var(--c-font);
+            font-family: var(--c-font-display, var(--c-font));
             font-size: 1rem;
             font-weight: 700;
             color: var(--c-text-main);
             line-height: 1.35;
+            letter-spacing: -0.01em;
             margin: 0;
           }
           .menu-card__desc {
@@ -297,18 +298,20 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
             gap: 2px;
           }
           .menu-card__price-value {
-            font-family: var(--font-mono);
-            font-size: 1.0625rem;
-            font-weight: 700;
+            font-family: var(--c-font-numeric, var(--c-font-display));
+            font-size: 1.1rem;
+            font-weight: 800;
             color: var(--c-primary);
-            font-feature-settings: 'tnum' 1;
-            letter-spacing: 0.01em;
+            font-variant-numeric: tabular-nums lining-nums;
+            font-feature-settings: 'tnum' 1, 'lnum' 1;
+            letter-spacing: -0.02em;
           }
           .menu-card__price-unit {
-            font-family: var(--c-font);
+            font-family: var(--c-font-numeric, var(--c-font-display));
             font-size: 0.8125rem;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--c-primary);
+            margin-left: 1px;
           }
 
           /* Add button */
@@ -323,9 +326,10 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
             border: none;
             border-radius: var(--c-r-md);
             cursor: pointer;
-            font-family: var(--c-font);
+            font-family: var(--c-font-button, var(--font-button));
             font-size: 0.8125rem;
             font-weight: 700;
+            letter-spacing: -0.01em;
             transition: all var(--c-t-fast);
             box-shadow: 0 2px 8px rgba(232,93,38,0.3);
           }
@@ -373,7 +377,9 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
             font-size: 0.9375rem;
             font-weight: 800;
             color: var(--c-primary);
-            font-family: var(--c-font);
+            font-family: var(--c-font-numeric, var(--c-font-display));
+            font-variant-numeric: tabular-nums lining-nums;
+            font-feature-settings: 'tnum' 1, 'lnum' 1;
           }
         `}</style>
       </article>

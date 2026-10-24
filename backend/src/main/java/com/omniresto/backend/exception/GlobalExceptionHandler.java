@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.CONFLICT.value());
         body.put("error", "Conflict");
-        body.put("code", "TABLE_LOCKED_BY_ANOTHER_DEVICE");
+        body.put("code", ex.getCode() != null ? ex.getCode() : "CONFLICT");
         body.put("message", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
@@ -77,7 +77,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
@@ -93,7 +94,8 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         body.put("error", "Internal Server Error");
-        body.put("message", ex.getMessage() != null ? ex.getMessage() : "Đã xảy ra lỗi máy chủ nội bộ. Vui lòng thử lại!");
+        body.put("message",
+                ex.getMessage() != null ? ex.getMessage() : "Đã xảy ra lỗi máy chủ nội bộ. Vui lòng thử lại!");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

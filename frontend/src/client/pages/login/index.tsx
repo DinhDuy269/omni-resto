@@ -30,14 +30,16 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const customer = await loginCustomer({ identifier: form.identifier.trim(), password: form.password });
-      localStorage.setItem("customer", JSON.stringify(customer)); // lưu tạm thông tin khách đã đăng nhập
-      navigate("/client");
+      if (customer.token) {
+        localStorage.setItem("token", customer.token);
+      }
+      localStorage.setItem("customer", JSON.stringify(customer));
+      const redirectUrl = new URLSearchParams(window.location.search).get("redirect") || "/client";
+      navigate(redirectUrl);
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setServerMsg(
-          err.status === 401 || err.status === 400
-            ? "Email/số điện thoại hoặc mật khẩu không đúng"
-            : err.message
+          err.message || "Email/số điện thoại hoặc mật khẩu không đúng"
         );
       } else {
         setServerMsg("Không kết nối được máy chủ. Kiểm tra backend đã chạy ở cổng 8080 chưa.");

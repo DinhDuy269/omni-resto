@@ -8,6 +8,7 @@ import type { OrderMode, ClientPaymentMethod, VnPayPaymentInfo } from '../../../
 import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
 import { createVnPayPayment, processVnPayDirectPayment } from '../../../shared/api/vnpayApi';
+import { checkIsItemAvailableNow } from '../../utils/mealPeriodUtils';
 
 export const ClientCart: React.FC = () => {
   const navigate = useNavigate();
@@ -26,6 +27,10 @@ export const ClientCart: React.FC = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const isEmpty = cart.length === 0;
 
+  const hasExpiredItems = useMemo(() => {
+    return cart.some((it) => !checkIsItemAvailableNow(it));
+  }, [cart]);
+
   // Form states
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -39,6 +44,8 @@ export const ClientCart: React.FC = () => {
   const [availableVouchers, setAvailableVouchers] = useState<VoucherInfo[]>([]);
   const [voucherCode, setVoucherCode] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState<VoucherInfo | null>(null);
+  const [appliedVoucherPreview, setAppliedVoucherPreview] = useState<import('../../../shared/types').VoucherPreviewResponse | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
   const [voucherMsg, setVoucherMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -56,8 +63,11 @@ export const ClientCart: React.FC = () => {
   }, []);
 
   const discountAmount = useMemo(() => {
+    if (appliedVoucherPreview) {
+      return Number(appliedVoucherPreview.discount_amount) || 0;
+    }
     if (!appliedVoucher) return 0;
-    // Kiểm tra điều kiện đơn hàng tối thiểu
+    // Fallback nếu có voucher cũ
     if (totalAmount < appliedVoucher.min_order_amount) {
       return 0;
     }
@@ -72,11 +82,11 @@ export const ClientCart: React.FC = () => {
       discount = Number(appliedVoucher.discount_value) || 0;
     }
     return Math.min(discount, totalAmount);
-  }, [appliedVoucher, totalAmount]);
+  }, [appliedVoucherPreview, appliedVoucher, totalAmount]);
 
   const finalAmount = Math.max(0, totalAmount - discountAmount);
 
-  // Áp dụng voucher thông qua xác thực Server-side bảo mật cao
+  // Áp dụng voucher thông qua xác thực Server-side bảo mật cao (Bắt buộc đăng nhập tài khoản)
   const handleApplyVoucher = async () => {
     const code = voucherCode.trim().toUpperCase();
     if (!code) {
@@ -84,16 +94,37 @@ export const ClientCart: React.FC = () => {
       return;
     }
 
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setVoucherMsg({
+        text: 'Chỉ khách hàng có tài khoản thành viên mới được áp dụng voucher. Vui lòng đăng nhập!',
+        type: 'error',
+      });
+      setShowLoginPrompt(true);
+      return;
+    }
+
     setIsValidatingVoucher(true);
     setVoucherMsg(null);
+    setShowLoginPrompt(false);
+
     try {
-      const validated = await voucherApi.validateVoucher(code, totalAmount);
-      setAppliedVoucher(validated);
-      setVoucherMsg({ text: `Áp dụng mã [${validated.code}] thành công!`, type: 'success' });
-    } catch (err: any) {
-      setAppliedVoucher(null);
+      const items = cart.map((it) => ({
+        menu_item_id: it.id || it.menu_item_id || '',
+        quantity: it.quantity,
+      }));
+
+      const preview = await voucherApi.previewVoucher({ code, items });
+      setAppliedVoucherPreview(preview);
       setVoucherMsg({
-        text: err.message || 'Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện.',
+        text: preview.message || `Áp dụng mã [${preview.code}] thành công! Tiết kiệm ${Number(preview.discount_amount).toLocaleString('vi-VN')}đ`,
+        type: 'success',
+      });
+    } catch (err: any) {
+      setAppliedVoucherPreview(null);
+      const msg = err.error_description || err.message || 'Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện.';
+      setVoucherMsg({
+        text: msg,
         type: 'error',
       });
     } finally {
@@ -128,6 +159,11 @@ export const ClientCart: React.FC = () => {
   // Handle placing order
   const handlePlaceOrder = async () => {
     if (isSubmitting || isEmpty) return;
+
+    if (hasExpiredItems) {
+      alert('⚠️ Giỏ hàng chứa món đã hết giờ phục vụ. Quý khách vui lòng xóa món đó khỏi danh sách để tiếp tục gửi đơn!');
+      return;
+    }
 
     // Validation
     if (orderMode === 'DELIVERY') {
@@ -169,8 +205,9 @@ export const ClientCart: React.FC = () => {
         customerName: finalCustomerName || undefined,
         customerPhone: customerPhone.trim() || undefined,
         deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddr.trim() : undefined,
-        notes: (appliedVoucher ? `[Voucher ${appliedVoucher.code} - Giảm ${discountAmount.toLocaleString('vi-VN')}đ] ${notes.trim()}`.trim() : notes.trim()) || undefined,
+        notes: (appliedVoucherPreview ? `[Voucher ${appliedVoucherPreview.code} - Giảm ${discountAmount.toLocaleString('vi-VN')}đ] ${notes.trim()}`.trim() : notes.trim()) || undefined,
         paymentMethod: orderMode === 'DINE_IN' && tableSession?.mode !== 'PAY_FIRST' ? 'CASH' : payMethod,
+        voucherCode: appliedVoucherPreview ? appliedVoucherPreview.code : (appliedVoucher ? appliedVoucher.code : undefined),
       });
 
       if (!placed) return;
@@ -363,6 +400,7 @@ export const ClientCart: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {cart.map((item, idx) => {
                   const itemKey = item.id || item.menuItemId || (item as any).menu_item_id || '';
+                  const isAvailable = checkIsItemAvailableNow(item);
                   return (
                     <div
                       key={itemKey || idx}
@@ -372,6 +410,7 @@ export const ClientCart: React.FC = () => {
                         gap: 14,
                         padding: '14px 18px',
                         borderBottom: idx < cart.length - 1 ? '1px solid var(--c-border-light, #f1f5f9)' : 'none',
+                        background: !isAvailable ? '#fff1f2' : 'transparent',
                       }}
                     >
                       <img
@@ -381,6 +420,7 @@ export const ClientCart: React.FC = () => {
                           width: 58, height: 58, borderRadius: 10,
                           objectFit: 'cover', flexShrink: 0,
                           border: '1px solid #f1f5f9',
+                          filter: !isAvailable ? 'grayscale(80%)' : 'none',
                         }}
                       />
 
@@ -392,6 +432,24 @@ export const ClientCart: React.FC = () => {
                         }}>
                           {item.name}
                         </div>
+                        {!isAvailable && (
+                          <div style={{
+                            fontSize: '0.725rem',
+                            color: '#b91c1c',
+                            background: '#fee2e2',
+                            border: '1px solid #fca5a5',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            marginBottom: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontWeight: 600,
+                            width: 'fit-content',
+                          }}>
+                            ⚠️ Đã hết giờ phục vụ
+                          </div>
+                        )}
                         <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--c-primary)' }}>
                           {(item.price * item.quantity).toLocaleString('vi-VN')}đ
                         </div>
@@ -791,18 +849,41 @@ export const ClientCart: React.FC = () => {
               {voucherMsg && (
                 <div style={{
                   marginTop: 10,
-                  padding: '8px 12px',
-                  borderRadius: 8,
+                  padding: '10px 14px',
+                  borderRadius: 10,
                   background: voucherMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
                   border: `1px solid ${voucherMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
                   color: voucherMsg.type === 'success' ? '#15803d' : '#b91c1c',
-                  fontSize: '0.8rem',
+                  fontSize: '0.85rem',
                   fontWeight: 600,
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 6
+                  flexDirection: 'column',
+                  gap: 8,
                 }}>
-                  {voucherMsg.type === 'success' ? '✅' : '❌'} {voucherMsg.text}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {voucherMsg.type === 'success' ? '✅' : '❌'} {voucherMsg.text}
+                  </div>
+                  {showLoginPrompt && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/login')}
+                      style={{
+                        alignSelf: 'flex-start',
+                        padding: '6px 14px',
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        borderRadius: 6,
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        marginTop: 2,
+                        transition: 'background 0.2s',
+                      }}
+                    >
+                      Đăng nhập tài khoản thành viên ngay &rarr;
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -949,9 +1030,9 @@ export const ClientCart: React.FC = () => {
                 <span style={{ fontWeight: 700, color: '#16a34a' }}>Miễn phí</span>
               </div>
 
-              {appliedVoucher && (
+              {(appliedVoucherPreview || appliedVoucher) && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
-                  <span>Khuyến mãi ({appliedVoucher.code})</span>
+                  <span>Khuyến mãi ({appliedVoucherPreview?.code || appliedVoucher?.code})</span>
                   <span style={{ fontWeight: 700 }}>-{discountAmount.toLocaleString('vi-VN')}đ</span>
                 </div>
               )}
@@ -974,26 +1055,46 @@ export const ClientCart: React.FC = () => {
             </div>
 
             {/* Main Action Button */}
+            {hasExpiredItems && (
+              <div style={{
+                background: '#fee2e2',
+                border: '1px solid #fca5a5',
+                color: '#991b1b',
+                borderRadius: 10,
+                padding: '10px 14px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                marginTop: 16,
+                lineHeight: 1.4,
+              }}>
+                ⚠️ Giỏ hàng chứa món đã hết giờ phục vụ. Quý khách vui lòng xóa món đó khỏi danh sách để tiếp tục gửi đơn!
+              </div>
+            )}
+
             <button
               id="place-order-main-btn"
               onClick={handlePlaceOrder}
-              disabled={isSubmitting || (isDineIn && !tableSession)}
+              disabled={isSubmitting || (isDineIn && !tableSession) || hasExpiredItems}
               className="c-btn c-btn-primary c-btn-lg c-btn-block"
               style={{
-                marginTop: 20,
+                marginTop: hasExpiredItems ? 10 : 20,
                 padding: '14px',
                 fontSize: '0.95rem',
                 fontWeight: 800,
-                boxShadow: '0 4px 14px rgba(234, 88, 12, 0.3)',
+                boxShadow: hasExpiredItems ? 'none' : '0 4px 14px rgba(234, 88, 12, 0.3)',
+                background: hasExpiredItems ? '#cbd5e1' : undefined,
+                cursor: hasExpiredItems ? 'not-allowed' : 'pointer',
               }}
             >
-              {isSubmitting
-                ? 'Đang gửi đơn...'
-                : isDineIn
-                  ? (tableSession ? `🚀 Gửi bếp ngay • ${finalAmount.toLocaleString('vi-VN')}đ` : '📷 Quét QR bàn để đặt món')
-                  : isTakeaway
-                    ? `📦 Đặt món mang về • ${finalAmount.toLocaleString('vi-VN')}đ`
-                    : `🛵 Đặt giao hàng • ${finalAmount.toLocaleString('vi-VN')}đ`}
+              {hasExpiredItems
+                ? '⚠️ Vui lòng xóa món hết giờ phục vụ'
+                : isSubmitting
+                  ? 'Đang gửi đơn...'
+                  : isDineIn
+                    ? (tableSession ? `🚀 Gửi bếp ngay • ${finalAmount.toLocaleString('vi-VN')}đ` : '📷 Quét QR bàn để đặt món')
+                    : isTakeaway
+                      ? `📦 Đặt món mang về • ${finalAmount.toLocaleString('vi-VN')}đ`
+                      : `🛵 Đặt giao hàng • ${finalAmount.toLocaleString('vi-VN')}đ`}
             </button>
 
             <div style={{ marginTop: 12, textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>

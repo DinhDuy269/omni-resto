@@ -30,9 +30,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private final StaffKeyAuthenticationFilter staffKeyAuthenticationFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(StaffKeyAuthenticationFilter staffKeyAuthenticationFilter) {
+    public SecurityConfig(
+            StaffKeyAuthenticationFilter staffKeyAuthenticationFilter,
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
         this.staffKeyAuthenticationFilter = staffKeyAuthenticationFilter;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean // nghĩa là Spring gọi hàm này một lần khi khởi động, giữ kết quả để dùng chung.
@@ -64,6 +69,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)// Tắt bảo vệ CSRF(Cross-Site Request Forgery)
                 .authorizeHttpRequests(this::configureAuthorizeHttpRequests)// Cấu hình quyền truy cập vào các API
                 .addFilterBefore(staffKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -115,7 +121,9 @@ public class SecurityConfig {
                 .requestMatchers(eventApiPatterns()).permitAll()
                 // 14. Newsletter (NewsletterController)
                 .requestMatchers(newsletterApiPatterns()).permitAll()
-                // 15. Customer Authentication & Management (CustomerAuthController)
+                // 15. Customer Admin Management (CustomerAuthController - Admin only)
+                .requestMatchers(customerAdminApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                // 16. Customer Authentication & Management (CustomerAuthController)
                 .requestMatchers(customerAuthApiPatterns()).permitAll()
                 // Infrastructure / Static / Docs
                 .requestMatchers(websocketPatterns()).permitAll()
@@ -278,6 +286,17 @@ public class SecurityConfig {
                 new AntPathRequestMatcher("/error")
         };
     }
+    // region customer-admin (CustomerAuthController - Admin only)
+    private static RequestMatcher[] customerAdminApiPatterns() {
+        return new RequestMatcher[] {
+                new AntPathRequestMatcher("/api/customers/admin/**"),
+                new AntPathRequestMatcher("/api/v1/auth/customer/admin/**"),
+                new AntPathRequestMatcher("/api/v1/customer/auth/admin/**"),
+                new AntPathRequestMatcher("/api/auth/admin/**")
+        };
+    }
+    // endregion
+
     // region customer-auth (CustomerAuthController)
     private static RequestMatcher[] customerAuthApiPatterns() {
         return new RequestMatcher[] {
@@ -286,7 +305,9 @@ public class SecurityConfig {
                 new AntPathRequestMatcher("/api/v1/customer/auth"),
                 new AntPathRequestMatcher("/api/v1/customer/auth/**"),
                 new AntPathRequestMatcher("/api/customers"),
-                new AntPathRequestMatcher("/api/customers/**")
+                new AntPathRequestMatcher("/api/customers/**"),
+                new AntPathRequestMatcher("/api/auth"),
+                new AntPathRequestMatcher("/api/auth/**")
         };
     }
     // endregion

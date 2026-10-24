@@ -5,6 +5,7 @@ import { useClientStore } from '../../store/clientStore';
 import type { MenuItem } from '../../../shared/types/admin';
 import './ClientGacha.css';
 import { GachaAudio } from '../../utils/GachaAudio';
+import { checkIsItemAvailableNow, getCurrentPeriodClient, getMealPeriodDisplayName } from '../../utils/mealPeriodUtils';
 
 // Kích thước chuẩn để tính toán trượt (Chiều rộng thẻ 160px + Margin 20px)
 const ITEM_WIDTH = 180;
@@ -16,9 +17,14 @@ const ClientGacha: React.FC = () => {
     const menuItems = menu_items || [];
     const { addToCart, openCart } = useClientStore();
 
+    const currentPeriod = useMemo(() => getCurrentPeriodClient(), []);
+
     const availableItems = useMemo(() => {
-        return menuItems.filter(m => m.status === 'AVAILABLE' || m.status === 'available');
-    }, [menuItems]);
+        return menuItems.filter(m => 
+            (m.status === 'AVAILABLE' || m.status === 'available') &&
+            checkIsItemAvailableNow(m, currentPeriod)
+        );
+    }, [menuItems, currentPeriod]);
 
     const [isSpinning, setIsSpinning] = useState(false);
     const [spinTrack, setSpinTrack] = useState<MenuItem[]>([]);
@@ -115,12 +121,19 @@ const ClientGacha: React.FC = () => {
 
     const handleOrder = () => {
         if (winner) {
+            if (!checkIsItemAvailableNow(winner, getCurrentPeriodClient())) {
+                alert(`⚠️ Rất tiếc, món "${winner.name}" hiện đã quá giờ phục vụ. Quý khách vui lòng quay món khác trong thực đơn hiện tại nhé!`);
+                setWinner(null);
+                return;
+            }
             addToCart({
                 menuItemId: winner.id,
                 name: winner.name,
                 price: Number(winner.base_price) || 0,
                 image: winner.image || '',
-                category: winner.category
+                category: winner.category,
+                meal_periods: winner.meal_periods,
+                is_available_now: true,
             }, 1);
             openCart();
             setWinner(null); // Đóng Modal sau khi chốt đơn
@@ -133,7 +146,19 @@ const ClientGacha: React.FC = () => {
         audioRef.current?.setMuted(newState);
     };
 
-    if (availableItems.length === 0) return <div style={{ textAlign: 'center', padding: '40px' }}>Chưa có dữ liệu menu.</div>;
+    if (availableItems.length === 0) {
+        return (
+            <div style={{ textAlign: 'center', padding: '60px 20px', maxWidth: 480, margin: '40px auto' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🌙</div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--c-text-main)', marginBottom: '10px' }}>
+                    Nhà hàng hiện đang đóng cửa
+                </h2>
+                <p style={{ color: 'var(--c-text-muted)', lineHeight: 1.6, marginBottom: '20px' }}>
+                    Hiện tại là {getMealPeriodDisplayName(currentPeriod)}. Vòng quay may mắn sẽ mở lại cùng thực đơn nóng hổi vào ca sáng (06:00 - 10:30) nhé!
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="gacha-pro-wrapper" style={{ position: 'relative' }}>

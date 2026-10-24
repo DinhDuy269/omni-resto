@@ -1,78 +1,75 @@
-/* Floating Gacha Button Launcher */
+/* ─────────────────────────────────────────────────────────────────
+   ClientGachaFloatingButton.css
+   Nút nổi Vòng quay ẩm thực Omni Gacha
+   Aesthetic: Luxury Amber Gold, Subtle Specular Border, Glass Tooltip
+   ───────────────────────────────────────────────────────────────── */
+
 .omni-gacha-float-launcher {
   position: fixed;
-  bottom: 96px;
+  bottom: 84px;
   right: 24px;
-  z-index: 999;
+  z-index: 998;
   display: flex;
   align-items: center;
   gap: 10px;
   pointer-events: auto;
 }
 
-/* Nút bấm tròn với gradient vàng kim / cam ấm rực rỡ */
+/* Nút bấm tròn phong cách Hoàng kim / Hổ phách sang trọng */
 .omni-gacha-float-btn {
-  width: 54px;
-  height: 54px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 50%, #dc2626 100%);
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
   color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.45), 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 20px -2px rgba(234, 88, 12, 0.35),
+              0 2px 6px rgba(0, 0, 0, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
 
 .omni-gacha-float-btn:hover {
-  transform: scale(1.1) translateY(-3px);
-  box-shadow: 0 14px 30px rgba(234, 88, 12, 0.55), 0 4px 10px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 12px 26px -2px rgba(234, 88, 12, 0.48),
+              0 4px 10px rgba(0, 0, 0, 0.12);
   border-color: #ffffff;
 }
 
 .omni-gacha-float-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
-/* Hiệu ứng xoay nhẹ xúc xắc khi hover */
+/* Icon xúc xắc */
 .omni-gacha-dice-icon {
-  transition: transform 0.4s ease;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .omni-gacha-float-btn:hover .omni-gacha-dice-icon {
-  transform: rotate(20deg) scale(1.1);
+  transform: rotate(24deg) scale(1.08);
 }
 
-/* Hiệu ứng ánh hào quang xung quanh */
+/* Ánh hào quang nhẹ (ambient glow) */
 .omni-gacha-float-glow {
   position: absolute;
-  inset: -3px;
+  inset: -2px;
   border-radius: 50%;
   background: linear-gradient(135deg, #fbbf24, #f97316);
-  opacity: 0.6;
-  filter: blur(6px);
+  opacity: 0.4;
+  filter: blur(5px);
   z-index: -1;
-  animation: gacha-float-pulse 2.2s infinite ease-out;
+  transition: opacity 0.3s ease;
 }
 
-@keyframes gacha-float-pulse {
-  0% {
-    transform: scale(0.92);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.18);
-    opacity: 0.25;
-  }
-  100% {
-    transform: scale(0.92);
-    opacity: 0.7;
-  }
+.omni-gacha-float-btn:hover .omni-gacha-float-glow {
+  opacity: 0.7;
 }
 
 /* Huy hiệu lấp lánh ở góc */
@@ -84,43 +81,32 @@
   color: #b45309;
   border: 1.5px solid #ffffff;
   border-radius: 50%;
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  animation: sparkle-spin 3s infinite linear;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
 }
 
-@keyframes sparkle-spin {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.15);
-  }
-  100% {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-/* Tooltip gợi mở */
+/* Tooltip kính mờ Obsidian sang trọng */
 .omni-gacha-float-tooltip {
   background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #ffffff;
   padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  border-radius: 9999px;
+  font-size: 0.78125rem;
+  font-weight: 600;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   pointer-events: none;
   opacity: 0;
-  transform: translateX(10px);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: -0.01em;
 }
 
 .omni-gacha-float-tooltip.visible,
@@ -131,18 +117,19 @@
 
 .omni-gacha-float-tooltip strong {
   color: #fbbf24;
+  font-weight: 700;
 }
 
-/* Responsive trên màn hình nhỏ */
+/* Mobile Responsive */
 @media (max-width: 640px) {
   .omni-gacha-float-launcher {
-    bottom: 90px;
+    bottom: 78px;
     right: 16px;
   }
 
   .omni-gacha-float-btn {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
   }
 
   .omni-gacha-float-tooltip {

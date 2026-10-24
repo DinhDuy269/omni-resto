@@ -24,6 +24,11 @@ public class OrderResponse {
     private OrderStatus status;
     private PaymentStatus paymentStatus;
     private BigDecimal totalAmount;
+    private BigDecimal subtotal;
+    private BigDecimal discountAmount;
+    private String voucherId;
+    private String voucherCode;
+    private String customerId;
     private String customerName;
     private PaymentMethod paymentMethod;
     private List<OrderItemResponse> items;

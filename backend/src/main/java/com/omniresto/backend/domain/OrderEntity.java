@@ -48,6 +48,23 @@ public class OrderEntity extends BaseEntity {
     @Builder.Default
     private PaymentStatus paymentStatus = PaymentStatus.unpaid;
 
+    @Column(name = "customer_id", length = 36)
+    private String customerId;
+
+    @Column(name = "voucher_id", length = 36)
+    private String voucherId;
+
+    @Column(name = "voucher_code", length = 50)
+    private String voucherCode;
+
+    @Column(name = "subtotal", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Column(name = "discount_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;

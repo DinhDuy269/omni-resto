@@ -1,0 +1,280 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   ClientMenu.css — Unified Floating Island Design System
+   OmniResto Haute Gastronomy Experience
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.client-menu-page {
+  font-family: var(--c-font);
+  background-color: var(--c-bg);
+  min-height: 100%;
+  color: var(--c-text-body);
+}
+
+/* ── Top Page Banner / Brand Headline ── */
+.menu-hero-intro {
+  max-width: var(--c-max-w);
+  margin: 0 auto;
+  padding: 24px 24px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.menu-hero-title-group h1 {
+  font-family: var(--c-font-display, var(--c-font));
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--c-text-main);
+  letter-spacing: -0.02em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-hero-title-group p {
+  font-size: 0.84rem;
+  color: var(--c-text-muted);
+  margin-top: 4px;
+}
+
+/* ── UNIFIED FLOATING ISLAND (STAGE & ISLAND CONTAINER) ── */
+.menu-floating-island-wrapper {
+  position: sticky;
+  top: 72px;
+  z-index: 95;
+  padding: 12px 24px;
+  transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none; /* Allows click-through outside the island */
+}
+
+.menu-floating-island-wrapper.is-scrolled {
+  padding: 8px 24px;
+}
+
+.menu-floating-island {
+  pointer-events: auto;
+  max-width: var(--c-max-w);
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(254, 215, 170, 0.85);
+  border-radius: 24px;
+  box-shadow: 0 16px 36px -4px rgba(255, 107, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04);
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menu-floating-island-wrapper.is-scrolled .menu-floating-island {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 40px -4px rgba(255, 107, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.06);
+  border-color: var(--c-primary);
+}
+
+/* ── TẦNG 1: CA PHỤC VỤ (MEAL PERIODS) & TÌM KIẾM (SEARCH) ── */
+.island-tier-period {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Period Segmented Control */
+.period-segmented-cluster {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--c-surface-warm);
+  padding: 4px;
+  border-radius: 9999px;
+  border: 1px solid var(--c-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-width: 100%;
+}
+
+.period-segmented-cluster::-webkit-scrollbar {
+  display: none;
+}
+
+.period-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-body);
+  font-family: var(--c-font);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.period-pill-btn:hover:not(.active) {
+  color: var(--c-primary);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.period-pill-btn.active {
+  background: #ffffff;
+  color: var(--c-primary);
+  font-weight: 750;
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.18);
+}
+
+/* Ambient Pulse Dot */
+.live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 8px rgba(22, 163, 74, 0.7);
+  animation: liveDotPulse 2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes liveDotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.4); opacity: 1; }
+}
+
+/* Integrated Search Input Box */
+.island-search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1.5px solid var(--c-border);
+  border-radius: 9999px;
+  padding: 7px 16px;
+  flex: 0 1 310px;
+  min-width: 220px;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.island-search-wrapper.is-focused {
+  border-color: var(--c-primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.16), var(--c-shadow-orange);
+}
+
+.island-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: var(--c-font);
+  font-size: 0.84rem;
+  color: var(--c-text-main);
+  width: 100%;
+}
+
+.island-search-clear-btn {
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  font-size: 0.75rem;
+  line-height: 1;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.island-search-clear-btn:hover {
+  background: var(--c-primary);
+  color: #ffffff;
+}
+
+/* ── TẦNG 2: DẢI DANH MỤC VỚI EDGE FADE GRADIENTS (NO ROUND ARROW BUTTONS) ── */
+.island-tier-category {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(254, 215, 170, 0.45);
+}
+
+.category-ribbon-viewport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  width: 100%;
+  padding: 4px 16px 4px 6px;
+  /* Kỹ thuật Edge Fade Mask triệt tiêu nút bấm mũi tên */
+  mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
+}
+
+.category-ribbon-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.category-ribbon-tab {
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-family: var(--c-font);
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--c-text-body);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.category-ribbon-tab:hover {
+  color: var(--c-primary);
+  background: rgba(255, 107, 0, 0.06);
+}
+
+.category-ribbon-tab.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--c-primary) 0%, #ea580c 100%);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(255, 107, 0, 0.32);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Responsive Tweaks */
+@media (max-width: 768px) {
+  .menu-floating-island-wrapper {
+    top: 64px;
+    padding: 8px 14px;
+  }
+  .menu-floating-island {
+    padding: 10px 14px;
+    border-radius: 18px;
+    gap: 8px;
+  }
+  .island-search-wrapper {
+    flex: 1 1 100%;
+    order: 2;
+  }
+  .period-segmented-cluster {
+    width: 100%;
+    order: 1;
+  }
+}

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { CartItem, OrderMode, ClientOrderDraft, PlacedOrder, PlacedOrderStatus, TableSession, ClientPaymentMethod } from '../../shared/types/client';
 import { useAdminStore } from '../../admin/store/adminStore';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../shared/config/paymentConfig';
+import { checkIsItemAvailableNow } from '../utils/mealPeriodUtils';
 
 const STORAGE_KEY = 'omniresto_client_orders';
 const TABLE_SESSION_KEY = 'omniresto_client_table_session';
@@ -191,6 +192,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   addToCart: (item, quantity = 1) =>
     set((state) => {
+      // Cart Guard: Chặn không cho thêm vào giỏ nếu món đã hết giờ phục vụ
+      if (item.is_available_now === false || item.availableNow === false || !checkIsItemAvailableNow(item)) {
+        alert(`⚠️ Món "${item.name}" hiện đã quá giờ phục vụ. Quý khách vui lòng chọn các món ăn đang mở bán trong thực đơn hiện tại nhé!`);
+        return state;
+      }
       const itemKey = item.id || item.menu_item_id;
       const existing = state.cart.find((c) => (c.id || c.menu_item_id) === itemKey);
       if (existing) {
@@ -625,6 +631,14 @@ export const useClientStore = create<ClientState>((set, get) => ({
       return null;
     }
 
+    // Cart Guard: Kiểm tra toàn bộ món trong giỏ hàng xem có món nào bị quá giờ phục vụ không
+    const expiredItems = state.cart.filter((it) => !checkIsItemAvailableNow(it));
+    if (expiredItems.length > 0) {
+      const names = expiredItems.map((i) => `"${i.name}"`).join(', ');
+      alert(`⚠️ Đơn hàng có món đã hết thời gian phục vụ (${names}). Quý khách vui lòng xóa món này khỏi giỏ hàng trước khi gửi đơn nhé!`);
+      return null;
+    }
+
     const session = state.table_session;
     const effectiveTableNo = draft.order_mode === 'DINE_IN'
       ? session?.table_no
@@ -646,6 +660,10 @@ export const useClientStore = create<ClientState>((set, get) => ({
         'Content-Type': 'application/json',
         'Idempotency-Key': 'idemp_' + Math.random().toString(36).substring(2) + '_' + Date.now(),
       };
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       if (effectiveSessionToken) {
         headers['X-Table-Session'] = effectiveSessionToken;
       }
@@ -660,6 +678,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
           table_no: effectiveTableNo,
           customer_name: draft.customer_name,
           payment_method: normalizedPaymentMethod,
+          voucher_code: draft.voucher_code || draft.voucherCode || undefined,
           items: state.cart.map((it) => ({
             menu_item_id: it.menu_item_id || it.id || '',
             name: it.name,

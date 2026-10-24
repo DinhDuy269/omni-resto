@@ -29,8 +29,9 @@ function validate(f: FormState): Errors {
   if (!f.email.trim()) e.email = "Vui lòng nhập email";
   else if (!/^\S+@\S+\.\S+$/.test(f.email)) e.email = "Email không hợp lệ";
   if (!f.phone.trim()) e.phone = "Vui lòng nhập số điện thoại";
-  else if (!/^(0|\+84)\d{9}$/.test(f.phone)) e.phone = "Số điện thoại không hợp lệ (ví dụ 0912345678)";
-  if (f.dateOfBirth && new Date(f.dateOfBirth) >= new Date()) e.dateOfBirth = "Ngày sinh phải ở quá khứ";
+  else if (!/^(0|\+84)[35789]\d{8}$/.test(f.phone)) e.phone = "Số điện thoại không hợp lệ (ví dụ: 0912345678)";
+  if (!f.dateOfBirth) e.dateOfBirth = "Vui lòng chọn ngày sinh (thông tin bắt buộc)";
+  else if (new Date(f.dateOfBirth) >= new Date()) e.dateOfBirth = "Ngày sinh phải ở trong quá khứ";
   if (f.password.length < 8) e.password = "Mật khẩu cần ít nhất 8 ký tự";
   else if (!/[A-Za-z]/.test(f.password) || !/\d/.test(f.password)) e.password = "Mật khẩu cần có cả chữ và số";
   if (f.confirmPassword !== f.password) e.confirmPassword = "Mật khẩu nhập lại không khớp";
@@ -77,15 +78,28 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      setDone(await registerCustomer({ ...form, dateOfBirth: form.dateOfBirth || null }));
+      const res = await registerCustomer({
+        full_name: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+        date_of_birth: form.dateOfBirth,
+      });
+      if (res.token) {
+        localStorage.setItem("token", res.token);
+      }
+      localStorage.setItem("customer", JSON.stringify(res));
+      setDone(res);
     } catch (err) {
       if (err instanceof ApiRequestError) {
         if (err.status === 400 && err.fieldErrors) {
           const mapped: Errors = { ...err.fieldErrors };
+          if (mapped.full_name) mapped.fullName = mapped.full_name;
+          if (mapped.date_of_birth) mapped.dateOfBirth = mapped.date_of_birth;
           if (mapped.passwordConfirmed) mapped.confirmPassword = mapped.passwordConfirmed;
           return setErrors(mapped);
         }
-        if (err.status === 409) {
+        if (err.status === 409 || err.status === 400) {
           if (/điện thoại/i.test(err.message)) return setErrors({ phone: err.message });
           if (/email/i.test(err.message)) return setErrors({ email: err.message });
         }
@@ -106,7 +120,7 @@ export default function RegisterPage() {
           <p>Tài khoản thành viên của bạn đã sẵn sàng. Mã thành viên: <strong>{done.id}</strong></p>
           <dl>
             <div><dt>Hạng hiện tại</dt><dd>Tiêu chuẩn</dd></div>
-            <div><dt>Điểm tích lũy</dt><dd>{done.loyaltyPoints}</dd></div>
+            <div><dt>Điểm tích lũy</dt><dd>{done.loyalty_points}</dd></div>
           </dl>
           <button className="rg-btn" onClick={() => { setDone(null); setForm(EMPTY); }}>
             Đăng ký tài khoản khác
@@ -155,8 +169,8 @@ export default function RegisterPage() {
             </Field>
           </div>
 
-          <Field label="Ngày sinh " name="dateOfBirth" error={errors.dateOfBirth}>
-            <input id="dateOfBirth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={set} />
+          <Field label="Ngày sinh (Bắt buộc) *" name="dateOfBirth" error={errors.dateOfBirth}>
+            <input id="dateOfBirth" name="dateOfBirth" type="date" required value={form.dateOfBirth} onChange={set} />
           </Field>
 
           <div className="rg-row">

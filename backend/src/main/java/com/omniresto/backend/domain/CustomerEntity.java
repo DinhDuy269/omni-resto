@@ -1,5 +1,8 @@
 package com.omniresto.backend.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.omniresto.backend.converter.CustomerStatusConverter;
+import com.omniresto.backend.converter.MembershipTierConverter;
 import com.omniresto.backend.domain.enums.CustomerStatus;
 import com.omniresto.backend.domain.enums.MembershipTier;
 import jakarta.persistence.*;
@@ -39,20 +42,21 @@ public class CustomerEntity {
     @Column(nullable = false, length = 20)
     private String phone;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password; // đã mã hoá BCrypt
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = MembershipTierConverter.class)
     @Column(name = "membership_tier", nullable = false, length = 20)
     private MembershipTier membershipTier;
 
     @Column(name = "loyalty_points", nullable = false)
     private Integer loyaltyPoints;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = CustomerStatusConverter.class)
     @Column(nullable = false, length = 20)
     private CustomerStatus status;
 

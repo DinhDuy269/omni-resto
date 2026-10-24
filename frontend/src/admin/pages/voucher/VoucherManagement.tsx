@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Ticket } from 'lucide-react';
+import { Search, Plus, Ticket, Sparkles, CheckCircle2, PauseCircle, Clock } from 'lucide-react';
 import { VoucherCard } from './components/VoucherCard';
 import { useVoucher } from './hooks/useVoucher';
 import { voucherApi } from '../../../shared/api/voucherApi';
@@ -167,9 +167,60 @@ export const VoucherManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary KPI Badges & Controls */}
-      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      {/* Executive KPI Stats Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(59, 130, 246, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+            <Sparkles size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tất Cả Voucher</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text-main)', fontVariantNumeric: 'tabular-nums' }}>
+              {summaryCount.all} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>chương trình</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(16, 185, 129, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--success)' }}>
+            <CheckCircle2 size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Đang Hoạt Động</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>
+              {summaryCount.active} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>hiệu lực</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(245, 158, 11, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--warning)' }}>
+            <PauseCircle size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tạm Dừng</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--warning)', fontVariantNumeric: 'tabular-nums' }}>
+              {summaryCount.inactive} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>chiến dịch</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(239, 68, 68, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}>
+            <Clock size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Đã Hết Hạn</div>
+            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--danger)', fontVariantNumeric: 'tabular-nums' }}>
+              {summaryCount.expired} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>chiến dịch</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Filter Tabs */}
+      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '12px 16px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             className={`btn btn-sm ${filterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setFilterStatus('ALL')}

@@ -1,15 +1,17 @@
 package com.omniresto.backend.controller;
 
+import com.omniresto.backend.model.voucher.request.VoucherPreviewRequest;
 import com.omniresto.backend.model.voucher.request.VoucherRequest;
+import com.omniresto.backend.model.voucher.response.VoucherPreviewResponse;
 import com.omniresto.backend.model.voucher.response.VoucherResponse;
 import com.omniresto.backend.service.VoucherService;
+import com.omniresto.backend.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -84,12 +86,14 @@ public class VoucherController {
     }
 
     /**
-     * API Khách hàng: Kiểm tra tính hợp lệ của mã khuyến mãi theo giá trị đơn hàng
+     * API Khách hàng: Xác thực và xem trước giá trị voucher cho giỏ hàng
+     * Zero-Trust Security: customerId được trích xuất trực tiếp từ JWT của người dùng đã đăng nhập.
      */
-    @GetMapping("/validate")
-    public ResponseEntity<VoucherResponse> validateVoucher(
-            @RequestParam String code,
-            @RequestParam BigDecimal orderAmount) {
-        return ResponseEntity.ok(voucherService.validateVoucherForOrder(code, orderAmount));
+    @PostMapping("/validate")
+    public ResponseEntity<VoucherPreviewResponse> previewVoucher(
+            @Valid @RequestBody VoucherPreviewRequest request
+    ) {
+        String customerId = SecurityUtils.getCurrentCustomerId();
+        return ResponseEntity.ok(voucherService.previewVoucher(request, customerId));
     }
 }

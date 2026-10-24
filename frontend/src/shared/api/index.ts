@@ -1,4 +1,6 @@
 export * from './client';
+export * from './authService';
+export * from './reservationApi';
 
 // Common API Response & Request Interfaces
 export interface ApiResponse<T> {

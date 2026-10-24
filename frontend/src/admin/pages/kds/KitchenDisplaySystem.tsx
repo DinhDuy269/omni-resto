@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChefHat, Clock, CheckCircle2, AlertCircle, Utensils, Sparkles, Wifi } from 'lucide-react';
+import { ChefHat, Clock, CheckCircle2, AlertCircle, Utensils, Sparkles, Wifi, Flame, AlertTriangle } from 'lucide-react';
 import { useAdminStore } from '../../store/adminStore';
 import type { OrderStatus } from '../../../shared/types/admin';
 import { useWebSocket } from '../../../shared/hooks/useWebSocket';
@@ -14,29 +14,38 @@ export const KitchenDisplaySystem: React.FC = () => {
   // Filter orders relevant for Kitchen (PENDING, CONFIRMED, PREPARING, READY)
   const kitchenOrders = orders.filter((order) => {
     if (filterStatus === 'KITCHEN_ACTIVE') {
-      return order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PREPARING' || order.status === 'READY';
+      return (
+        order.status === 'PENDING' ||
+        order.status === 'CONFIRMED' ||
+        order.status === 'PREPARING' ||
+        order.status === 'READY'
+      );
     }
     return order.status === filterStatus;
   });
 
+  const confirmedCount = orders.filter((o) => o.status === 'CONFIRMED' || o.status === 'PENDING').length;
+  const preparingCount = orders.filter((o) => o.status === 'PREPARING').length;
+  const readyCount = orders.filter((o) => o.status === 'READY').length;
+
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case 'PENDING':
-        return { label: 'Đơn Chờ Xác Nhận', bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', icon: AlertCircle };
+        return { label: 'Đơn Chờ Xác Nhận', bg: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', icon: AlertCircle };
       case 'CONFIRMED':
-        return { label: 'Hàng Đợi Nấu', bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', icon: Clock };
+        return { label: 'Hàng Đợi Nấu', bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb', icon: Clock };
       case 'PREPARING':
-        return { label: 'Đang Nấu', bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', icon: Utensils };
+        return { label: 'Đang Nấu', bg: 'rgba(245, 158, 11, 0.12)', color: '#d97706', icon: Flame };
       case 'READY':
-        return { label: 'Sẵn Sàng', bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981', icon: CheckCircle2 };
+        return { label: 'Sẵn Sàng Trả', bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981', icon: CheckCircle2 };
       default:
-        return { label: status, bg: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8', icon: Clock };
+        return { label: status, bg: 'rgba(148, 163, 184, 0.12)', color: '#64748b', icon: Clock };
     }
   };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Header Bar */}
+      {/* ── KITCHEN HEADER BAR ── */}
       <div
         style={{
           display: 'flex',
@@ -46,28 +55,30 @@ export const KitchenDisplaySystem: React.FC = () => {
           gap: '16px',
           background: 'var(--bg-surface)',
           padding: '20px 24px',
-          borderRadius: '16px',
+          borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-sm)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
+              width: '46px',
+              height: '46px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+              color: '#ffffff',
             }}
           >
-            <ChefHat size={28} color="#ffffff" />
+            <ChefHat size={26} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Màn Hình Bếp Trực Quan (KDS)
               </h2>
               <span
@@ -75,44 +86,47 @@ export const KitchenDisplaySystem: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  padding: '4px 8px',
-                  borderRadius: '12px',
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-full)',
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  background: isConnected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                  color: isConnected ? '#10b981' : '#f59e0b',
-                  border: `1px solid ${isConnected ? '#10b981' : '#f59e0b'}`,
+                  background: isConnected ? 'var(--success-bg)' : 'var(--warning-bg)',
+                  color: isConnected ? 'var(--success)' : 'var(--warning)',
+                  border: `1px solid ${isConnected ? 'var(--success-border)' : 'var(--warning-border)'}`,
                 }}
               >
                 <Wifi size={12} /> {isConnected ? 'Real-time Live' : 'Polling Sync'}
               </span>
             </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Điều phối tiến trình chế biến món ăn thời gian thực theo từng đơn hàng
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+              Điều phối tiến trình chế biến món ăn thời gian thực theo thứ tự vào bếp (FIFO)
             </p>
           </div>
         </div>
 
-        {/* Status Filters */}
+        {/* Status Filter Tabs */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
-            { id: 'KITCHEN_ACTIVE', label: 'Tất cả đơn bếp' },
-            { id: 'CONFIRMED', label: '🔵 Chờ nấu' },
-            { id: 'PREPARING', label: '🟡 Đang chế biến' },
-            { id: 'READY', label: '🟢 Đã xong' },
+            { id: 'KITCHEN_ACTIVE', label: `Tất cả đơn bếp (${kitchenOrders.length})` },
+            { id: 'CONFIRMED', label: `🔵 Chờ nấu (${confirmedCount})` },
+            { id: 'PREPARING', label: `🟡 Đang chế biến (${preparingCount})` },
+            { id: 'READY', label: `🟢 Sẵn sàng trả (${readyCount})` },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
-              className="btn"
+              className="btn btn-sm"
               style={{
-                padding: '8px 16px',
+                padding: '8px 14px',
                 fontSize: '0.85rem',
-                fontWeight: 600,
-                borderRadius: '10px',
-                background: filterStatus === tab.id ? 'var(--primary-color)' : 'var(--bg-card)',
-                color: filterStatus === tab.id ? '#ffffff' : 'var(--text-muted)',
-                border: '1px solid var(--border-color)',
+                fontWeight: 700,
+                borderRadius: 'var(--radius-md)',
+                background: filterStatus === tab.id ? 'var(--primary)' : 'var(--bg-app)',
+                color: filterStatus === tab.id ? '#ffffff' : 'var(--text-body)',
+                border: `1px solid ${filterStatus === tab.id ? 'var(--primary)' : 'var(--border-color)'}`,
+                boxShadow: filterStatus === tab.id ? '0 2px 8px var(--primary-glow)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
               {tab.label}
@@ -121,29 +135,29 @@ export const KitchenDisplaySystem: React.FC = () => {
         </div>
       </div>
 
-      {/* Empty State */}
+      {/* ── ORDERS EMPTY STATE ── */}
       {kitchenOrders.length === 0 ? (
         <div
           className="card"
           style={{
             textAlign: 'center',
-            padding: '60px 20px',
+            padding: '64px 20px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '12px',
           }}
         >
-          <Sparkles size={48} color="var(--primary-color)" style={{ opacity: 0.6 }} />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)' }}>
-            Hiện chưa có đơn hàng cần chế biến
+          <Sparkles size={48} color="var(--primary)" style={{ opacity: 0.5 }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            Khu vực bếp hiện đã hoàn thành toàn bộ món ăn
           </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '400px' }}>
-            Khi khách hàng chọn món hoặc nhân viên tạo đơn mới, các thẻ đơn hàng sẽ hiển thị tại đây thời gian thực.
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '420px', margin: 0 }}>
+            Khi khách hàng đặt món tại bàn hoặc qua ứng dụng, thẻ đơn sẽ tự động xuất hiện và phát tín hiệu tại đây.
           </p>
         </div>
       ) : (
-        /* Orders Grid */
+        /* ── KDS CARDS GRID (Touch-friendly for Chefs) ── */
         <div
           style={{
             display: 'grid',
@@ -154,6 +168,8 @@ export const KitchenDisplaySystem: React.FC = () => {
           {kitchenOrders.map((order) => {
             const statusConfig = getStatusBadge(order.status);
             const StatusIcon = statusConfig.icon;
+            const isCooking = order.status === 'PREPARING';
+            const isPendingConfirm = order.status === 'PENDING' || order.status === 'CONFIRMED';
 
             return (
               <div
@@ -163,9 +179,17 @@ export const KitchenDisplaySystem: React.FC = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  borderRadius: '16px',
-                  border: order.status === 'PENDING' ? '2px solid #ef4444' : order.status === 'CONFIRMED' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
-                  boxShadow: order.status === 'PENDING' ? '0 0 20px rgba(239, 68, 68, 0.2)' : order.status === 'CONFIRMED' ? '0 0 16px rgba(59, 130, 246, 0.2)' : 'none',
+                  borderRadius: 'var(--radius-lg)',
+                  border: isPendingConfirm
+                    ? '2px solid #3b82f6'
+                    : isCooking
+                    ? '2px solid #f59e0b'
+                    : '1.5px solid var(--border-color)',
+                  boxShadow: isCooking
+                    ? '0 6px 20px rgba(245, 158, 11, 0.15)'
+                    : isPendingConfirm
+                    ? '0 6px 20px rgba(59, 130, 246, 0.15)'
+                    : 'var(--shadow-sm)',
                   padding: '20px',
                   gap: '16px',
                   background: 'var(--bg-surface)',
@@ -174,20 +198,25 @@ export const KitchenDisplaySystem: React.FC = () => {
               >
                 {/* Header of Order Card */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <div>
                       <span
                         style={{
-                          fontSize: '1.1rem',
+                          fontSize: '1.15rem',
                           fontWeight: 800,
-                          color: 'var(--primary-color)',
+                          color: 'var(--primary)',
                           letterSpacing: '0.5px',
+                          fontFamily: 'var(--font-mono)',
                         }}
                       >
                         {order.order_number}
                       </span>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '2px' }}>
-                        {order.order_type === 'DINE_IN' ? `📍 ${order.table_no || 'Bàn Ăn'}` : order.order_type === 'TAKEAWAY' ? '🛍️ Mang Về' : '🛵 Giao Hàng'}
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
+                        {order.order_type === 'DINE_IN'
+                          ? `📍 ${order.table_no || 'Bàn Chưa Gán'}`
+                          : order.order_type === 'TAKEAWAY'
+                          ? '🛍️ Mang Về'
+                          : '🛵 Giao Hàng'}
                         {order.customer_name && ` • ${order.customer_name}`}
                       </div>
                     </div>
@@ -195,10 +224,10 @@ export const KitchenDisplaySystem: React.FC = () => {
                     <div
                       style={{
                         padding: '4px 10px',
-                        borderRadius: '20px',
+                        borderRadius: 'var(--radius-full)',
                         background: statusConfig.bg,
                         color: statusConfig.color,
-                        fontSize: '0.8rem',
+                        fontSize: '0.75rem',
                         fontWeight: 700,
                         display: 'flex',
                         alignItems: 'center',
@@ -210,45 +239,69 @@ export const KitchenDisplaySystem: React.FC = () => {
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
-                    <Clock size={14} /> {order.created_at || 'Mới nhận'}
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <Clock size={14} /> Thời gian nhận: <strong>{order.created_at || 'Mới nhận'}</strong>
                   </div>
 
                   {/* Divider */}
-                  <div style={{ height: '1px', background: 'var(--border-color)', margin: '8px 0 14px' }} />
+                  <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '8px 0 14px' }} />
 
-                  {/* Items List */}
+                  {/* Items List - High Contrast */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {order.items.map((item, idx) => (
                       <div
                         key={idx}
                         style={{
-                          background: 'var(--bg-card)',
-                          padding: '10px 12px',
-                          borderRadius: '10px',
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          background: 'var(--bg-app)',
+                          padding: '12px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-subtle)',
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.925rem' }}>
-                            <span style={{ color: 'var(--primary-color)', marginRight: '6px' }}>{item.quantity}x</span>
+                          <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1rem' }}>
+                            <span
+                              style={{
+                                color: 'var(--primary)',
+                                marginRight: '8px',
+                                fontSize: '1.1rem',
+                                fontWeight: 900,
+                              }}
+                            >
+                              {item.quantity}x
+                            </span>
                             {item.name}
                           </span>
                         </div>
+
+                        {/* Special Kitchen Dặn Bếp Notes */}
                         {item.notes && (
                           <div
                             style={{
-                              marginTop: '4px',
-                              fontSize: '0.8rem',
-                              color: '#f59e0b',
-                              fontWeight: 600,
-                              background: 'rgba(245, 158, 11, 0.1)',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              display: 'inline-block',
+                              marginTop: '6px',
+                              fontSize: '0.825rem',
+                              color: '#b45309',
+                              fontWeight: 700,
+                              background: '#fef3c7',
+                              border: '1px solid #fde68a',
+                              padding: '4px 10px',
+                              borderRadius: 'var(--radius-sm)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
                             }}
                           >
-                            ⚠️ Ghi chú: {item.notes}
+                            <AlertTriangle size={14} color="#b45309" />
+                            <span>Ghi chú bếp: {item.notes}</span>
                           </div>
                         )}
                       </div>
@@ -256,28 +309,30 @@ export const KitchenDisplaySystem: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Footer Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                {/* Footer Action Controls - Large touch buttons for kitchen */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                   {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
                     <button
                       onClick={() => updateOrderStatus(order.id, 'PREPARING')}
                       style={{
                         flex: 1,
-                        padding: '10px',
-                        borderRadius: '10px',
-                        background: order.status === 'CONFIRMED' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#f59e0b',
+                        padding: '12px',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                         color: '#ffffff',
-                        fontWeight: 700,
+                        fontWeight: 800,
                         border: 'none',
                         cursor: 'pointer',
-                        fontSize: '0.875rem',
+                        fontSize: '0.925rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px var(--primary-glow)',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      <Utensils size={16} /> Bắt Đầu Chế Biến
+                      <Utensils size={18} /> Bắt Đầu Chế Biến
                     </button>
                   )}
 
@@ -286,21 +341,23 @@ export const KitchenDisplaySystem: React.FC = () => {
                       onClick={() => updateOrderStatus(order.id, 'READY')}
                       style={{
                         flex: 1,
-                        padding: '10px',
-                        borderRadius: '10px',
-                        background: '#10b981',
+                        padding: '12px',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
                         color: '#ffffff',
-                        fontWeight: 700,
+                        fontWeight: 800,
                         border: 'none',
                         cursor: 'pointer',
-                        fontSize: '0.875rem',
+                        fontSize: '0.925rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      <CheckCircle2 size={16} /> Báo Hoàn Thành Món
+                      <CheckCircle2 size={18} /> Hoàn Thành Nấu
                     </button>
                   )}
 
@@ -309,21 +366,23 @@ export const KitchenDisplaySystem: React.FC = () => {
                       onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
                       style={{
                         flex: 1,
-                        padding: '10px',
-                        borderRadius: '10px',
-                        background: 'var(--primary-color)',
+                        padding: '12px',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'var(--primary)',
                         color: '#ffffff',
-                        fontWeight: 700,
+                        fontWeight: 800,
                         border: 'none',
                         cursor: 'pointer',
-                        fontSize: '0.875rem',
+                        fontSize: '0.925rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px var(--primary-glow)',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      <CheckCircle2 size={16} /> Phục Vụ / Trả Đơn
+                      <CheckCircle2 size={18} /> Trả Món / Phục Vụ
                     </button>
                   )}
                 </div>
@@ -335,3 +394,4 @@ export const KitchenDisplaySystem: React.FC = () => {
     </div>
   );
 };
+export default KitchenDisplaySystem;

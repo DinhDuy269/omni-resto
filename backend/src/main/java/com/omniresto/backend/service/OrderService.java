@@ -13,7 +13,11 @@ import com.omniresto.backend.domain.enums.OrderStatus;
 import com.omniresto.backend.domain.enums.OrderType;
 import com.omniresto.backend.domain.enums.PaymentStatus;
 import com.omniresto.backend.domain.enums.TableSessionStatus;
+import com.omniresto.backend.domain.VoucherEntity;
+import com.omniresto.backend.domain.VoucherRedemptionEntity;
+import com.omniresto.backend.domain.enums.RedemptionStatus;
 import com.omniresto.backend.exception.BadRequestException;
+import com.omniresto.backend.exception.ConflictException;
 import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.helper.MealPeriodHelper;
 import com.omniresto.backend.model.order.request.OrderItemRequest;
@@ -25,6 +29,10 @@ import com.omniresto.backend.repository.MenuItemRepository;
 import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
 import com.omniresto.backend.repository.TableSessionRepository;
+import com.omniresto.backend.repository.VoucherRedemptionRepository;
+import com.omniresto.backend.repository.VoucherRepository;
+import com.omniresto.backend.util.SecurityUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -58,6 +66,9 @@ public class OrderService {
     private final TableSessionRepository tableSessionRepository;
     private final OrderWebSocketHandler orderWebSocketHandler;
     private final ObjectMapper objectMapper;
+    private final VoucherRepository voucherRepository;
+    private final VoucherRedemptionRepository voucherRedemptionRepository;
+    private final VoucherService voucherService;
 
     @Setter
     @Value("${restaurant.business-hours.enforce:true}")
@@ -297,7 +308,66 @@ public class OrderService {
             itemEntities.add(orderItemRepository.save(item));
         }
 
-        saved.setTotalAmount(calculatedTotal);
+        BigDecimal subtotal = calculatedTotal;
+        BigDecimal finalTotal = calculatedTotal;
+
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
+            Optional<String> customerIdOpt = SecurityUtils.getCurrentCustomerIdOptional();
+            if (customerIdOpt.isEmpty()) {
+                throw new BadRequestException("Vui lòng đăng nhập tài khoản thành viên để sử dụng mã ưu đãi!");
+            }
+            String customerId = customerIdOpt.get();
+
+            // 1. Pipeline thẩm định toàn diện voucher
+            VoucherEntity voucher = voucherService.validateAndGetVoucher(request.getVoucherCode(), customerId, subtotal);
+
+            // 2. Trừ lượt dùng toàn hệ thống nguyên tử (Atomic Database Lock / Row-level update)
+            int updatedRows = voucherRepository.incrementUsedQuantityAtomic(voucher.getId());
+            if (updatedRows == 0) {
+                throw new ConflictException("Rất tiếc, mã khuyến mãi vừa hết lượt sử dụng trên toàn hệ thống!");
+            }
+
+            // 3. Tính toán số lượt dùng của khách hàng và thứ tự sử dụng (usageSequence)
+            long userUsedCount = voucherRedemptionRepository.countByVoucherIdAndCustomerIdAndStatus(
+                    voucher.getId(), customerId, RedemptionStatus.APPLIED
+            );
+            int usageSequence = (int) userUsedCount + 1;
+
+            BigDecimal discount = voucherService.calculateDiscount(voucher, subtotal);
+            finalTotal = subtotal.subtract(discount).max(BigDecimal.ZERO);
+
+            // 4. Lưu bản ghi sổ cái (Voucher Redemption Ledger) để bảo vệ Unique Constraint (voucher_id, customer_id, usage_sequence)
+            VoucherRedemptionEntity redemption = VoucherRedemptionEntity.builder()
+                    .id("vcr-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24))
+                    .voucherId(voucher.getId())
+                    .customerId(customerId)
+                    .orderId(saved.getId())
+                    .usageSequence(usageSequence)
+                    .discountAmount(discount)
+                    .redeemedAt(LocalDateTime.now(DEFAULT_ZONE))
+                    .status(RedemptionStatus.APPLIED)
+                    .build();
+
+            try {
+                voucherRedemptionRepository.save(redemption);
+            } catch (DataIntegrityViolationException ex) {
+                log.warn("Race condition detected on voucher per-user quota: {}", ex.getMessage());
+                voucherRepository.decrementUsedQuantityAtomic(voucher.getId());
+                throw new ConflictException("Bạn đã dùng hết số lượt cho phép của mã khuyến mãi này!");
+            }
+
+            saved.setCustomerId(customerId);
+            saved.setVoucherId(voucher.getId());
+            saved.setVoucherCode(voucher.getCode());
+            saved.setSubtotal(subtotal);
+            saved.setDiscountAmount(discount);
+        } else {
+            saved.setSubtotal(subtotal);
+            saved.setDiscountAmount(BigDecimal.ZERO);
+            SecurityUtils.getCurrentCustomerIdOptional().ifPresent(saved::setCustomerId);
+        }
+
+        saved.setTotalAmount(finalTotal);
         OrderEntity finalSaved = orderRepository.save(saved);
 
         OrderResponse response = mapToResponseWithItems(finalSaved, itemEntities);
@@ -448,6 +518,18 @@ public class OrderService {
             }
             entity.setStatus(OrderStatus.cancelled);
             entity.setTotalAmount(BigDecimal.ZERO);
+
+            // Hoàn lại lượt dùng voucher nguyên tử và cập nhật trạng thái sổ cái (Idempotent compensation)
+            if (entity.getVoucherId() != null) {
+                voucherRepository.decrementUsedQuantityAtomic(entity.getVoucherId());
+                voucherRedemptionRepository.findByOrderIdAndStatus(entity.getId(), RedemptionStatus.APPLIED)
+                        .ifPresent(redemption -> {
+                            redemption.setStatus(RedemptionStatus.REVERTED);
+                            voucherRedemptionRepository.save(redemption);
+                            log.info("Đã hoàn lại lượt dùng voucher {} cho khách hàng {} từ đơn hàng {}",
+                                    entity.getVoucherCode(), entity.getCustomerId(), entity.getId());
+                        });
+            }
 
             // Nếu đơn gắn với phiên bàn đang chờ thanh toán, hủy trạng thái đóng băng để bàn trở về active
             if (entity.getTableSessionId() != null) {
@@ -632,6 +714,11 @@ public class OrderService {
         res.setStatus(entity.getStatus());
         res.setPaymentStatus(entity.getPaymentStatus());
         res.setTotalAmount(entity.getTotalAmount());
+        res.setSubtotal(entity.getSubtotal() != null ? entity.getSubtotal() : entity.getTotalAmount());
+        res.setDiscountAmount(entity.getDiscountAmount() != null ? entity.getDiscountAmount() : BigDecimal.ZERO);
+        res.setVoucherId(entity.getVoucherId());
+        res.setVoucherCode(entity.getVoucherCode());
+        res.setCustomerId(entity.getCustomerId());
         res.setPaymentMethod(entity.getPaymentMethod());
         res.setCustomerName(entity.getCustomerName());
         res.setItems(itemResponses);

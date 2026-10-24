@@ -1,10 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, ShoppingCart, Clock, Sun, Sunset, Moon, Coffee, AlertTriangle } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, ShoppingCart, Clock, Sun, Sunset, Coffee, AlertTriangle, MoonIcon } from 'lucide-react';
 import { useAdminStore } from '../../../admin/store/adminStore';
 import { useClientStore, selectTotalItems, selectTotalAmount } from '../../store/clientStore';
 import { MenuCard } from '../../components/MenuCard';
 import { menuApi } from '../../../admin/pages/menu/menuApi';
 import type { MenuItem } from '../../../shared/types/menu';
+import { checkIsItemAvailableNow as checkAvailableShared } from '../../utils/mealPeriodUtils';
+import { matchesMultiFieldSearch } from '../../../shared/utils/stringUtils';
+import './ClientMenu.css';
 
 const ALL_CATEGORY = 'Tất cả';
 
@@ -50,6 +53,62 @@ export const ClientMenu: React.FC = () => {
   const [activePeriod,  setActivePeriod]  = useState<string>('ALL');
   const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY);
   const [searchQuery,    setSearchQuery]    = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Theo dõi cuộn trang để co gọn đảo nổi khi người dùng cuộn sâu
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 30);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Debounce tìm kiếm 220ms để tối ưu hóa hiệu năng render
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+  };
+
+  // Build category list
+  const categories: string[] = useMemo(() => {
+    const cats = Array.from(new Set(menu_items.map((m) => m.category))).filter(Boolean) as string[];
+    return [ALL_CATEGORY, ...cats];
+  }, [menu_items]);
+
+  // Refs hỗ trợ giải quyết Scroll Desync và thanh cuộn ngang danh mục
+  const menuGridRef = useRef<HTMLDivElement>(null);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+
+  // Khắc phục triệt để lỗi Scroll Desync: Tự động cuộn mượt về đầu danh sách món
+  const scrollToGridTop = () => {
+    if (menuGridRef.current) {
+      const stickyOffset = 175; // 72px client-header + ~95px unified island + buffer
+      const elementY = menuGridRef.current.getBoundingClientRect().top + window.pageYOffset - stickyOffset;
+      if (window.pageYOffset > elementY) {
+        window.scrollTo({ top: elementY, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setActiveCategory(cat);
+    scrollToGridTop();
+  };
+
+  const handlePeriodChange = (periodId: string) => {
+    setActivePeriod(periodId);
+    scrollToGridTop();
+  };
 
   // Đồng bộ với API backend nếu có
   useEffect(() => {
@@ -86,37 +145,8 @@ export const ClientMenu: React.FC = () => {
 
   // Kiểm tra một món có đang trong giờ phục vụ thực tế hay không
   const checkIsItemAvailableNow = (item: MenuItem): boolean => {
-    if (currentPeriod === 'CLOSED') {
-      return false;
-    }
-    const p = (item.meal_periods || '').toUpperCase();
-    const isAllDayOrDrink = !p ||
-      p.includes('ALL_DAY') ||
-      p.includes('ALLDAY') ||
-      p.includes('BREAK') ||
-      Boolean(item.category && (item.category.includes('Đồ Uống') || item.category.includes('Tráng Miệng')));
-
-    // Trong giờ nghỉ bếp (14:30 - 16:30), quầy Bar đồ uống và tráng miệng / món cả ngày vẫn phục vụ
-    if (currentPeriod === 'BREAK') {
-      return isAllDayOrDrink;
-    }
-
-    if (item.is_available_now !== undefined) {
-      return item.is_available_now;
-    }
-
-    if (isAllDayOrDrink) {
-      return true;
-    }
-
-    return p.includes(currentPeriod);
+    return checkAvailableShared(item, currentPeriod as any);
   };
-
-  // Build category list
-  const categories: string[] = useMemo(() => {
-    const cats = Array.from(new Set(menu_items.map((m) => m.category))).filter(Boolean) as string[];
-    return [ALL_CATEGORY, ...cats];
-  }, [menu_items]);
 
   // Filter + sort items
   const filteredItems = useMemo(() => {
@@ -141,11 +171,10 @@ export const ClientMenu: React.FC = () => {
       items = items.filter((m) => m.category === activeCategory);
     }
 
-    // Lọc theo tìm kiếm
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      items = items.filter(
-        (m) => m.name.toLowerCase().includes(q) || (m.description && m.description.toLowerCase().includes(q))
+    // Lọc theo tìm kiếm tiếng Việt thông minh (không dấu + có dấu + đa từ khóa)
+    if (debouncedSearchQuery.trim()) {
+      items = items.filter((m) =>
+        matchesMultiFieldSearch([m.name, m.description, m.category], debouncedSearchQuery)
       );
     }
 
@@ -155,7 +184,7 @@ export const ClientMenu: React.FC = () => {
       if (!a.is_available_now && b.is_available_now) return 1;
       return (b.is_best_seller ? 1 : 0) - (a.is_best_seller ? 1 : 0);
     });
-  }, [menu_items, activePeriod, activeCategory, searchQuery, currentPeriod]);
+  }, [menu_items, activePeriod, activeCategory, debouncedSearchQuery, currentPeriod]);
 
   const availableCount = filteredItems.filter((m) => (m.status === 'AVAILABLE' || m.status === 'available') && m.is_available_now).length;
 
@@ -195,7 +224,7 @@ export const ClientMenu: React.FC = () => {
         text: 'Nhà hàng hiện đang nghỉ ngơi. Hệ thống sẽ mở nhận đơn điểm tâm sáng từ 06:00.',
         bg: '#f8fafc',
         color: '#64748b',
-        icon: <Moon size={18} color="#475569" />
+        icon: <MoonIcon size={18} color="#475569" />
       }
     };
     return periodDescriptions[currentPeriod] || periodDescriptions.NOON;
@@ -205,205 +234,102 @@ export const ClientMenu: React.FC = () => {
   const isViewingOutsidePeriod = activePeriod !== 'ALL' && activePeriod !== 'ALL_DAY' && activePeriod !== currentPeriod;
 
   return (
-    <div style={{ fontFamily: 'var(--c-font)', background: 'var(--c-bg)', minHeight: '100%' }}>
+    <div className="client-menu-page">
 
-      {/* ── Header Context + Search Bar ── */}
-      <div style={{
-        background: 'var(--c-surface)',
-        borderBottom: '1px solid var(--c-border-light)',
-      }}>
-        <div style={{
-          maxWidth: 'var(--c-max-w)', margin: '0 auto',
-          padding: '16px 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 16, flexWrap: 'wrap',
-        }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--c-text-main)', margin: 0 }}>
-              Thực Đơn Đặc Sắc OmniResto
-            </h1>
-            <span style={{ fontSize: '0.85rem', color: 'var(--c-text-muted)' }}>
-              Tinh hoa ẩm thực ba miền: Phở bò, Cơm tấm, Bánh mì chảo, Lẩu riêu cua & Thức uống thanh nhiệt
-            </span>
-          </div>
-
-          {/* Search */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            background: 'var(--c-surface-warm)', border: '1.5px solid var(--c-border)',
-            borderRadius: 'var(--c-r-lg)', padding: '8px 16px',
-            flex: '0 1 320px', transition: 'border-color var(--c-t-fast)',
-          }}>
-            <Search size={16} color="var(--c-text-muted)" strokeWidth={2} />
-            <input
-              id="menu-search-input"
-              type="text"
-              placeholder="Tìm xôi, cơm tấm, bún chả, lẩu..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                border: 'none', background: 'transparent', outline: 'none',
-                font: '0.875rem/1 var(--c-font)', color: 'var(--c-text-main)',
-                width: '100%',
-              }}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--c-text-muted)', padding: 0, lineHeight: 1,
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
+      {/* ── Brand Headline & Live Status ── */}
+      <div className="menu-hero-intro">
+        <div className="menu-hero-title-group">
+          <h1>
+            <span>Thực Đơn OmniResto</span>
+            <span className="live-pulse-dot" title="Bếp đang mở phục vụ trực tiếp" />
+          </h1>
+          <p>
+            {banner.label} &bull; {banner.text}
+          </p>
         </div>
       </div>
 
-      {/* ── Live Meal Period Status Banner ── */}
-      <div style={{
-        background: banner.bg,
-        borderBottom: '1px solid rgba(0,0,0,0.06)',
-      }}>
-        <div style={{
-          maxWidth: 'var(--c-max-w)', margin: '0 auto',
-          padding: '12px 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 16, flexWrap: 'wrap',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {banner.icon}
-            <div>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: banner.color, marginRight: 8, textTransform: 'uppercase' }}>
-                ● {banner.label}
-              </span>
-              <span style={{ fontSize: '0.8125rem', color: 'var(--c-text-body)' }}>
-                {banner.text}
-              </span>
+      {/* ── UNIFIED FLOATING ISLAND (STAGE & ISLAND CONTAINER) ── */}
+      <div className={`menu-floating-island-wrapper ${isScrolled ? 'is-scrolled' : ''}`}>
+        <div className="menu-floating-island">
+          {/* Tier 1: Meal Period Segmented Controls & Search Bar */}
+          <div className="island-tier-period">
+            <div className="period-segmented-cluster" role="tablist">
+              {MEAL_PERIOD_TABS.map((tab) => {
+                const isSelected = activePeriod === tab.id;
+                const isLive = tab.id === 'ALL_DAY'
+                  ? currentPeriod !== 'CLOSED'
+                  : currentPeriod === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    id={`meal-period-tab-${tab.id}`}
+                    className={`period-pill-btn ${isSelected ? 'active' : ''}`}
+                    onClick={() => handlePeriodChange(tab.id)}
+                    type="button"
+                  >
+                    {isLive && <span className="live-pulse-dot" />}
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Monocle Search Bar with Vietnamese diacritics support */}
+            <div className={`island-search-wrapper ${isSearchFocused ? 'is-focused' : ''}`}>
+              <Search
+                size={15}
+                color={isSearchFocused ? 'var(--c-primary)' : 'var(--c-text-muted)'}
+                strokeWidth={2.4}
+              />
+              <input
+                id="menu-search-input"
+                type="text"
+                className="island-search-input"
+                placeholder="Tìm món ngon (vd: pho bo, lau...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="island-search-clear-btn"
+                  onClick={handleClearSearch}
+                  title="Xóa tìm kiếm"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </div>
 
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'rgba(255,255,255,0.85)', padding: '4px 12px',
-            borderRadius: 'var(--c-r-full)', fontSize: '0.75rem', fontWeight: 700,
-            color: banner.color, border: '1px solid rgba(0,0,0,0.08)'
-          }}>
-            <Clock size={13} />
-            Giờ hiện tại: {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+          {/* Tier 2: Category Ribbon with Edge Fade Masking */}
+          <div className="island-tier-category">
+            <div className="category-ribbon-viewport" ref={categoryScrollRef}>
+              {categories.map((cat) => {
+                const isActive = cat === activeCategory;
+                return (
+                  <button
+                    key={cat}
+                    id={`category-filter-${cat}`}
+                    className={`category-ribbon-tab ${isActive ? 'active' : ''}`}
+                    onClick={() => handleCategoryChange(cat)}
+                    type="button"
+                    aria-pressed={isActive}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── Meal Period Filter Tabs (Sáng / Trưa / Tối / Cả ngày) ── */}
-      <div style={{
-        background: 'var(--c-surface)',
-        borderBottom: '1px solid var(--c-border-light)',
-      }}>
-        <div style={{
-          maxWidth: 'var(--c-max-w)', margin: '0 auto',
-          padding: '12px 24px',
-          display: 'flex', gap: 10, alignItems: 'center', overflowX: 'auto',
-          scrollbarWidth: 'none',
-        }}>
-          {MEAL_PERIOD_TABS.map((tab) => {
-            const isSelected = activePeriod === tab.id;
-            const isLive = tab.id === 'ALL_DAY'
-              ? currentPeriod !== 'CLOSED'
-              : currentPeriod === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={`meal-period-tab-${tab.id}`}
-                onClick={() => setActivePeriod(tab.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '8px 18px', borderRadius: 'var(--c-r-full)',
-                  border: isSelected ? '1.5px solid var(--c-primary)' : '1px solid var(--c-border)',
-                  background: isSelected ? 'var(--c-primary)' : 'var(--c-surface-warm)',
-                  color: isSelected ? '#fff' : 'var(--c-text-body)',
-                  cursor: 'pointer', whiteSpace: 'nowrap',
-                  fontSize: '0.875rem', fontWeight: isSelected ? 700 : 500,
-                  boxShadow: isSelected ? 'var(--c-shadow-orange)' : 'none',
-                  transition: 'all var(--c-t-fast)',
-                }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                {isLive && (
-                  <span style={{
-                    fontSize: '0.625rem', fontWeight: 800,
-                    background: isSelected ? 'rgba(255,255,255,0.3)' : '#22c55e',
-                    color: '#fff', padding: '2px 6px', borderRadius: 'var(--c-r-full)',
-                    textTransform: 'uppercase'
-                  }}>
-                    Đang mở
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Category Chips Filter ── */}
-      <div style={{
-        position: 'sticky', top: 'var(--c-header-h)', zIndex: 90,
-        background: 'rgba(255,252,249,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid var(--c-border-light)',
-      }}>
-        <div style={{
-          maxWidth: 'var(--c-max-w)', margin: '0 auto',
-          padding: '10px 24px',
-          display: 'flex', gap: 8, alignItems: 'center',
-          overflowX: 'auto', scrollbarWidth: 'none',
-        }}>
-          {categories.map((cat) => {
-            const isActive = cat === activeCategory;
-            const count = cat === ALL_CATEGORY ? menu_items.length : menu_items.filter((m) => m.category === cat).length;
-            return (
-              <button
-                key={cat}
-                id={`category-filter-${cat}`}
-                className="c-btn"
-                style={{
-                  minHeight: 36,
-                  padding: '6px 16px',
-                  borderRadius: 'var(--c-r-full)',
-                  fontSize: '0.85rem',
-                  fontWeight: isActive ? 700 : 500,
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  background: isActive ? 'var(--c-primary)' : 'var(--c-surface)',
-                  color: isActive ? '#fff' : 'var(--c-text-body)',
-                  border: `1.5px solid ${isActive ? 'var(--c-primary)' : 'var(--c-border)'}`,
-                  boxShadow: isActive ? 'var(--c-shadow-orange)' : 'none',
-                  transition: 'all var(--c-t-fast)',
-                }}
-                onClick={() => setActiveCategory(cat)}
-                aria-pressed={isActive}
-              >
-                <span>{cat}</span>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    opacity: isActive ? 0.9 : 0.6,
-                    marginLeft: 6,
-                    fontWeight: 700,
-                  }}
-                >
-                  ({count})
-                </span>
-              </button>
-            );
-          })}
         </div>
       </div>
 
       {/* ── Menu Grid + Notice ── */}
-      <div style={{ maxWidth: 'var(--c-max-w)', margin: '0 auto', padding: '24px 24px 80px' }}>
+      <div ref={menuGridRef} style={{ maxWidth: 'var(--c-max-w)', margin: '0 auto', padding: '24px 24px 80px' }}>
 
         {/* Cảnh báo nếu khách đang xem menu buổi khác */}
         {isViewingOutsidePeriod && (
@@ -427,7 +353,27 @@ export const ClientMenu: React.FC = () => {
             gap: 12, marginBottom: 20, flexWrap: 'wrap',
           }}>
             <span style={{ fontSize: '0.875rem', color: 'var(--c-text-muted)' }}>
-              Hiển thị <strong style={{ color: 'var(--c-text-body)' }}>{filteredItems.length}</strong> món
+              Hiển thị <strong style={{ color: 'var(--c-text-main)' }}>{filteredItems.length}</strong> món
+              {debouncedSearchQuery.trim() && (
+                <>
+                  {' '}cho từ khóa <strong style={{ color: 'var(--c-primary)' }}>"{debouncedSearchQuery}"</strong>
+                  <button
+                    onClick={handleClearSearch}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--c-primary)',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      fontSize: '0.8125rem',
+                      marginLeft: 8,
+                      fontWeight: 600,
+                    }}
+                  >
+                    (Bỏ tìm kiếm)
+                  </button>
+                </>
+              )}
               {activePeriod !== 'ALL' && ` · ${MEAL_PERIOD_TABS.find(t => t.id === activePeriod)?.label}`}
               {activeCategory !== ALL_CATEGORY && ` · ${activeCategory}`}
             </span>
@@ -447,15 +393,19 @@ export const ClientMenu: React.FC = () => {
             <span style={{ fontSize: '3rem' }}>🍽️</span>
             <div>
               <strong style={{ color: 'var(--c-text-main)', display: 'block', marginBottom: 6 }}>
-                Không tìm thấy món ăn phù hợp
+                {debouncedSearchQuery.trim()
+                  ? `Không tìm thấy món ăn phù hợp với "${debouncedSearchQuery}"`
+                  : 'Không tìm thấy món ăn phù hợp'}
               </strong>
               <span style={{ fontSize: '0.875rem', color: 'var(--c-text-muted)' }}>
-                Thử chọn buổi khác hoặc xóa bộ lọc tìm kiếm
+                {debouncedSearchQuery.trim()
+                  ? 'Thử tìm kiếm với từ khóa khác (ví dụ: pho bo, bun cha, com tam, lau...) hoặc xóa bộ lọc'
+                  : 'Thử chọn buổi khác hoặc xóa bộ lọc tìm kiếm'}
               </span>
             </div>
             <button
               className="c-btn c-btn-outline c-btn-sm"
-              onClick={() => { setSearchQuery(''); setActiveCategory(ALL_CATEGORY); setActivePeriod('ALL'); }}
+              onClick={() => { handleClearSearch(); setActiveCategory(ALL_CATEGORY); setActivePeriod('ALL'); }}
             >
               Xem tất cả thực đơn
             </button>
@@ -489,34 +439,53 @@ export const ClientMenu: React.FC = () => {
             id="floating-cart-btn"
             onClick={openCart}
             style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '14px 24px', borderRadius: 'var(--c-r-full)',
-              background: 'var(--c-primary)', color: '#fff',
-              border: 'none', cursor: 'pointer',
-              font: '700 0.9375rem var(--c-font)',
-              boxShadow: '0 8px 32px rgba(232,93,38,0.45)',
-              transition: 'transform var(--c-t-fast), box-shadow var(--c-t-fast)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 26px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+              color: '#ffffff',
+              border: '1.5px solid rgba(255, 255, 255, 0.35)',
+              cursor: 'pointer',
+              font: '700 0.9375rem var(--c-font, system-ui)',
+              boxShadow: '0 10px 30px -4px rgba(234, 88, 12, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
               whiteSpace: 'nowrap',
+              position: 'relative',
+              overflow: 'hidden',
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.transform = 'translateX(-50%) translateY(-2px)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(232,93,38,0.55)';
+              const el = e.currentTarget as HTMLElement;
+              el.style.transform = 'translateY(-3px) scale(1.02)';
+              el.style.boxShadow = '0 14px 36px -2px rgba(234, 88, 12, 0.65), 0 0 20px rgba(249, 115, 22, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5)';
+              el.style.borderColor = 'rgba(255, 255, 255, 0.65)';
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.transform = 'translateX(-50%)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(232,93,38,0.45)';
+              const el = e.currentTarget as HTMLElement;
+              el.style.transform = 'translateY(0) scale(1)';
+              el.style.boxShadow = '0 10px 30px -4px rgba(234, 88, 12, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4)';
+              el.style.borderColor = 'rgba(255, 255, 255, 0.35)';
             }}
             aria-label={`Xem giỏ hàng: ${totalItems} món, ${totalAmount.toLocaleString('vi-VN')}đ`}
           >
             <div style={{
-              background: 'rgba(255,255,255,0.25)', borderRadius: 'var(--c-r-full)',
-              width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.75rem', fontWeight: 900,
+              background: '#ffffff',
+              color: '#ea580c',
+              borderRadius: '9999px',
+              width: 26,
+              height: 26,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.78125rem',
+              fontWeight: 850,
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
             }}>
               {totalItems}
             </div>
-            <ShoppingCart size={18} strokeWidth={2.2} />
-            Xem giỏ hàng · {totalAmount.toLocaleString('vi-VN')}đ
+            <ShoppingCart size={18} strokeWidth={2.4} />
+            <span>Xem giỏ hàng · {totalAmount.toLocaleString('vi-VN')}đ</span>
           </button>
         </div>
       )}

@@ -9,6 +9,12 @@ export interface ChatRecommendedDish {
   is_vegetarian?: boolean;
   spicy_level?: number;
   allergens?: string[] | string;
+  meal_periods?: string;
+  mealPeriods?: string;
+  available_now?: boolean;
+  availableNow?: boolean;
+  meal_period_note?: string;
+  mealPeriodNote?: string;
 }
 
 export interface ChatMessage {

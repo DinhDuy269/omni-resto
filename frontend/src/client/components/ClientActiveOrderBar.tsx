@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronRight, X, Clock, Flame, Bell, Utensils } from 'lucide-react';
+import { ChevronRight, Clock, Flame, Bell, UtensilsCrossed, X } from 'lucide-react';
 import { useClientStore } from '../store/clientStore';
+import './ClientActiveOrderBar.css';
 
 export const ClientActiveOrderBar: React.FC = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ export const ClientActiveOrderBar: React.FC = () => {
   const orders = useClientStore((s) => s.orders);
   const table_session = useClientStore((s) => s.table_session);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Lọc tất cả đơn hàng đang hoạt động (chưa hoàn thành và chưa bị hủy)
   const activeOrders = orders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
@@ -17,198 +19,102 @@ export const ClientActiveOrderBar: React.FC = () => {
   if (activeOrders.length === 0 || isDismissed) return null;
   if (location.pathname === '/client/orders') return null;
 
-  // Tính toán tổng số lượng món ăn và số đợt gọi món (không tính món đã hủy)
+  // Tính toán tổng số lượng món ăn (không tính món đã hủy)
   const totalDishesCount = activeOrders.reduce(
     (sum, o) => sum + o.items.filter((it) => it.status !== 'CANCELLED').reduce((s, it) => s + (it.quantity || 1), 0),
     0
   );
-  const roundsCount = activeOrders.length;
   const currentTable = table_session?.table_no || activeOrders[0]?.table_no;
 
   // Xác định trạng thái tổng thể của các món
   const hasReady = activeOrders.some((o) => o.status === 'READY');
   const hasPreparing = activeOrders.some((o) => o.status === 'PREPARING');
 
-  const getStatusBadge = () => {
+  const getStatusConfig = () => {
     if (hasReady) {
       return {
-        label: 'Theo dõi tiến độ món ăn',
-        subLabel: `🔔 Có món đã sẵn sàng · Tổng ${totalDishesCount} món (${roundsCount} đợt gọi)`,
-        color: '#16a34a',
-        bg: '#f0fdf4',
-        border: '#86efac',
-        icon: <Bell size={18} className="c-pulse" color="#16a34a" />,
+        type: 'ready',
+        label: 'Món sẵn sàng!',
+        badgeClass: 'omni-order-mini-icon--ready',
+        icon: <Bell size={16} strokeWidth={2.4} />,
       };
     }
     if (hasPreparing) {
       return {
-        label: 'Theo dõi tiến độ món ăn',
-        subLabel: `🔥 Bếp đang nấu ${totalDishesCount} món · ${roundsCount} đợt gọi món`,
-        color: '#ea580c',
-        bg: '#fff7ed',
-        border: '#fdba74',
-        icon: <Flame size={18} className="c-pulse" color="#ea580c" />,
+        type: 'preparing',
+        label: 'Bếp đang nấu',
+        badgeClass: 'omni-order-mini-icon--preparing',
+        icon: <Flame size={16} strokeWidth={2.4} />,
       };
     }
     return {
-      label: 'Theo dõi tiến độ món ăn',
-      subLabel: `⏳ Đang tiếp nhận ${totalDishesCount} món · ${roundsCount} đợt gọi món`,
-      color: '#0284c7',
-      bg: '#f0f9ff',
-      border: '#7dd3fc',
-      icon: <Clock size={18} color="#0284c7" />,
+      type: 'pending',
+      label: 'Đã nhận đơn',
+      badgeClass: 'omni-order-mini-icon--pending',
+      icon: <Clock size={16} strokeWidth={2.4} />,
     };
   };
 
-  const statusBadge = getStatusBadge();
+  const statusConfig = getStatusConfig();
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 24,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 200,
-        width: 'calc(100% - 32px)',
-        maxWidth: '560px',
-        animation: 'c-fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both',
-      }}
+    <aside
+      className={`omni-order-left-dock${isHovered ? ' omni-order-left-dock--expanded' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      aria-label="Theo dõi tiến độ món ăn trực tiếp"
     >
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          background: 'rgba(255, 255, 255, 0.96)',
-          backdropFilter: 'blur(16px)',
-          border: `1.5px solid ${statusBadge.border}`,
-          borderRadius: 'var(--c-r-full, 9999px)',
-          padding: '8px 12px 8px 16px',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
-          cursor: 'pointer',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-        }}
+        className="omni-order-left-pill"
         onClick={() => navigate('/client/orders')}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-        }}
+        title="Nhấn để xem chi tiết tiến độ từng món"
       >
-        {/* Status Indicator & Dish Progress Summary */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: statusBadge.bg,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            {statusBadge.icon}
-          </div>
-
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  color: 'var(--c-text-main, #0f172a)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {statusBadge.label}
-              </span>
-              {currentTable && (
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    color: '#ea580c',
-                    background: '#fff7ed',
-                    border: '1px solid #fed7aa',
-                    padding: '1px 8px',
-                    borderRadius: '999px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {currentTable}
-                </span>
-              )}
-            </div>
-            <div
-              style={{
-                fontSize: '0.75rem',
-                color: statusBadge.color,
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                marginTop: '1px',
-              }}
-            >
-              {statusBadge.subLabel}
-            </div>
-          </div>
+        {/* Radar Icon Badge */}
+        <div className={`omni-order-mini-icon ${statusConfig.badgeClass}`}>
+          <div className="omni-order-mini-pulse" />
+          {statusConfig.icon}
         </div>
 
-        {/* Action Button & Dismiss */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        {/* Thông tin siêu rút gọn (Luôn hiển thị) */}
+        <div className="omni-order-mini-info">
+          <span className="omni-order-mini-count">{totalDishesCount} món</span>
+          {currentTable && (
+            <span className="omni-order-mini-table">Bàn {currentTable}</span>
+          )}
+        </div>
+
+        {/* Vùng mở rộng khi Hover / Chạm (Progressive Disclosure) */}
+        <div className="omni-order-expanded-zone">
+          <span className="omni-order-expanded-label">{statusConfig.label}</span>
           <button
-            className="c-btn c-btn-primary"
-            style={{
-              padding: '7px 16px',
-              borderRadius: 'var(--c-r-full, 9999px)',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#ea580c',
-              color: '#fff',
-              border: 'none',
-              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.35)',
-            }}
+            type="button"
+            className="omni-order-mini-cta"
             onClick={(e) => {
               e.stopPropagation();
               navigate('/client/orders');
             }}
           >
-            <Utensils size={14} />
-            <span>Xem tất cả</span>
-            <ChevronRight size={14} />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDismissed(true);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--c-text-muted, #64748b)',
-              padding: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-            }}
-            title="Tạm ẩn thanh theo dõi"
-          >
-            <X size={15} />
+            <UtensilsCrossed size={12} strokeWidth={2.4} />
+            <span>Tiến độ</span>
+            <ChevronRight size={13} strokeWidth={2.4} />
           </button>
         </div>
+
+        {/* Nút tạm ẩn */}
+        <button
+          type="button"
+          className="omni-order-mini-dismiss"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDismissed(true);
+          }}
+          title="Tạm ẩn thanh theo dõi"
+          aria-label="Tạm ẩn thanh theo dõi đơn hàng"
+        >
+          <X size={13} strokeWidth={2.2} />
+        </button>
       </div>
-    </div>
+    </aside>
   );
 };
 
