@@ -1,18 +1,18 @@
 /* ══════════════════════════════════════════════════════════════════════════════
-   HAND GESTURE CONTROLLER - LUXURY GLASSMORPHISM STYLING
+   HAND GESTURE CONTROLLER - ULTRA-HIGH PERFORMANCE & SMOOTHNESS
    ══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── 1. Floating Trigger FAB Button ── */
 .gesture-fab-trigger {
   position: fixed;
-  bottom: 24px;
+  bottom: 84px;
   left: 24px;
   z-index: 9998;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: rgba(18, 18, 22, 0.85);
+  background: rgba(18, 18, 22, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -78,20 +78,25 @@
 /* ── 2. Picture-in-Picture (PiP) Window ── */
 .gesture-pip-window {
   position: fixed;
-  bottom: 84px;
+  bottom: 184px;
   left: 24px;
-  width: 270px;
-  background: rgba(15, 17, 23, 0.92);
+  width: 274px;
+  background: rgba(15, 17, 23, 0.94);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.52), 0 0 1px rgba(255, 255, 255, 0.2);
   z-index: 9998;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   animation: gestureSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+.gesture-pip-window--minimized {
+  width: 230px;
 }
 
 @keyframes gestureSlideUp {
@@ -111,11 +116,22 @@
 .gesture-pip-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   font-size: 12.5px;
   font-weight: 600;
   color: #e2e8f0;
   letter-spacing: 0.3px;
+}
+
+.gesture-live-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1.5px 6px;
+  background: rgba(34, 197, 94, 0.18);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
 }
 
 .gesture-pip-actions {
@@ -155,25 +171,22 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1); /* Lật ngang webcam tự nhiên */
+  transform: scaleX(-1);
   opacity: 0.65;
   filter: contrast(1.1) brightness(0.95);
 }
 
 .gesture-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  object-fit: cover;
+  display: block;
 }
 
 .gesture-viewport-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  border-radius: 0;
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.7);
 }
 
@@ -208,7 +221,7 @@
   bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
   padding: 4px 10px;
   border-radius: 12px;
@@ -269,6 +282,10 @@
   color: #94a3b8;
 }
 
+.gesture-pinch-label {
+  white-space: nowrap;
+}
+
 .gesture-pinch-track {
   flex: 1;
   height: 5px;
@@ -281,7 +298,20 @@
   height: 100%;
   background: linear-gradient(90deg, #38bdf8, #22c55e);
   border-radius: 9999px;
-  transition: width 0.08s ease-out;
+  transition: width 0.06s ease-out;
+}
+
+.gesture-pinch-fill--active {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.gesture-pinch-val {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #38bdf8;
+  min-width: 38px;
+  text-align: right;
 }
 
 /* Help cheatsheet */
@@ -296,7 +326,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* ── 5. Full-Screen Virtual Cursor Overlay ── */
+/* ── 5. Full-Screen Virtual Cursor Overlay (Zero React overhead) ── */
 .gesture-cursor-container {
   position: fixed;
   top: 0;
@@ -308,12 +338,17 @@
 }
 
 .gesture-virtual-cursor {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  transform: translate(-50%, -50%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  margin-top: -17px;
+  margin-left: -17px;
   pointer-events: none;
-  transition: transform 0.04s ease-out;
+  will-change: transform;
+  /* Phần cứng tăng tốc mượt mà 60-120fps */
+  backface-visibility: hidden;
 }
 
 .gesture-cursor-ring {
@@ -322,7 +357,10 @@
   border: 2px solid rgba(245, 158, 11, 0.85);
   border-radius: 50%;
   box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
-  transition: all 0.1s ease-out;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gesture-cursor-dot {
@@ -335,37 +373,63 @@
   border-radius: 50%;
   transform: translate(-50%, -50%);
   box-shadow: 0 0 8px #38bdf8;
+  transition: all 0.12s;
 }
 
-/* Khi đang chụm ngón (Pinching) */
+/* KHI HOVER TRÚNG MỤC TIÊU BẤM (Magnetic Reticle Halo) */
+.gesture-virtual-cursor--hovering .gesture-cursor-ring {
+  border-color: #22d3ee;
+  border-width: 2.5px;
+  transform: scale(1.15);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.55);
+}
+
+.gesture-virtual-cursor--hovering .gesture-cursor-dot {
+  background: #22d3ee;
+  box-shadow: 0 0 12px #22d3ee;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.gesture-reticle-icon {
+  color: #22d3ee;
+  animation: reticlePulse 1.2s infinite ease-in-out;
+}
+
+@keyframes reticlePulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* KHI CHỤM NGÓN (Pinching to Click) */
 .gesture-virtual-cursor--pinching .gesture-cursor-ring {
-  transform: scale(0.65);
+  transform: scale(0.6);
   border-color: #22c55e;
-  box-shadow: 0 0 20px #22c55e;
-  background: rgba(34, 197, 94, 0.35);
+  box-shadow: 0 0 22px #22c55e;
+  background: rgba(34, 197, 94, 0.4);
 }
 
 .gesture-virtual-cursor--pinching .gesture-cursor-dot {
   background: #22c55e;
-  box-shadow: 0 0 12px #22c55e;
+  box-shadow: 0 0 14px #22c55e;
 }
 
-/* Click Ripple Pulse */
+/* Sóng xung kích khi Click */
 .gesture-cursor-ripple {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 50px;
-  height: 50px;
-  border: 2px solid #22c55e;
+  width: 55px;
+  height: 55px;
+  border: 2.5px solid #22c55e;
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(0.2);
-  animation: gestureRipple 0.4s ease-out forwards;
+  animation: gestureRipple 0.38s ease-out forwards;
 }
 
 @keyframes gestureRipple {
   to {
-    transform: translate(-50%, -50%) scale(1.6);
+    transform: translate(-50%, -50%) scale(1.7);
     opacity: 0;
   }
 }
@@ -373,19 +437,19 @@
 /* ── 6. Floating Action Feedback Toast ── */
 .gesture-feedback-toast {
   position: absolute;
-  top: -34px;
+  top: -36px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  border: 1px solid rgba(245, 158, 11, 0.45);
   color: #fbbf24;
-  padding: 4px 10px;
+  padding: 4px 11px;
   border-radius: 12px;
   font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  animation: gestureFadeToast 0.25s ease-out;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  animation: gestureFadeToast 0.22s ease-out;
 }
 
 @keyframes gestureFadeToast {
@@ -398,14 +462,14 @@
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(245, 158, 11, 0.9);
+  background: rgba(245, 158, 11, 0.92);
   color: #0f172a;
   font-weight: 700;
   font-size: 12px;
-  padding: 6px 16px;
+  padding: 6px 18px;
   border-radius: 20px;
   z-index: 99999;
-  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.45);
   animation: gestureBounce 1s infinite alternate;
 }
 

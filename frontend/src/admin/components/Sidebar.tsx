@@ -22,13 +22,33 @@ export const Sidebar: React.FC = () => {
     (o) => o.status?.toUpperCase() === 'PENDING'
   ).length;
 
-  const navItems = [
+  const savedStaffStr = localStorage.getItem('staff_user');
+  let currentStaff: { full_name?: string; role?: string } | null = null;
+  try {
+    currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
+  } catch {
+    currentStaff = null;
+  }
+  const userRole = currentStaff?.role?.toLowerCase() || 'staff';
+
+  interface NavItem {
+    label: string;
+    path: string;
+    icon: any;
+    badge?: number;
+    roles?: string[];
+  }
+
+  const navItems: { section: string; items: NavItem[] }[] = [
     {
       section: 'VẬN HÀNH NHÀ HÀNG',
       items: [
         { label: 'Tổng Quan Nhà Hàng', path: '/admin', icon: LayoutDashboard },
         { label: 'Menu & Món Ăn', path: '/admin/menu', icon: UtensilsCrossed },
-        { label: 'Quản Lý Đơn Hàng', path: '/admin/orders', icon: ShoppingBag,
+        {
+          label: 'Quản Lý Đơn Hàng',
+          path: '/admin/orders',
+          icon: ShoppingBag,
           badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
         },
         { label: 'Màn Hình Bếp (KDS)', path: '/admin/kds', icon: ChefHat },
@@ -40,13 +60,20 @@ export const Sidebar: React.FC = () => {
     {
       section: 'QUẢN TRỊ & PHÂN TÍCH',
       items: [
-        { label: 'Hội Viên & Khách Hàng', path: '/admin/customers', icon: Users },
-        { label: 'Nhân Sự & Phân Quyền', path: '/admin/staff', icon: Users },
-        { label: 'Báo Cáo Doanh Thu', path: '/admin/reports', icon: BarChart3 },
-        { label: 'Cấu Hình Hệ Thống', path: '/admin/settings', icon: Settings },
+        { label: 'Hội Viên & Khách Hàng', path: '/admin/customers', icon: Users, roles: ['admin', 'store_manager'] },
+        { label: 'Nhân Sự & Phân Quyền', path: '/admin/staff', icon: Users, roles: ['admin', 'store_manager'] },
+        { label: 'Báo Cáo Doanh Thu', path: '/admin/reports', icon: BarChart3, roles: ['admin', 'store_manager'] },
+        { label: 'Cấu Hình Hệ Thống', path: '/admin/settings', icon: Settings, roles: ['admin'] },
       ],
     },
   ];
+
+  const filteredGroups = navItems
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.roles || item.roles.includes(userRole)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside className="sidebar">
@@ -65,7 +92,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Nav Menu */}
       <nav className="sidebar-nav">
-        {navItems.map((group, idx) => (
+        {filteredGroups.map((group, idx) => (
           <div key={idx}>
             <div className="sidebar-section-title">{group.section}</div>
             {group.items.map((item) => {

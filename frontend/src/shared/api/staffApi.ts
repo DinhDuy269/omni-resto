@@ -5,15 +5,15 @@ export const staffApi = {
   getAll: async (): Promise<StaffUser[]> => {
     try {
       const res = await apiClient.get<any[]>('/users');
-            return res.data.map((u)=>({
+      return res.data.map((u) => ({
         id: u.id,
-        full_name: u.full_name || '',
+        full_name: u.full_name || u.fullName || '',
         email: u.email,
         phone: u.phone,
         role: u.role,
         status: u.status || 'active',
         avatar: u.avatar || undefined,
-        created_at: u.created_at || new Date().toISOString(),
+        created_at: u.created_at || u.createdAt || new Date().toISOString(),
       }));
     } catch (error) {
       throw transformAxiosErrorResponse(error);
@@ -22,17 +22,25 @@ export const staffApi = {
 
   create: async (data: any): Promise<StaffUser> => {
     try {
-      const res = await apiClient.post<any>('/users', data);
+      const res = await apiClient.post<any>('/users', {
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        status: data.status || 'active',
+        avatar: data.avatar,
+        password: data.password || '123456',
+      });
       const u = res.data;
       return {
         id: u.id,
-        full_name: u.full_name || '',
+        full_name: u.full_name || u.fullName || '',
         email: u.email,
         phone: u.phone,
         role: u.role,
         status: u.status || 'active',
         avatar: u.avatar || undefined,
-        created_at: u.created_at || new Date().toISOString(),
+        created_at: u.created_at || u.createdAt || new Date().toISOString(),
       };
     } catch (error) {
       throw transformAxiosErrorResponse(error);

@@ -41,4 +41,24 @@ public final class SecurityUtils {
 
         return Optional.of(principal);
     }
+
+    /**
+     * Kiểm tra xem người dùng hiện tại có bất kỳ role nào trong danh sách hay không.
+     */
+    public static boolean hasAnyRole(String... roles) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream().anyMatch(a -> {
+            String authName = a.getAuthority();
+            for (String role : roles) {
+                if (authName.equalsIgnoreCase("ROLE_" + role) || authName.equalsIgnoreCase(role)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
 }

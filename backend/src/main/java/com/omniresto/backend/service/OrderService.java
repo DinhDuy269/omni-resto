@@ -503,10 +503,29 @@ public class OrderService {
         }
     }
 
+    private void validateOrderStatusTransition(OrderEntity order, OrderStatus targetStatus) {
+        OrderStatus current = order.getStatus();
+        if (current == targetStatus) {
+            return;
+        }
+        if (current == OrderStatus.cancelled) {
+            throw new ConflictException("Đơn hàng #" + order.getOrderNumber() + " đã bị hủy, không thể thay đổi trạng thái!");
+        }
+        if (current == OrderStatus.completed) {
+            throw new ConflictException("Đơn hàng #" + order.getOrderNumber() + " đã hoàn tất, không thể thay đổi trạng thái!");
+        }
+        if (targetStatus == OrderStatus.completed && order.getPaymentStatus() != PaymentStatus.paid) {
+            throw new BadRequestException("Không thể hoàn tất đơn hàng #" + order.getOrderNumber() 
+                    + " vì chưa thanh toán thành công (Trạng thái thanh toán: " + order.getPaymentStatus() + "). Vui lòng thu tiền trước khi hoàn tất!");
+        }
+    }
+
     @Transactional
     public OrderResponse updateOrderStatus(String id, OrderStatus status) {
         OrderEntity entity = findOrderById(id);
         List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
+
+        validateOrderStatusTransition(entity, status);
 
         if (status == OrderStatus.cancelled) {
             // Hủy toàn bộ đơn: Hủy các món trong đơn và đưa tổng tiền về 0

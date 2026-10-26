@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Store, Calendar, ChevronDown, User, Package, LogOut, HelpCircle, Zap } from 'lucide-react';
 import { Modal } from '../../shared/components/Modal';
 import { useAdminStore } from '../store/adminStore';
@@ -9,6 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
+  const navigate = useNavigate();
   const { service_requests, resolveServiceRequest, clearAllServiceRequests, orders } = useAdminStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -24,9 +26,27 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
     day: 'numeric',
   });
 
+  const savedStaffStr = localStorage.getItem('staff_user');
+  let currentStaff: { full_name?: string; role?: string; email?: string } | null = null;
+  try {
+    currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
+  } catch {}
+  const staffName = currentStaff?.full_name || 'Lê Minh Tuấn';
+  const staffRole = currentStaff?.role?.toUpperCase() || 'ADMIN';
+  const initials = staffName
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase() || 'AD';
+
   const handleLogout = () => {
     setShowProfileDropdown(false);
-    window.location.reload();
+    localStorage.removeItem('token');
+    localStorage.removeItem('customer');
+    localStorage.removeItem('staff_user');
+    navigate('/login');
   };
 
   return (
@@ -242,8 +262,11 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
                 setShowNotifications(false);
               }}
             >
-              <div className="user-avatar-circle">LT</div>
-              <span className="user-profile-name">Lê Minh Tuấn</span>
+              <div className="user-avatar-circle">{initials}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+                <span className="user-profile-name">{staffName}</span>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--primary)' }}>{staffRole}</span>
+              </div>
               <ChevronDown size={14} color="var(--text-muted)" />
             </button>
 

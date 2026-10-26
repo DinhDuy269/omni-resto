@@ -4,6 +4,7 @@ import { tableApi } from '../../shared/api/tableApi';
 import { orderApi } from '../../shared/api/orderApi';
 import { staffApi } from '../../shared/api/staffApi';
 import { voucherApi } from '../../shared/api/voucherApi';
+import { serviceRequestApi } from '../../shared/api/serviceRequestApi';
 import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, OrderStatus, VoucherInfo } from '../../shared/types/admin';
 
 export const DISH_CATEGORIES = [
@@ -46,10 +47,10 @@ interface AdminState {
   setVouchers: (vouchers: VoucherInfo[]) => void; // <-- Thêm Setter cho Vouchers
 
   // Menu
-  addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
-  updateMenuItem: (item: MenuItem) => void;
-  deleteMenuItem: (id: string) => void;
-  toggleMenuItemStatus: (id: string, status: MenuItem['status']) => void;
+  addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void> | void;
+  updateMenuItem: (item: MenuItem) => Promise<void> | void;
+  deleteMenuItem: (id: string) => Promise<void> | void;
+  toggleMenuItemStatus: (id: string, status: MenuItem['status']) => Promise<void> | void;
 
   // Category options (size, topping)
   addCategoryOption: (option: Omit<CategoryOption, 'id'>) => void;
@@ -59,10 +60,10 @@ interface AdminState {
 
   // Tables
   updateTableStatus: (tableId: string, status: TableInfo['status']) => Promise<void>;
-  addTable: (table: Omit<TableInfo, 'id'>) => void;
-  updateTable: (table: TableInfo) => void;
-  deleteTable: (tableId: string) => void;
-  regenerateTableQrToken: (tableId: string) => void;
+  addTable: (table: Omit<TableInfo, 'id'>) => Promise<void> | void;
+  updateTable: (table: TableInfo) => Promise<void> | void;
+  deleteTable: (tableId: string) => Promise<void> | void;
+  regenerateTableQrToken: (tableId: string) => Promise<void> | void;
   verifyTableSession: (tableNo: string) => void;
   setTablePaymentRequested: (tableNo: string, requested: boolean) => void;
   confirmTablePayment: (tableNo: string) => void;
@@ -73,8 +74,8 @@ interface AdminState {
   handleWebSocketOrderEvent: (event: { eventType: string; order: Order }) => void;
 
   // Staff
-  addStaff: (staff: Omit<StaffUser, 'id' | 'created_at'>) => void;
-  toggleStaffStatus: (id: string, status: StaffUser['status']) => void;
+  addStaff: (staff: Omit<StaffUser, 'id' | 'created_at'>) => Promise<StaffUser>;
+  toggleStaffStatus: (id: string, status: StaffUser['status']) => Promise<void>;
 
   // Service requests (gọi phục vụ tại bàn)
   addServiceRequest: (req: { table_no: string; order_id?: string; request_text: string }) => void;
@@ -89,15 +90,7 @@ interface AdminState {
   toggleVoucherStatus: (id: string, status: VoucherInfo['status']) => Promise<void>;
 }
 
-/**
- * Các action bên dưới được đánh dấu TODO chưa nối backend.
- * Cố ý để chúng báo lỗi rõ ràng thay vì sửa dữ liệu cục bộ rồi giả vờ thành công,
- * vì dữ liệu chỉ nằm trên giao diện sẽ lệch với database.
- * Khi nối xong từng cái, thay `notWired(...)` bằng lời gọi API tương ứng.
- */
-const notWired = (name: string): never => {
-  throw new Error(`${name}: chưa được nối với API backend`);
-};
+
 
 function upsertById<T extends { id: string }>(list: T[], item: T): T[] {
   const exists = list.some((x) => x.id === item.id);
@@ -175,12 +168,13 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchInitialData: async () => {
     set({ isLoading: true, loadError: null });
 
-    const [menu, tables, orders, staff, vouchers] = await Promise.allSettled([
+    const [menu, tables, orders, staff, vouchers, serviceRequests] = await Promise.allSettled([
       menuApi.getMenuItems(),
       tableApi.getAll(),
       orderApi.getAll(),
       staffApi.getAll(),
       voucherApi.getVouchers(),
+      serviceRequestApi.getActiveRequests(),
     ]);
 
     const failed: string[] = [];
@@ -216,6 +210,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     if (vouchers.status === 'fulfilled') patch.vouchers = vouchers.value;
     else failed.push('khuyến mãi');
 
+    if (serviceRequests.status === 'fulfilled') patch.service_requests = serviceRequests.value;
+    else failed.push('yêu cầu phục vụ');
+
     if (failed.length > 0) {
       console.error('Không tải được từ backend:', failed.join(', '));
     }
@@ -236,17 +233,44 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   setTables: (tables) => set({ tables }),
   setVouchers: (vouchers) => set({ vouchers }), // <-- Thêm Setter cho Vouchers
 
-  // ---------- Menu (TODO: nối menuApi) ----------
-  addMenuItem: () => notWired('addMenuItem'),
-  updateMenuItem: () => notWired('updateMenuItem'),
-  deleteMenuItem: () => notWired('deleteMenuItem'),
-  toggleMenuItemStatus: () => notWired('toggleMenuItemStatus'),
+  // ---------- Menu ----------
+  addMenuItem: async (item) => {
+    const created = await menuApi.createMenuItem(item);
+    set((s) => ({ menu_items: [created, ...s.menu_items] }));
+  },
+  updateMenuItem: async (item) => {
+    const updated = await menuApi.updateMenuItem(item.id, item);
+    set((s) => ({ menu_items: s.menu_items.map((m) => (m.id === item.id ? updated : m)) }));
+  },
+  deleteMenuItem: async (id) => {
+    await menuApi.deleteMenuItem(id);
+    set((s) => ({ menu_items: s.menu_items.filter((m) => m.id !== id) }));
+  },
+  toggleMenuItemStatus: async (id, status) => {
+    const prev = get().menu_items;
+    set({ menu_items: prev.map((m) => (m.id === id ? { ...m, status } : m)) });
+    try {
+      await menuApi.updateMenuItemStatus(id, status);
+    } catch (err) {
+      set({ menu_items: prev });
+      throw err;
+    }
+  },
 
-  // ---------- Category options (TODO: nối API) ----------
-  addCategoryOption: () => notWired('addCategoryOption'),
-  updateCategoryOption: () => notWired('updateCategoryOption'),
-  toggleCategoryOptionStatus: () => notWired('toggleCategoryOptionStatus'),
-  deleteCategoryOption: () => notWired('deleteCategoryOption'),
+  // ---------- Category options ----------
+  addCategoryOption: (option) => {
+    const newOpt = { ...option, id: `opt-${Date.now()}` };
+    set((s) => ({ category_options: [newOpt, ...s.category_options] }));
+  },
+  updateCategoryOption: (option) => {
+    set((s) => ({ category_options: s.category_options.map((o) => (o.id === option.id ? option : o)) }));
+  },
+  toggleCategoryOptionStatus: (id, status) => {
+    set((s) => ({ category_options: s.category_options.map((o) => (o.id === id ? { ...o, status } : o)) }));
+  },
+  deleteCategoryOption: (id) => {
+    set((s) => ({ category_options: s.category_options.filter((o) => o.id !== id) }));
+  },
 
   // ---------- Tables ----------
   updateTableStatus: async (tableId, status) => {
@@ -260,13 +284,49 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       throw err; // để nơi gọi hiện thông báo cho nhân viên
     }
   },
-  addTable: () => notWired('addTable'),
-  updateTable: () => notWired('updateTable'),
-  deleteTable: () => notWired('deleteTable'),
-  regenerateTableQrToken: () => notWired('regenerateTableQrToken'),
-  verifyTableSession: () => notWired('verifyTableSession'),
-  setTablePaymentRequested: () => notWired('setTablePaymentRequested'),
-  confirmTablePayment: () => notWired('confirmTablePayment'),
+  addTable: async (table) => {
+    const created = await tableApi.create(table);
+    set((s) => ({ tables: [...s.tables, created] }));
+  },
+  updateTable: async (table) => {
+    const updated = await tableApi.update(table.id, table);
+    set((s) => ({ tables: s.tables.map((t) => (t.id === table.id ? updated : t)) }));
+  },
+  deleteTable: async (tableId) => {
+    await tableApi.delete(tableId);
+    set((s) => ({ tables: s.tables.filter((t) => t.id !== tableId) }));
+  },
+  regenerateTableQrToken: async (tableId) => {
+    const newToken = await tableApi.regenerateQr(tableId);
+    set((s) => ({
+      tables: s.tables.map((t) => (t.id === tableId ? { ...t, qr_secret_token: newToken } : t)),
+    }));
+  },
+  verifyTableSession: (tableNo) => {
+    set((s) => ({
+      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: 'OCCUPIED' } : t)),
+    }));
+  },
+  setTablePaymentRequested: (tableNo, requested) => {
+    set((s) => ({
+      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: requested ? 'OCCUPIED' : t.status } : t)),
+    }));
+  },
+  confirmTablePayment: async (tableNo) => {
+    const table = get().tables.find((t) => t.table_no === tableNo);
+    set((s) => ({
+      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: 'CLEANING', is_paid: true } : t)),
+    }));
+    if (table) {
+      try {
+        await tableApi.confirmPayment(table.id);
+        const fresh = await tableApi.getAll();
+        set({ tables: fresh });
+      } catch (err) {
+        console.error('Lỗi xác nhận thanh toán bàn:', err);
+      }
+    }
+  },
 
   // ---------- Orders ----------
   updateOrderStatus: async (id, status) => {
@@ -305,9 +365,24 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     set((s) => ({ orders: upsertById(s.orders, normalized) }));
   },
 
-  // ---------- Staff (TODO: nối staffApi) ----------
-  addStaff: () => notWired('addStaff'),
-  toggleStaffStatus: () => notWired('toggleStaffStatus'),
+  // ---------- Staff (Nối staffApi) ----------
+  addStaff: async (staffData) => {
+    const created = await staffApi.create(staffData);
+    set((state) => ({ staff_list: [created, ...state.staff_list] }));
+    return created;
+  },
+  toggleStaffStatus: async (id, status) => {
+    const prev = get().staff_list;
+    set({
+      staff_list: prev.map((s) => (s.id === id ? { ...s, status } : s)),
+    });
+    try {
+      await staffApi.updateStatus(id, status);
+    } catch (err) {
+      set({ staff_list: prev });
+      throw err;
+    }
+  },
 
   // ---------- Service requests (tạm lưu cục bộ, sau này lấy từ backend) ----------
   addServiceRequest: ({ table_no, order_id, request_text }) =>
@@ -324,14 +399,26 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         ...s.service_requests,
       ],
     })),
-  resolveServiceRequest: (id) =>
+  resolveServiceRequest: async (id) => {
     set((s) => ({
       service_requests: s.service_requests.map((r) => (r.id === id ? { ...r, status: 'RESOLVED' } : r)),
-    })),
-  resolveServiceRequestsByTable: (table_no) =>
+    }));
+    try {
+      await serviceRequestApi.resolveRequest(id);
+    } catch (err) {
+      console.error('Lỗi giải quyết yêu cầu phục vụ:', err);
+    }
+  },
+  resolveServiceRequestsByTable: async (table_no) => {
     set((s) => ({
       service_requests: s.service_requests.map((r) => (r.table_no === table_no ? { ...r, status: 'RESOLVED' } : r)),
-    })),
+    }));
+    try {
+      await serviceRequestApi.resolveTableRequests(table_no);
+    } catch (err) {
+      console.error('Lỗi giải quyết yêu cầu bàn:', err);
+    }
+  },
   clearAllServiceRequests: () => set({ service_requests: [] }),
 
   // Action Quản lý Voucher với Backend API

@@ -9,6 +9,7 @@ import {
   Info,
   Sparkles,
   AlertCircle,
+  Crosshair,
 } from 'lucide-react';
 import { useHandGestureEngine } from './useHandGestureEngine';
 import './HandGestureWidget.css';
@@ -36,15 +37,34 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
     state,
     videoRef,
     canvasRef,
+    cursorRef,
     toggleCamera,
     setMode,
   } = useHandGestureEngine({
     onSwipeLeft: handleSwipeLeft,
     onSwipeRight: handleSwipeRight,
+    isMinimized,
   });
 
   return (
     <>
+      {/* ── 0. Video Element ngầm (Luôn gắn trong DOM để stream camera không bao giờ bị ngắt hay null) ── */}
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        autoPlay
+        style={{
+          position: 'fixed',
+          top: -9999,
+          left: -9999,
+          width: 640,
+          height: 480,
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
+      />
+
       {/* ── 1. Floating Trigger Button (FAB) ── */}
       <button
         id="hand-gesture-toggle-btn"
@@ -62,12 +82,15 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
 
       {/* ── 2. Picture-in-Picture (PiP) Window ── */}
       {state.isActive && (
-        <div className="gesture-pip-window">
+        <div className={`gesture-pip-window${isMinimized ? ' gesture-pip-window--minimized' : ''}`}>
           {/* Header */}
           <div className="gesture-pip-header">
             <div className="gesture-pip-title">
               <Sparkles size={14} color="#f59e0b" />
-              <span>Camera Nhận Diện Tay</span>
+              <span>{isMinimized ? 'Cử chỉ tay AI' : 'Camera Nhận Diện Tay'}</span>
+              {state.handDetected && (
+                <span className="gesture-live-pill">LIVE 60FPS</span>
+              )}
             </div>
             <div className="gesture-pip-actions">
               <button
@@ -82,7 +105,7 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
                 type="button"
                 className="gesture-icon-btn"
                 onClick={() => setIsMinimized(!isMinimized)}
-                title={isMinimized ? 'Mở rộng' : 'Thu nhỏ'}
+                title={isMinimized ? 'Mở rộng khung camera' : 'Thu nhỏ khung camera'}
               >
                 {isMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
               </button>
@@ -101,13 +124,7 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
           {!isMinimized && (
             <>
               <div className="gesture-viewport">
-                <video
-                  ref={videoRef}
-                  className="gesture-video"
-                  playsInline
-                  muted
-                  autoPlay
-                />
+                {/* Canvas hiển thị đồng thời cả video camera lẫn khung xương bàn tay đồng bộ 100% */}
                 <canvas ref={canvasRef} className="gesture-canvas" />
 
                 <div className="gesture-viewport-overlay" />
@@ -116,7 +133,7 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
                 {state.isLoading && (
                   <div className="gesture-loading-overlay">
                     <div className="gesture-spinner" />
-                    <span>Đang khởi động AI nhận diện...</span>
+                    <span>Đang nạp mô hình Vision AI...</span>
                   </div>
                 )}
 
@@ -131,7 +148,7 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
                 {/* Badge thông báo chưa thấy tay */}
                 {!state.isLoading && !state.error && !state.handDetected && (
                   <div className="gesture-no-hand-badge">
-                    👋 Giơ bàn tay vào khung hình để điều khiển
+                    👋 Giơ bàn tay vào khung hình để bắt đầu
                   </div>
                 )}
               </div>
@@ -169,25 +186,30 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
                 {/* Thanh đo lực chụm ngón (Pinch Meter) */}
                 {state.mode !== 'gesture_only' && state.handDetected && (
                   <div className="gesture-pinch-indicator">
-                    <span>Lực chụm:</span>
+                    <span className="gesture-pinch-label">
+                      {state.isHoveringClickable ? '🎯 Đã nhắm mục tiêu' : 'Lực chụm:'}
+                    </span>
                     <div className="gesture-pinch-track">
                       <div
-                        className="gesture-pinch-fill"
+                        className={`gesture-pinch-fill${state.isPinching ? ' gesture-pinch-fill--active' : ''}`}
                         style={{ width: `${Math.round(state.pinchStrength * 100)}%` }}
                       />
                     </div>
-                    <span>{state.isPinching ? '👌 CLICK' : `${Math.round(state.pinchStrength * 100)}%`}</span>
+                    <span className="gesture-pinch-val">
+                      {state.isPinching ? '👌 CLICK' : `${Math.round(state.pinchStrength * 100)}%`}
+                    </span>
                   </div>
                 )}
 
                 {/* Hướng dẫn thao tác nhanh */}
                 {showHelp && (
                   <div className="gesture-help-tips">
-                    <div>• 👆 <b>Ngón trỏ</b>: Di chuyển chuột ảo</div>
-                    <div>• 🤏 <b>Chụm 2 ngón</b>: Click vào nút/món ăn</div>
-                    <div>• ⬆️ <b>Đưa tay lên cao</b>: Tự động cuộn lên</div>
-                    <div>• ⬇️ <b>Hạ tay xuống thấp</b>: Tự động cuộn xuống</div>
-                    <div>• 👋 <b>Vẫy tay trái/phải</b>: Quay lại / Đi tiếp trang</div>
+                    <div>• 👆 <b>Ngón trỏ</b>: Di chuyển chuột (Bộ lọc 1-Euro chống rung)</div>
+                    <div>• 🤏 <b>Chụm 2 ngón</b>: Bấm chuột (Tự động khóa tọa độ chống trượt)</div>
+                    <div>• 🎯 <b>Nam châm</b>: Con trỏ tự hút nhẹ vào nút/món ăn gần nhất</div>
+                    <div>• ⬆️ <b>Đưa tay lên mép trên</b>: Tự động cuộn lên</div>
+                    <div>• ⬇️ <b>Hạ tay xuống mép dưới</b>: Tự động cuộn xuống</div>
+                    <div>• 👋 <b>Vẫy tay trái/phải</b>: Quay lại (Back) / Đi tiếp (Next)</div>
                   </div>
                 )}
               </div>
@@ -196,17 +218,24 @@ export const HandGestureWidget: React.FC<HandGestureWidgetProps> = ({
         </div>
       )}
 
-      {/* ── 3. Full-Screen Virtual Cursor Overlay ── */}
+      {/* ── 3. Full-Screen Virtual Cursor Overlay (Direct DOM 60-120FPS) ── */}
       {state.isActive && state.handDetected && state.mode !== 'gesture_only' && (
         <div className="gesture-cursor-container">
           <div
-            className={`gesture-virtual-cursor${state.isPinching ? ' gesture-virtual-cursor--pinching' : ''}`}
+            ref={cursorRef}
+            className={`gesture-virtual-cursor${
+              state.isPinching ? ' gesture-virtual-cursor--pinching' : ''
+            }${state.isHoveringClickable ? ' gesture-virtual-cursor--hovering' : ''}`}
             style={{
-              left: `${state.cursor.x}px`,
-              top: `${state.cursor.y}px`,
+              transform: `translate3d(${state.cursor.x}px, ${state.cursor.y}px, 0)`,
             }}
           >
-            <div className="gesture-cursor-ring" />
+            {/* Vòng nhắm ngoài (Reticle Ring) */}
+            <div className="gesture-cursor-ring">
+              {state.isHoveringClickable && <Crosshair size={14} className="gesture-reticle-icon" />}
+            </div>
+
+            {/* Chấm tâm con trỏ */}
             <div className="gesture-cursor-dot" />
 
             {/* Sóng xung kích khi Click */}

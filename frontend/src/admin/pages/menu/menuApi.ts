@@ -86,6 +86,36 @@ export const menuApi = {
     }
   },
 
+  updateMenuItem: async (id: string, request: Partial<MenuItem>): Promise<MenuItem> => {
+    try {
+      const payload = {
+        name: request.name,
+        category_id: request.category_id || 'cat-01',
+        category_name: request.category,
+        base_price: request.base_price,
+        meal_periods: request.meal_periods || 'ALL_DAY',
+        description: request.description,
+        ingredients: request.ingredients,
+        is_best_seller: request.is_best_seller,
+        image: request.image,
+        image_url: request.image,
+      };
+      const res = await apiClient.put<any>(`/menu-items/${id}`, payload);
+      const raw = res.data.menu_item || res.data;
+      return transformMenuItem(raw);
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  deleteMenuItem: async (id: string): Promise<void> => {
+    try {
+      await apiClient.delete(`/menu-items/${id}`);
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
   updateMenuItemStatus: async (id: string, status: MenuStatus): Promise<MenuItem> => {
     try {
       const res = await apiClient.patch<any>(`/menu-items/${id}/status`, null, { params: { status: status.toLowerCase() } });

@@ -16,6 +16,20 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Attach X-Staff-Role for RBAC verification on backend
+  const staffUserStr = localStorage.getItem('staff_user');
+  if (staffUserStr) {
+    try {
+      const staffUser = JSON.parse(staffUserStr);
+      if (staffUser?.role) {
+        config.headers['X-Staff-Role'] = String(staffUser.role).toUpperCase();
+      }
+    } catch {
+      // Ignore parse error
+    }
+  }
+
   return config;
 });
 

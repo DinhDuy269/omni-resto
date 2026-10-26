@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import {
-  Settings,
   Store,
   Wifi,
   Receipt,
-  QrCode,
   Bot,
   Save,
   CheckCircle2,
-  Shield,
   CreditCard,
 } from 'lucide-react';
 
@@ -16,7 +13,9 @@ export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'GENERAL' | 'WIFI' | 'PAYMENT' | 'TAX' | 'AI'>('GENERAL');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const [form, setForm] = useState({
+  const SETTINGS_STORAGE_KEY = 'omniresto_hq_settings';
+
+  const defaultSettings = {
     brandName: 'OmniResto',
     hotline: '1900 6868',
     address: '123 Đường Ẩm Thực, Quận 1, TP. Hồ Chí Minh',
@@ -32,12 +31,26 @@ export const SettingsPage: React.FC = () => {
     vnpayHashSecret: 'XNBCJFAKAZQSGZSABUSXM9QMV8FVOEZM',
     geminiModel: 'gemini-3.6-flash',
     geminiRateLimit: 15,
+  };
+
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    } catch {
+      return defaultSettings;
+    }
   });
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(form));
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (err) {
+      alert('Không thể lưu cài đặt vào bộ nhớ hệ thống.');
+    }
   };
 
   return (

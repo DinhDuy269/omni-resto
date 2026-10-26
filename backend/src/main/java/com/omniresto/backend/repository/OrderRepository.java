@@ -43,4 +43,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
     long countByCustomerIdAndStatusNot(String customerId, OrderStatus status);
 
     List<OrderEntity> findByCustomerIdOrderByCreatedAtDesc(String customerId);
+
+    List<OrderEntity> findByTableIdAndStatusNotIn(String tableId, Collection<OrderStatus> statuses);
+
+    List<OrderEntity> findByTableNoAndStatusNotIn(String tableNo, Collection<OrderStatus> statuses);
 }

@@ -93,38 +93,72 @@ public class SecurityConfig {
     private void configureAuthorizeHttpRequests(
             AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizeRequests) {
         authorizeRequests
-                // 1. File Upload (FileUploadController)
+                // 1. File Upload (FileUploadController) - Admin/Staff only
                 .requestMatchers(uploadApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
-                // 2. Menu Item (MenuItemController)
-                .requestMatchers(menuApiPatterns()).permitAll()
-                // 3. Category (CategoryController)
-                .requestMatchers(categoryApiPatterns()).permitAll()
-                // 4. Order (OrderController)
-                .requestMatchers(orderApiPatterns()).permitAll()
-                // 5. User (UserController)
-                .requestMatchers(userApiPatterns()).permitAll()
-                // 6. Table (TableController)
-                .requestMatchers(tableApiPatterns()).permitAll()
-                // 7. Table Session (TableSessionController)
+
+                // 2. User & Staff RBAC Management (UserController) - Chỉ Quản trị viên (ADMIN) & Quản lý (STORE_MANAGER)
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/users", "/api/users/**").hasRole("ADMIN")
+
+                // 3. Customer Admin Management (CustomerAuthController - Admin only)
+                .requestMatchers(customerAdminApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER")
+
+                // 4. Menu Items: GET public, POST/PUT/PATCH/DELETE yêu cầu quyền Admin/Staff
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/menu-items", "/api/menu-items/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+
+                // 5. Category: GET public, POST/PUT/DELETE yêu cầu quyền Admin/Staff
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories", "/api/categories/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+
+                // 6. Reservations: Khách đặt bàn online & tra cứu là public; toàn bộ quản trị (danh sách PII, xếp bàn, check-in, hủy) yêu cầu Admin/Staff
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/tables/reservations/online", "/api/reservations/online").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tables/reservations/track/**", "/api/reservations/track/**").permitAll()
+                .requestMatchers(reservationApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+
+                // 7. Table Sessions: Các thao tác thu ngân / nhân viên (verify, confirm-payment, close) yêu cầu Admin/Staff
+                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                        "/api/table-sessions/verify",
+                        "/api/table-sessions/confirm-payment",
+                        "/api/table-sessions/tables/**",
+                        "/api/table-sessions/close"
+                ).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(tableSessionApiPatterns()).permitAll()
-                // 8. Reservation (ReservationController)
-                .requestMatchers(reservationApiPatterns()).permitAll()
-                // 9. Voucher (VoucherController)
-                .requestMatchers(voucherApiPatterns()).permitAll()
-                // 10. Service Request (ServiceRequestController)
-                .requestMatchers(serviceRequestApiPatterns()).permitAll()
-                // 11. Payment (PaymentController)
+
+                // 8. Tables: GET public, POST/PATCH/DELETE yêu cầu quyền Admin/Staff
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tables", "/api/tables/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+
+                // 9. Vouchers: GET /available & /validate public, mọi thao tác danh sách quản trị yêu cầu quyền Admin/Staff
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/vouchers/available", "/api/vouchers/validate").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/vouchers/validate").permitAll()
+                .requestMatchers(voucherApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+
+                // 10. Service Requests: Khách tại bàn gửi yêu cầu là public; xem danh sách active và resolve yêu cầu Admin/Staff
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/service-requests").permitAll()
+                .requestMatchers(serviceRequestApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+
+                // 11. Order Management: Thao tác cập nhật trạng thái đơn/món của nhân viên
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/orders/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/orders/*/items/*/cancel").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(orderApiPatterns()).permitAll()
+
+                // 12. Public & Customer Endpoints
                 .requestMatchers(paymentApiPatterns()).permitAll()
-                // 12. AI Chatbot (AiChatbotController)
                 .requestMatchers(aiApiPatterns()).permitAll()
-                // 13. Event (EventController)
                 .requestMatchers(eventApiPatterns()).permitAll()
-                // 14. Newsletter (NewsletterController)
                 .requestMatchers(newsletterApiPatterns()).permitAll()
-                // 15. Customer Admin Management (CustomerAuthController - Admin only)
-                .requestMatchers(customerAdminApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
-                // 16. Customer Authentication & Management (CustomerAuthController)
                 .requestMatchers(customerAuthApiPatterns()).permitAll()
+
                 // Infrastructure / Static / Docs
                 .requestMatchers(websocketPatterns()).permitAll()
                 .requestMatchers(swaggerPatterns()).permitAll()

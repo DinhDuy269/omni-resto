@@ -34,4 +34,5 @@ export interface HandGestureState {
   detectedGesture: GestureType;
   actionFeedback: GestureActionFeedback | null;
   mode: ActiveMode;
+  isHoveringClickable: boolean;
 }

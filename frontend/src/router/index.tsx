@@ -13,6 +13,7 @@ import { KitchenDisplaySystem } from '../admin/pages/kds/KitchenDisplaySystem';
 import { ReservationManagement } from '../admin/pages/reservation/ReservationManagement';
 import { ReportsPage } from '../admin/pages/reports/ReportsPage';
 import { SettingsPage } from '../admin/pages/settings/SettingsPage';
+import { AdminProtectedRoute } from '../admin/components/AdminProtectedRoute';
 
 // ── Client imports ────────────────────────────────────────────────────────────
 import { ClientLayout } from '../client/layouts/ClientLayout';
@@ -54,18 +55,28 @@ export const AppRouter: React.FC = () => {
         {/* ══════════════════════════════════════════════════
             ADMIN FLOW — Enterprise management interface
             ══════════════════════════════════════════════════ */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="menu" element={<MasterMenuManagement />} />
-          <Route path="orders" element={<ChainOrdersManagement />} />
-          <Route path="staff" element={<StaffManagement />} />
-          <Route path="tables" element={<TableManagement />} />
-          <Route path="reservations" element={<ReservationManagement />} />
-          <Route path="kds" element={<KitchenDisplaySystem />} />
-          <Route path="vouchers" element={<VoucherManagement />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+        <Route element={<AdminProtectedRoute />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="menu" element={<MasterMenuManagement />} />
+            <Route path="orders" element={<ChainOrdersManagement />} />
+            <Route path="tables" element={<TableManagement />} />
+            <Route path="reservations" element={<ReservationManagement />} />
+            <Route path="kds" element={<KitchenDisplaySystem />} />
+            <Route path="vouchers" element={<VoucherManagement />} />
+
+            {/* RBAC Protected: Chỉ Quản Trị Viên & Quản Lý Cửa Hàng */}
+            <Route element={<AdminProtectedRoute allowedRoles={['admin', 'store_manager']} />}>
+              <Route path="staff" element={<StaffManagement />} />
+              <Route path="customers" element={<CustomersPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+            </Route>
+
+            {/* RBAC Protected: Chỉ Quản Trị Viên Cấp Cao Chuỗi HQ */}
+            <Route element={<AdminProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+          </Route>
         </Route>
 
         {/* ══════════════════════════════════════════════════

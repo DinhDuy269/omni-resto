@@ -36,19 +36,37 @@ public class StaffKeyAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String staffKey = request.getHeader("X-Staff-Key");
-        String authHeader = request.getHeader("Authorization");
-        boolean hasBearerToken = authHeader != null && authHeader.startsWith("Bearer ");
 
-        // Nếu request không có Bearer token từ khách hàng, kiểm tra xác thực bằng X-Staff-Key
-        if (!hasBearerToken && staffKey != null && !staffKey.isBlank() && isKeyValid(staffKey, configuredStaffKey)) {
+        // Kiểm tra xác thực bằng X-Staff-Key hợp lệ (cho POS, KDS, Upload và Admin Portal)
+        if (staffKey != null && !staffKey.isBlank() && isKeyValid(staffKey, configuredStaffKey)) {
+            String staffRoleHeader = request.getHeader("X-Staff-Role");
+            List<SimpleGrantedAuthority> authorities;
+
+            if (staffRoleHeader != null && (
+                    "WAITER".equalsIgnoreCase(staffRoleHeader) ||
+                    "CASHIER".equalsIgnoreCase(staffRoleHeader) ||
+                    "CHEF".equalsIgnoreCase(staffRoleHeader) ||
+                    "STAFF".equalsIgnoreCase(staffRoleHeader))) {
+                authorities = List.of(new SimpleGrantedAuthority("ROLE_STAFF"));
+            } else if (staffRoleHeader != null && (
+                    "STORE_MANAGER".equalsIgnoreCase(staffRoleHeader) ||
+                    "MANAGER".equalsIgnoreCase(staffRoleHeader))) {
+                authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_STAFF"),
+                        new SimpleGrantedAuthority("ROLE_STORE_MANAGER")
+                );
+            } else {
+                authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_STAFF"),
+                        new SimpleGrantedAuthority("ROLE_STORE_MANAGER"),
+                        new SimpleGrantedAuthority("ROLE_ADMIN")
+                );
+            }
+
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    "STAFF_ADMIN_USER",
+                    "STAFF_AUTH_USER",
                     null,
-                    List.of(
-                            new SimpleGrantedAuthority("ROLE_STAFF"),
-                            new SimpleGrantedAuthority("ROLE_ADMIN"),
-                            new SimpleGrantedAuthority("ROLE_STORE_MANAGER")
-                    )
+                    authorities
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }

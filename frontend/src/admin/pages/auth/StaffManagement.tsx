@@ -43,28 +43,46 @@ export const StaffManagement: React.FC = () => {
   const managementCount = staff_list.filter((s) => s.role === 'admin' || s.role === 'store_manager' || s.role === 'cashier').length;
   const floorStaffCount = staff_list.filter((s) => s.role === 'waiter' || s.role === 'chef').length;
 
-  const handleSubmitNewStaff = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  const handleSubmitNewStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.full_name || !formData.email) return;
 
-    addStaff({
-      full_name: formData.full_name,
-      email: formData.email,
-      phone: formData.phone,
-      role: formData.role,
-      status: 'active',
-      avatar: formData.avatar,
-    });
+    setSubmitting(true);
+    setFormError('');
+    try {
+      await addStaff({
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        status: 'active',
+        avatar: formData.avatar,
+      });
 
-    setIsModalOpen(false);
-    setFormData({
-      full_name: '',
-      email: '',
-      phone: '',
-      role: 'store_manager',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
-    });
+      setIsModalOpen(false);
+      setFormData({
+        full_name: '',
+        email: '',
+        phone: '',
+        role: 'store_manager',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
+      });
+    } catch (err: any) {
+      setFormError(err.error_description || err.message || 'Không thể tạo tài khoản nhân sự.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const savedStaffStr = localStorage.getItem('staff_user');
+  let currentStaff: { role?: string; full_name?: string } | null = null;
+  try {
+    currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
+  } catch {}
+  const isSuperAdmin = currentStaff?.role?.toLowerCase() === 'admin';
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -297,7 +315,9 @@ export const StaffManagement: React.FC = () => {
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value as RoleType })}
               >
-                <option value="admin">Admin / Chủ Chuỗi (Quyền cao nhất)</option>
+                {isSuperAdmin && (
+                  <option value="admin">Admin / Chủ Chuỗi (Quyền cao nhất)</option>
+                )}
                 <option value="store_manager">Quản Lý Cửa Hàng</option>
                 <option value="cashier">Thu Ngân Quầy</option>
                 <option value="waiter">Phục Vụ / Order Bàn</option>
@@ -306,12 +326,18 @@ export const StaffManagement: React.FC = () => {
             </div>
           </div>
 
+          {formError && (
+            <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', fontSize: '0.875rem', marginTop: '14px' }}>
+              {formError}
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '14px', marginTop: '28px' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)} disabled={submitting}>
               Hủy
             </button>
-            <button type="submit" className="btn btn-primary">
-              Tạo Tài Khoản
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Đang tạo...' : 'Tạo Tài Khoản'}
             </button>
           </div>
         </form>

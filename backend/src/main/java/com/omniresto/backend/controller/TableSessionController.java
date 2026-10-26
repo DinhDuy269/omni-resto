@@ -75,13 +75,25 @@ public class TableSessionController {
     public TableSessionResponse confirmPayment(
             @RequestParam String sessionToken,
             @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId,
-            @RequestParam(required = false) PaymentMethod method,
+            @RequestParam(required = false) String method,
             @RequestParam(required = false) BigDecimal amountReceived,
             @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
         // Bảo vệ nghiêm ngặt: Tuyệt đối không cho phép khách hàng tự xác nhận thanh toán
         checkStaffAccess(staffKey);
-        return tableSessionService.confirmPayment(sessionToken, staffId, method, amountReceived);
+        return tableSessionService.confirmPayment(sessionToken, staffId, PaymentMethod.fromString(method), amountReceived);
+    }
+
+    @PostMapping("/tables/{tableId}/confirm-payment")
+    public TableSessionResponse confirmPaymentForTable(
+            @PathVariable String tableId,
+            @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId,
+            @RequestParam(required = false) String method,
+            @RequestParam(required = false) BigDecimal amountReceived,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
+    ) {
+        checkStaffAccess(staffKey);
+        return tableSessionService.confirmPaymentByTable(tableId, staffId, PaymentMethod.fromString(method), amountReceived);
     }
 
     @PostMapping("/close")

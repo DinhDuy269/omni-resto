@@ -64,25 +64,6 @@ public class TableSessionService {
         }
 
         TableEntity table = tableRepository.findByQrSecretToken(qrSecretToken.trim())
-                .or(() -> {
-                    // Fallback: match by table ID if token includes tbl-XX or ban-XX
-                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:tbl|ban)[_-]?0?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(qrSecretToken.trim());
-                    if (m.find()) {
-                        int num = Integer.parseInt(m.group(1));
-                        String id1 = "tbl-" + num;
-                        String id2 = String.format("tbl-%02d", num);
-                        Optional<TableEntity> opt = tableRepository.findById(id1)
-                                .or(() -> tableRepository.findById(id2))
-                                .or(() -> tableRepository.findByTableNo(String.format("Bàn %02d", num)))
-                                .or(() -> tableRepository.findByTableNo(String.format("Bàn %d", num)));
-                        opt.ifPresent(t -> {
-                            t.setQrSecretToken(qrSecretToken.trim());
-                            tableRepository.save(t);
-                        });
-                        return opt;
-                    }
-                    return Optional.empty();
-                })
                 .orElseThrow(() -> new ResourceNotFoundException("Mã QR không hợp lệ hoặc bàn không tồn tại trong hệ thống!"));
 
         // Check if table already has an ACTIVE session (active, payment_requested, payment_pending)
@@ -299,7 +280,12 @@ public class TableSessionService {
      */
     @Transactional
     public TableSessionResponse confirmPayment(String sessionToken, String staffId, PaymentMethod method, BigDecimal amountReceived) {
-        TableSessionEntity session = validateAndTouchSessionWithLock(sessionToken);
+        TableSessionEntity session = tableSessionRepository.findBySessionTokenWithLock(sessionToken.trim())
+                .orElseThrow(() -> new BadRequestException("Phiên bàn không tồn tại hoặc đã bị hủy."));
+
+        if (session.getStatus() == TableSessionStatus.closed) {
+            throw new BadRequestException("Phiên bàn này đã được đóng và thanh toán trước đó.");
+        }
 
         Optional<OrderEntity> activeOrderOpt = orderRepository
                 .findFirstByTableSessionIdAndStatusInOrderByCreatedAtDesc(
@@ -346,6 +332,56 @@ public class TableSessionService {
         TableSessionResponse response = mapToResponse(saved);
         response.setMessage("Thanh toán thành công! Phiên bàn đã được đóng và giải phóng.");
         return response;
+    }
+
+    /**
+     * Thu ngân xác nhận thanh toán trực tiếp qua tableId (dành cho Admin / POS)
+     */
+    @Transactional
+    public TableSessionResponse confirmPaymentByTable(String tableId, String staffId, PaymentMethod method, BigDecimal amountReceived) {
+        List<TableSessionStatus> activeStatuses = List.of(
+                TableSessionStatus.active,
+                TableSessionStatus.payment_requested,
+                TableSessionStatus.payment_pending,
+                TableSessionStatus.paid
+        );
+        List<TableSessionEntity> sessions = tableSessionRepository.findByTableIdAndStatusIn(tableId, activeStatuses);
+        if (!sessions.isEmpty()) {
+            return confirmPayment(sessions.get(0).getSessionToken(), staffId, method, amountReceived);
+        }
+
+        Optional<TableEntity> tableOpt = tableRepository.findById(tableId);
+        if (tableOpt.isEmpty()) {
+            throw new BadRequestException("Không tìm thấy bàn với ID: " + tableId);
+        }
+        TableEntity table = tableOpt.get();
+
+        List<OrderEntity> openOrders = orderRepository.findByTableIdAndStatusNotIn(
+                tableId,
+                List.of(OrderStatus.completed, OrderStatus.cancelled)
+        );
+
+        if (openOrders.isEmpty() && table.getTableNo() != null) {
+            openOrders = orderRepository.findByTableNoAndStatusNotIn(
+                    table.getTableNo(),
+                    List.of(OrderStatus.completed, OrderStatus.cancelled)
+            );
+        }
+
+        for (OrderEntity order : openOrders) {
+            order.setPaymentStatus(PaymentStatus.paid);
+            order.setStatus(OrderStatus.completed);
+            orderRepository.save(order);
+        }
+
+        table.setStatus(TableStatus.available);
+        tableRepository.save(table);
+
+        return TableSessionResponse.builder()
+                .tableId(tableId)
+                .tableNo(table.getTableNo())
+                .message("Thanh toán thành công! Bàn " + table.getTableNo() + " đã được thanh toán và giải phóng.")
+                .build();
     }
 
     @Transactional

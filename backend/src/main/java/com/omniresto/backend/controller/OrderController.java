@@ -5,6 +5,7 @@ import com.omniresto.backend.domain.enums.OrderStatus;
 import com.omniresto.backend.model.order.request.OrderRequest;
 import com.omniresto.backend.model.order.response.OrderResponse;
 import com.omniresto.backend.service.OrderService;
+import com.omniresto.backend.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +14,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -47,8 +49,32 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public OrderResponse getOrderById(@PathVariable String id) {
-        return orderService.getOrderById(id);
+    public OrderResponse getOrderById(
+            @PathVariable String id,
+            @RequestHeader(value = "X-Table-Session", required = false) String sessionToken,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
+    ) {
+        OrderResponse order = orderService.getOrderById(id);
+
+        // 1. Nhân viên có khóa hợp lệ hoặc có quyền STAFF/ADMIN
+        boolean isStaff = (staffKey != null && !staffKey.isBlank() && staffKey.trim().equals(configuredStaffKey.trim()))
+                || SecurityUtils.hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF");
+        if (isStaff) {
+            return order;
+        }
+
+        // 2. Khách hàng tại bàn sở hữu phiên của đơn hàng
+        if (sessionToken != null && !sessionToken.isBlank() && sessionToken.equals(order.getTableSessionId())) {
+            return order;
+        }
+
+        // 3. Khách hàng thành viên sở hữu đơn hàng
+        Optional<String> customerIdOpt = SecurityUtils.getCurrentCustomerIdOptional();
+        if (customerIdOpt.isPresent() && customerIdOpt.get().equals(order.getCustomerId())) {
+            return order;
+        }
+
+        throw new AccessDeniedException("Truy cập bị từ chối: Bạn không có quyền xem thông tin đơn hàng này!");
     }
 
     @PostMapping

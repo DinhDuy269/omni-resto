@@ -1,3 +1,4 @@
+import { apiClient, transformAxiosErrorResponse } from './client';
 import type { MenuItem, OrderRequest, CustomerResponse, CustomerStatus } from '../types/customer';
 
 const API_BASE_URL = 'http://localhost:8080/api'; // Đường dẫn chuẩn API Backend
@@ -8,12 +9,12 @@ const API_BASE_URL = 'http://localhost:8080/api'; // Đường dẫn chuẩn API
 
 // 1. Lấy danh sách khách hàng cho trang Admin
 export const fetchCustomers = async (): Promise<CustomerResponse[]> => {
-  const res = await fetch(`${API_BASE_URL}/v1/auth/customer/admin/customers`);
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Không thể tải danh sách khách hàng');
+  try {
+    const res = await apiClient.get<CustomerResponse[]>('/v1/auth/customer/admin/customers');
+    return res.data;
+  } catch (error) {
+    throw transformAxiosErrorResponse(error);
   }
-  return res.json();
 };
 
 // 2. Cập nhật trạng thái khách hàng (active / inactive)
@@ -21,15 +22,14 @@ export const updateCustomerStatus = async (
   id: string,
   status: CustomerStatus | string
 ): Promise<CustomerResponse> => {
-  const res = await fetch(`${API_BASE_URL}/v1/auth/customer/admin/customers/${id}/status?status=${status}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Cập nhật trạng thái thất bại');
+  try {
+    const res = await apiClient.patch<CustomerResponse>(
+      `/v1/auth/customer/admin/customers/${id}/status?status=${status}`
+    );
+    return res.data;
+  } catch (error) {
+    throw transformAxiosErrorResponse(error);
   }
-  return res.json();
 };
 
 // ─────────────────────────────────────────────────────────────

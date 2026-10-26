@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import {
-  BarChart3,
   TrendingUp,
   DollarSign,
   ShoppingBag,
   Download,
-  Calendar,
   Layers,
   PieChart,
   ArrowUpRight,
@@ -18,25 +16,112 @@ export const ReportsPage: React.FC = () => {
   const { orders, menu_items } = useAdminStore();
   const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'MONTH' | 'YEAR'>('MONTH');
 
-  const totalRevenue = orders
+  const filteredOrdersByTime = orders.filter((o) => {
+    if (!o.created_at) return true;
+    const orderDate = new Date(o.created_at);
+    const now = new Date();
+    if (isNaN(orderDate.getTime())) return true;
+
+    if (timeRange === 'TODAY') {
+      return (
+        orderDate.getDate() === now.getDate() &&
+        orderDate.getMonth() === now.getMonth() &&
+        orderDate.getFullYear() === now.getFullYear()
+      );
+    }
+    if (timeRange === 'WEEK') {
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return orderDate >= oneWeekAgo;
+    }
+    if (timeRange === 'MONTH') {
+      return (
+        orderDate.getMonth() === now.getMonth() &&
+        orderDate.getFullYear() === now.getFullYear()
+      );
+    }
+    if (timeRange === 'YEAR') {
+      return orderDate.getFullYear() === now.getFullYear();
+    }
+    return true;
+  });
+
+  const totalRevenue = filteredOrdersByTime
     .filter((o) => o.status === 'COMPLETED' || o.payment_status === 'PAID')
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
-  const completedOrders = orders.filter((o) => o.status === 'COMPLETED');
-  const aov = completedOrders.length > 0 ? Math.round(totalRevenue / completedOrders.length) : 245000;
+  const completedOrders = filteredOrdersByTime.filter((o) => o.status === 'COMPLETED' || o.payment_status === 'PAID');
+  const aov = completedOrders.length > 0 ? Math.round(totalRevenue / completedOrders.length) : 0;
 
   // Kênh bán hàng
-  const dineInOrders = orders.filter((o) => o.order_type === 'DINE_IN').length;
-  const deliveryOrders = orders.filter((o) => o.order_type === 'DELIVERY').length;
-  const takeawayOrders = orders.filter((o) => o.order_type === 'TAKEAWAY').length;
+  const dineInOrders = filteredOrdersByTime.filter((o) => o.order_type === 'DINE_IN').length;
+  const deliveryOrders = filteredOrdersByTime.filter((o) => o.order_type === 'DELIVERY').length;
+  const takeawayOrders = filteredOrdersByTime.filter((o) => o.order_type === 'TAKEAWAY').length;
   const totalChannels = (dineInOrders + deliveryOrders + takeawayOrders) || 1;
 
   const dineInPct = Math.round((dineInOrders / totalChannels) * 100);
   const deliveryPct = Math.round((deliveryOrders / totalChannels) * 100);
   const takeawayPct = 100 - dineInPct - deliveryPct;
 
+  // Tính toán Top món ăn bán chạy & đóng góp doanh thu cao nhất từ đơn hàng thực tế
+  const topSellingDishes = React.useMemo(() => {
+    const map = new Map<string, { id: string; name: string; category: string; quantity: number; revenue: number }>();
+
+    filteredOrdersByTime.forEach((ord) => {
+      (ord.items || []).forEach((it) => {
+        const dishName = it.name;
+        const existing = map.get(dishName) || {
+          id: it.id || dishName,
+          name: it.name,
+          category: 'Món ăn',
+          quantity: 0,
+          revenue: 0,
+        };
+        const qty = Number(it.quantity || 1);
+        const price = Number(it.price || 0);
+        existing.quantity += qty;
+        existing.revenue += qty * price;
+        map.set(dishName, existing);
+      });
+    });
+
+    const sorted = Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+    if (sorted.length > 0) {
+      return sorted.slice(0, 5);
+    }
+
+    // Fallback hiển thị thực đơn nếu khoảng thời gian chưa phát sinh đơn
+    return menu_items.slice(0, 5).map((dish) => ({
+      id: dish.id,
+      name: dish.name,
+      category: dish.category,
+      quantity: 1,
+      revenue: dish.base_price,
+    }));
+  }, [filteredOrdersByTime, menu_items]);
+
   const handleExportReport = () => {
-    alert('Hệ thống đang xuất file Báo Cáo Doanh Thu (Excel .xlsx)... Tải xuống sẽ bắt đầu trong giây lát!');
+    const csvRows = [
+      ['Mã Đơn', 'Bàn / Kênh', 'Khách Hàng', 'Tổng Tiền (VNĐ)', 'Trạng Thái', 'Thanh Toán', 'Thời Gian'],
+      ...filteredOrdersByTime.map((o) => [
+        o.order_number,
+        o.order_type === 'DINE_IN' ? (o.table_no || 'Tại bàn') : o.order_type,
+        o.customer_name || 'Khách vãng lai',
+        o.total_amount || 0,
+        o.status,
+        o.payment_status,
+        o.created_at || '',
+      ]),
+    ];
+
+    const csvContent = '\uFEFF' + csvRows.map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Bao_Cao_Doanh_Thu_OmniResto_${timeRange}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -213,7 +298,7 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {menu_items.slice(0, 5).map((dish, idx) => (
+            {topSellingDishes.map((dish, idx) => (
               <div
                 key={dish.id}
                 style={{
@@ -244,16 +329,18 @@ export const ReportsPage: React.FC = () => {
                   </span>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-main)' }}>{dish.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{dish.category}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {dish.quantity > 1 ? `Đã bán: ${dish.quantity} suất` : dish.category}
+                    </div>
                   </div>
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
                   <strong style={{ fontSize: '0.9rem', color: 'var(--primary)', fontFeatureSettings: "'tnum' 1" }}>
-                    {dish.base_price.toLocaleString('vi-VN')} đ
+                    {dish.revenue.toLocaleString('vi-VN')} đ
                   </strong>
                   <div style={{ fontSize: '0.725rem', color: 'var(--success)', fontWeight: 600 }}>
-                    <ArrowUpRight size={11} style={{ display: 'inline' }} /> Best Seller
+                    <ArrowUpRight size={11} style={{ display: 'inline' }} /> Doanh số
                   </div>
                 </div>
               </div>

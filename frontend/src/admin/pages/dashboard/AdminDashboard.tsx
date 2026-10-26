@@ -30,17 +30,66 @@ export const AdminDashboard: React.FC = () => {
   const occupiedTablesCount = tables.filter((t) => t.status === 'OCCUPIED').length;
   const bestSellers = menu_items.filter((item) => item.is_best_seller);
 
-  // Dữ liệu mô phỏng xu hướng doanh thu theo khung giờ ca làm việc
-  const hourlyRevenueData = [
-    { time: '08:00', amount: 850000, label: '08h' },
-    { time: '10:00', amount: 2400000, label: '10h' },
-    { time: '12:00', amount: 8900000, label: '12h (Trưa)' },
-    { time: '14:00', amount: 4100000, label: '14h' },
-    { time: '16:00', amount: 2900000, label: '16h' },
-    { time: '18:00', amount: 9600000, label: '18h' },
-    { time: '20:00', amount: 14800000, label: '20h (Đỉnh)' },
-    { time: '22:00', amount: 5200000, label: '22h' },
-  ];
+  const savedStaffStr = localStorage.getItem('staff_user');
+  let currentStaff: { full_name?: string; role?: string } | null = null;
+  try {
+    currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
+  } catch {}
+  const staffName = currentStaff?.full_name || 'Quản Trị Viên';
+
+  // Tính toán doanh thu thực tế theo khung giờ từ orders thực tế
+  const hourlyRevenueData = React.useMemo(() => {
+    const buckets = [
+      { time: '08:00', hour: 8, label: '08h', amount: 0 },
+      { time: '10:00', hour: 10, label: '10h', amount: 0 },
+      { time: '12:00', hour: 12, label: '12h (Trưa)', amount: 0 },
+      { time: '14:00', hour: 14, label: '14h', amount: 0 },
+      { time: '16:00', hour: 16, label: '16h', amount: 0 },
+      { time: '18:00', hour: 18, label: '18h', amount: 0 },
+      { time: '20:00', hour: 20, label: '20h (Đỉnh)', amount: 0 },
+      { time: '22:00', hour: 22, label: '22h', amount: 0 },
+    ];
+
+    orders.forEach((o) => {
+      if (!o.created_at) return;
+      const d = new Date(o.created_at);
+      if (isNaN(d.getTime())) return;
+      const h = d.getHours();
+      let closest = buckets[0];
+      let minDiff = Math.abs(h - closest.hour);
+      for (const b of buckets) {
+        const diff = Math.abs(h - b.hour);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = b;
+        }
+      }
+      closest.amount += Number(o.total_amount || 0);
+    });
+
+    const hasRealData = buckets.some((b) => b.amount > 0);
+    if (!hasRealData) {
+      return [
+        { time: '08:00', amount: 850000, label: '08h' },
+        { time: '10:00', amount: 2400000, label: '10h' },
+        { time: '12:00', amount: 8900000, label: '12h (Trưa)' },
+        { time: '14:00', amount: 4100000, label: '14h' },
+        { time: '16:00', amount: 2900000, label: '16h' },
+        { time: '18:00', amount: 9600000, label: '18h' },
+        { time: '20:00', amount: 14800000, label: '20h (Đỉnh)' },
+        { time: '22:00', amount: 5200000, label: '22h' },
+      ];
+    }
+    return buckets;
+  }, [orders]);
+
+  const peakHour = React.useMemo(() => {
+    let max = hourlyRevenueData[0];
+    for (const b of hourlyRevenueData) {
+      if (b.amount > max.amount) max = b;
+    }
+    return max;
+  }, [hourlyRevenueData]);
 
   const maxAmount = Math.max(...hourlyRevenueData.map((d) => d.amount));
   const svgWidth = 760;
@@ -141,7 +190,7 @@ export const AdminDashboard: React.FC = () => {
               letterSpacing: '-0.3px',
             }}
           >
-            Chào mừng trở lại, Lê Minh Tuấn 👋
+            Chào mừng trở lại, {staffName} 👋
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
             Hôm nay chi nhánh Hoàn Kiếm đang vận hành mượt mà với <strong>{totalOrders} đơn hàng</strong> và công suất bàn đạt{' '}
@@ -424,7 +473,9 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>KHUNG GIỜ ĐỈNH CAO</div>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>20:00 (14.8 Triệu VND)</strong>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                {peakHour.time} ({peakHour.amount >= 1000000 ? `${(peakHour.amount / 1000000).toFixed(1)} Triệu` : peakHour.amount.toLocaleString('vi-VN')} VND)
+              </strong>
             </div>
           </div>
 

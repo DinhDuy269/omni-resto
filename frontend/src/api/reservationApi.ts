@@ -10,6 +10,25 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  const staffUserStr = localStorage.getItem('staff_user');
+  if (staffUserStr) {
+    try {
+      const staffUser = JSON.parse(staffUserStr);
+      if (staffUser?.role) {
+        config.headers['X-Staff-Role'] = String(staffUser.role).toUpperCase();
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  return config;
+});
+
 export interface OnlineReservationPayload {
   customerName: string;
   customerPhone: string;
