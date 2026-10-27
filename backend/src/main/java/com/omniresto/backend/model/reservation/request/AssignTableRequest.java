@@ -1,15 +1,15 @@
 package com.omniresto.backend.model.reservation.request;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
 public class AssignTableRequest {
 
-    @NotBlank(message = "Vui lòng chọn bàn cần gán")
-    @JsonAlias({"tableId", "table_id"})
-    private String tableId;
+    @NotEmpty(message = "Vui lòng chọn ít nhất một bàn")
+    private List<String> tableIds;
 }
