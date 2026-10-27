@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   UtensilsCrossed,
@@ -9,11 +9,8 @@ import {
   MapPin,
   Phone,
   Mail,
-  Send,
-  CheckCircle2,
   Sparkles,
 } from 'lucide-react';
-import { apiClient } from '../../shared/api/client';
 import './ClientFooter.css';
 
 const FOOTER_NAV_LINKS = [
@@ -25,29 +22,6 @@ const FOOTER_NAV_LINKS = [
 ];
 
 export const ClientFooter: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
-  const [subscribeMsg, setSubscribeMsg] = useState('');
-
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || submitting) return;
-    setSubmitting(true);
-    try {
-      const { data } = await apiClient.post<{ subscribed: boolean; message: string }>(
-        '/newsletter/subscribe',
-        { email }
-      );
-      setSubscribeMsg(data.message || 'Đăng ký thành công! Vui lòng kiểm tra hòm thư.');
-      setSubscribed(true);
-    } catch {
-      setSubscribeMsg('Đăng ký nhận ưu đãi thành công! Chào mừng quý khách.');
-      setSubscribed(true);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <footer className="client-footer-root" role="contentinfo" aria-label="Thông tin liên hệ và chân trang">
@@ -239,47 +213,43 @@ export const ClientFooter: React.FC = () => {
             </div>
           </div>
 
-          {/* Column 4: VIP Newsletter Subscription */}
+          {/* Column 4: Culinary Experience & Services */}
           <div className="footer-col-newsletter">
             <h4 className="footer-col-title">
               <span className="footer-col-title-accent" />
-              Đặc Quyền Hội Viên
+              Trải Nghiệm Đẳng Cấp
             </h4>
 
             <div className="footer-newsletter-card">
               <p className="footer-newsletter-desc">
-                Nhận thông báo thực đơn mùa mới từ Bếp trưởng và ưu đãi khai tiệc độc quyền 15% cho lần ghé thăm tiếp theo.
+                Trải nghiệm gọi món không chạm qua mã QR tại bàn, tư vấn món ngon cá nhân hóa cùng AI Sommelier và thanh toán VietQR tức thì.
               </p>
 
-              {subscribed ? (
-                <div className="footer-newsletter-success" role="status">
-                  <CheckCircle2 size={18} strokeWidth={2.4} />
-                  <span>{subscribeMsg}</span>
-                </div>
-              ) : (
-                <form onSubmit={handleSubscribe} className="footer-newsletter-form">
-                  <div className="footer-input-wrap">
-                    <input
-                      type="email"
-                      required
-                      placeholder="Nhập địa chỉ email của bạn..."
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="footer-newsletter-input"
-                      aria-label="Địa chỉ email nhận ưu đãi"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="footer-newsletter-btn"
-                    title="Đăng ký nhận ưu đãi"
-                  >
-                    <Send size={15} strokeWidth={2.2} />
-                    <span>{submitting ? 'Đang gửi...' : 'Đăng Ký Nhận Đặc Quyền'}</span>
-                  </button>
-                </form>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Link
+                  to="/client/menu"
+                  className="footer-newsletter-btn"
+                  style={{ textDecoration: 'none' }}
+                  title="Khám phá thực đơn"
+                >
+                  <Sparkles size={16} strokeWidth={2.2} />
+                  <span>Khám Phá Thực Đơn</span>
+                </Link>
+                <Link
+                  to="/client/reservation"
+                  className="footer-newsletter-btn"
+                  style={{
+                    textDecoration: 'none',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#f8fafc',
+                  }}
+                  title="Đặt bàn trước"
+                >
+                  <Clock size={16} strokeWidth={2.2} />
+                  <span>Đặt Bàn Trực Tuyến</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

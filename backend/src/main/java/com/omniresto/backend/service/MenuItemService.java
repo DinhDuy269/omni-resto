@@ -1,5 +1,7 @@
 package com.omniresto.backend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.omniresto.backend.config.OrderWebSocketHandler;
 import com.omniresto.backend.domain.CategoryEntity;
 import com.omniresto.backend.domain.MenuItemEntity;
 import com.omniresto.backend.domain.enums.MealPeriod;
@@ -23,6 +25,7 @@ import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -34,6 +37,8 @@ public class MenuItemService {
     private final MenuItemRepository menuItemRepository;
     private final CategoryRepository categoryRepository;
     private final CloudStorageService cloudStorageService;
+    private final OrderWebSocketHandler orderWebSocketHandler;
+    private final ObjectMapper objectMapper;
 
     public List<MenuItemResponse> getAllMenuItems(String period) {
         List<MenuItemEntity> items;
@@ -43,6 +48,7 @@ public class MenuItemService {
             items = menuItemRepository.findAll();
         }
         return items.stream()
+                .filter(item -> item.getStatus() != MenuStatus.discontinued)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -54,6 +60,27 @@ public class MenuItemService {
     private MenuItemEntity findMenuItemById(String id) {
         return menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy món ăn với ID: " + id));
+    }
+
+    private void broadcastMenuItemEvent(String eventType, MenuItemResponse response) {
+        try {
+            if (orderWebSocketHandler != null && response != null) {
+                Map<String, Object> message = Map.of(
+                        "eventType", eventType,
+                        "event_type", eventType,
+                        "menuItem", response,
+                        "menu_item", response,
+                        "itemId", response.getId() != null ? response.getId() : "",
+                        "item_id", response.getId() != null ? response.getId() : "",
+                        "status", response.getStatus() != null ? response.getStatus().name() : ""
+                );
+                String json = objectMapper.writeValueAsString(message);
+                orderWebSocketHandler.broadcast(json);
+                log.info("📢 Broadcasted WebSocket event '{}' for menu item {}", eventType, response.getId());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to broadcast WebSocket event for menu item: {}", e.getMessage());
+        }
     }
 
     @Transactional
@@ -96,7 +123,9 @@ public class MenuItemService {
         entity.setId("m-" + UUID.randomUUID().toString().substring(0, 8));
 
         MenuItemEntity saved = menuItemRepository.save(entity);
-        return mapToResponse(saved);
+        MenuItemResponse res = mapToResponse(saved);
+        broadcastMenuItemEvent("MENU_ITEM_CREATED", res);
+        return res;
     }
 
     @Transactional
@@ -158,7 +187,9 @@ public class MenuItemService {
         }
 
         MenuItemEntity updated = menuItemRepository.save(entity);
-        return mapToResponse(updated);
+        MenuItemResponse res = mapToResponse(updated);
+        broadcastMenuItemEvent("MENU_ITEM_UPDATED", res);
+        return res;
     }
 
     @Transactional
@@ -166,31 +197,19 @@ public class MenuItemService {
         MenuItemEntity entity = findMenuItemById(id);
         entity.setStatus(status);
         MenuItemEntity updated = menuItemRepository.save(entity);
-        return mapToResponse(updated);
+        MenuItemResponse res = mapToResponse(updated);
+        broadcastMenuItemEvent("MENU_ITEM_STATUS_CHANGED", res);
+        return res;
     }
 
     @Transactional
     public void deleteMenuItem(String id) {
         MenuItemEntity entity = findMenuItemById(id);
-        String imageUrl = entity.getImageUrl();
-        menuItemRepository.delete(entity);
-
-        // Chỉ xóa tài nguyên trên Cloudinary sau khi đã xóa thành công trong DB và không còn món nào khác dùng chung
-        if (imageUrl != null && !imageUrl.isBlank()) {
-            long remaining = menuItemRepository.countByImageUrl(imageUrl);
-            if (remaining == 0) {
-                String publicId = cloudStorageService.extractPublicId(imageUrl);
-                if (publicId != null) {
-                    try {
-                        cloudStorageService.deleteImage(publicId);
-                    } catch (Exception e) {
-                        log.warn("Không thể xóa ảnh món ăn trên Cloudinary: {}", e.getMessage());
-                    }
-                }
-            } else {
-                log.info("Giữ lại ảnh {} trên Cloudinary vì còn {} món khác cùng sử dụng.", imageUrl, remaining);
-            }
-        }
+        entity.setStatus(MenuStatus.discontinued);
+        MenuItemEntity updated = menuItemRepository.save(entity);
+        MenuItemResponse res = mapToResponse(updated);
+        broadcastMenuItemEvent("MENU_ITEM_DELETED", res);
+        log.info("Đã chuyển món ăn ID {} sang trạng thái ngừng kinh doanh (Soft Delete)", id);
     }
 
     public MealPeriodInfoResponse getCurrentMealPeriodInfo() {

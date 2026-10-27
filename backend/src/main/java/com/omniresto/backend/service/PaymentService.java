@@ -8,6 +8,7 @@ import com.omniresto.backend.domain.enums.PaymentMethod;
 import com.omniresto.backend.domain.enums.PaymentStatus;
 import com.omniresto.backend.domain.enums.PaymentTransactionStatus;
 import com.omniresto.backend.exception.BadRequestException;
+import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.model.order.response.OrderResponse;
 import com.omniresto.backend.model.payment.VnPayCallbackResponse;
 import com.omniresto.backend.model.payment.VnPayPaymentResponse;
@@ -167,8 +168,19 @@ public class PaymentService {
             ));
             return order;
         } else {
-            // Thanh toán đủ / dư: Chuyển đơn sang PREPARING (Bếp bắt đầu nấu)
-            updatedOrder = orderService.updateOrderStatus(orderId, OrderStatus.preparing);
+            // Thanh toán đủ / dư: Cập nhật paymentStatus = paid, paymentMethod = vietqr
+            OrderEntity orderEntity = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng: " + orderId));
+            orderEntity.setPaymentStatus(PaymentStatus.paid);
+            if (orderEntity.getPaymentMethod() == null) {
+                orderEntity.setPaymentMethod(PaymentMethod.qr_code);
+            }
+            if (orderEntity.getStatus() == OrderStatus.pending || orderEntity.getStatus() == OrderStatus.confirmed) {
+                orderEntity.setStatus(OrderStatus.preparing);
+            }
+            orderRepository.save(orderEntity);
+
+            updatedOrder = orderService.getOrderById(orderId);
             notifyPaymentEvent(orderId, "PAYMENT_SUCCESS", Map.of(
                     "orderId", orderId,
                     "amount", actualAmount,
@@ -185,10 +197,7 @@ public class PaymentService {
         OrderResponse order = orderService.getOrderById(orderId);
         List<PaymentTransactionEntity> txList = paymentTransactionRepository.findByOrderId(orderId);
 
-        boolean isPaid = order.getPaymentStatus() == PaymentStatus.paid
-                || order.getStatus() == OrderStatus.preparing
-                || order.getStatus() == OrderStatus.ready
-                || order.getStatus() == OrderStatus.completed;
+        boolean isPaid = order.getPaymentStatus() == PaymentStatus.paid;
 
         BigDecimal totalPaid = txList.stream()
                 .filter(t -> t.getStatus() == PaymentTransactionStatus.success || t.getStatus() == PaymentTransactionStatus.overpaid)

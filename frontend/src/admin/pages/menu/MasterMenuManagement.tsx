@@ -29,7 +29,12 @@ const CATEGORIES: MenuCategory[] = [
   'Cơm Tấm & Món Mặn',
   'Bánh Mì & Điểm Tâm',
   'Lẩu & Món Nhắm',
-  'Đồ Uống & Tráng Miệng',
+  'Khai Vị & Gỏi Cuốn',
+  'Đồ Uống & Cà Phê',
+  'Tráng Miệng & Chè',
+  'Món Chay Thanh Tịnh',
+  'Hải Sản Tươi Sống',
+  'Combo Tiết Kiệm',
 ];
 
 const MEAL_PERIOD_OPTIONS = [
@@ -99,7 +104,7 @@ export const MasterMenuManagement: React.FC = () => {
   const [editingOption, setEditingOption] = useState<CategoryOption | null>(null);
 
   const [optionFormData, setOptionFormData] = useState({
-    category_id: 'cat-pho',
+    category_id: 'cat-01',
     name: '',
     option_type: 'TOPPING' as 'SIZE' | 'TOPPING',
     price: 10000,

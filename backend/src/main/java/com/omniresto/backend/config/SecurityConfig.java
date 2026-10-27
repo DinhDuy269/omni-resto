@@ -120,7 +120,7 @@ public class SecurityConfig {
 
                 // 6. Reservations: Khách đặt bàn online & tra cứu là public; toàn bộ quản trị (danh sách PII, xếp bàn, check-in, hủy) yêu cầu Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/tables/reservations/online", "/api/reservations/online").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tables/reservations/track/**", "/api/reservations/track/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tables/reservations/track/**", "/api/reservations/track/**", "/api/tables/reservations/check-phone", "/api/reservations/check-phone").permitAll()
                 .requestMatchers(reservationApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
                 // 7. Table Sessions: Các thao tác thu ngân / nhân viên (verify, confirm-payment, close) yêu cầu Admin/Staff
@@ -155,8 +155,6 @@ public class SecurityConfig {
                 // 12. Public & Customer Endpoints
                 .requestMatchers(paymentApiPatterns()).permitAll()
                 .requestMatchers(aiApiPatterns()).permitAll()
-                .requestMatchers(eventApiPatterns()).permitAll()
-                .requestMatchers(newsletterApiPatterns()).permitAll()
                 .requestMatchers(customerAuthApiPatterns()).permitAll()
 
                 // Infrastructure / Static / Docs
@@ -276,29 +274,12 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region event (EventController)
-    private static RequestMatcher[] eventApiPatterns() {
-        return new RequestMatcher[] {
-                new AntPathRequestMatcher("/api/events"),
-                new AntPathRequestMatcher("/api/events/**")
-        };
-    }
-    // endregion
-
-    // region newsletter (NewsletterController)
-    private static RequestMatcher[] newsletterApiPatterns() {
-        return new RequestMatcher[] {
-                new AntPathRequestMatcher("/api/newsletter"),
-                new AntPathRequestMatcher("/api/newsletter/**")
-        };
-    }
-    // endregion
 
     // region websocket
     private static RequestMatcher[] websocketPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/ws/**"),
-                new AntPathRequestMatcher("/ws-raw/**")
+                        new AntPathRequestMatcher("/ws-raw/**")
         };
     }
     // endregion

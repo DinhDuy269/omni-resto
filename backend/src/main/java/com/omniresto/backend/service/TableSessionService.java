@@ -240,13 +240,11 @@ public class TableSessionService {
         }
 
         // Kiểm tra hóa đơn mở
-        Optional<OrderEntity> activeOrderOpt = orderRepository
-                .findFirstByTableSessionIdAndStatusInOrderByCreatedAtDesc(
-                        session.getId(),
-                        List.of(OrderStatus.pending, OrderStatus.confirmed, OrderStatus.preparing, OrderStatus.ready, OrderStatus.completed)
-                );
+        List<OrderEntity> sessionOrders = orderRepository.findByTableSessionIdOrderByCreatedAtDesc(session.getId());
+        boolean hasUnpaidBill = sessionOrders.stream()
+                .anyMatch(o -> o.getStatus() != OrderStatus.cancelled && (o.getPaymentStatus() != PaymentStatus.paid || o.getStatus() != OrderStatus.completed));
 
-        if (activeOrderOpt.isEmpty() || activeOrderOpt.get().getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (sessionOrders.isEmpty() || !hasUnpaidBill) {
             throw new BadRequestException("Bàn hiện chưa có món nào cần thanh toán!");
         }
 
@@ -287,32 +285,53 @@ public class TableSessionService {
             throw new BadRequestException("Phiên bàn này đã được đóng và thanh toán trước đó.");
         }
 
-        Optional<OrderEntity> activeOrderOpt = orderRepository
-                .findFirstByTableSessionIdAndStatusInOrderByCreatedAtDesc(
-                        session.getId(),
-                        List.of(OrderStatus.pending, OrderStatus.confirmed, OrderStatus.preparing, OrderStatus.ready, OrderStatus.completed)
-                );
+        List<OrderEntity> sessionOrders = orderRepository.findByTableSessionIdOrderByCreatedAtDesc(session.getId());
+        List<OrderEntity> openOrders = sessionOrders.stream()
+                .filter(o -> o.getStatus() != OrderStatus.cancelled && o.getStatus() != OrderStatus.completed)
+                .toList();
 
-        if (activeOrderOpt.isPresent()) {
-            OrderEntity order = activeOrderOpt.get();
-            BigDecimal expected = order.getTotalAmount();
-            BigDecimal received = (amountReceived != null && amountReceived.compareTo(BigDecimal.ZERO) > 0) ? amountReceived : expected;
+        // Nếu không có đơn chưa completed, lấy các đơn completed nhưng chưa paid
+        if (openOrders.isEmpty()) {
+            openOrders = sessionOrders.stream()
+                    .filter(o -> o.getStatus() != OrderStatus.cancelled && o.getPaymentStatus() != PaymentStatus.paid)
+                    .toList();
+        }
 
+        BigDecimal totalExpected = BigDecimal.ZERO;
+        for (OrderEntity order : openOrders) {
+            if (order.getTotalAmount() != null) {
+                totalExpected = totalExpected.add(order.getTotalAmount());
+            }
+            order.setPaymentStatus(PaymentStatus.paid);
+            order.setStatus(OrderStatus.completed);
+            if (method != null) {
+                order.setPaymentMethod(method);
+            }
+            // Đảm bảo các món trong đơn được chuyển thành SERVED nếu chưa hủy
+            List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(order.getId());
+            for (OrderItemEntity it : items) {
+                if (it.getStatus() != OrderItemStatus.cancelled && it.getStatus() != OrderItemStatus.served) {
+                    it.setStatus(OrderItemStatus.served);
+                    it.setConfirmedAt(LocalDateTime.now());
+                    orderItemRepository.save(it);
+                }
+            }
+            orderRepository.save(order);
+        }
+
+        if (!openOrders.isEmpty()) {
+            BigDecimal received = (amountReceived != null && amountReceived.compareTo(BigDecimal.ZERO) > 0) ? amountReceived : totalExpected;
             PaymentTransactionEntity tx = PaymentTransactionEntity.builder()
-                    .orderId(order.getId())
+                    .orderId(openOrders.get(0).getId())
                     .transactionReference("TXN-" + System.currentTimeMillis())
-                    .amountExpected(expected)
+                    .amountExpected(totalExpected)
                     .amountReceived(received)
                     .paymentGateway(method != null ? method.name() : "CASH")
                     .status(PaymentTransactionStatus.success)
-                    .rawPayload("Staff confirmed: " + (staffId != null ? staffId : "POS"))
+                    .rawPayload("Staff confirmed: " + (staffId != null ? staffId : "POS") + " for session " + session.getId() + " (" + openOrders.size() + " orders settled)")
                     .build();
             tx.setId("tx-" + UUID.randomUUID().toString().substring(0, 8));
             paymentTransactionRepository.save(tx);
-
-            order.setPaymentStatus(PaymentStatus.paid);
-            order.setStatus(OrderStatus.completed);
-            orderRepository.save(order);
         }
 
         LocalDateTime now = LocalDateTime.now();

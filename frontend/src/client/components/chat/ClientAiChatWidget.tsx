@@ -82,8 +82,6 @@ export const ClientAiChatWidget: React.FC = () => {
 
   // Xác định xem bot đã bắt đầu stream nội dung chưa
   const lastMessage = messages[messages.length - 1];
-  const isStreamingWithContent =
-    isLoading && lastMessage && lastMessage.sender === 'bot' && lastMessage.text.length > 0;
   const isWaitingInitialResponse =
     isLoading && (!lastMessage || lastMessage.sender === 'user' || lastMessage.text.length === 0);
 

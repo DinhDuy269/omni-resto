@@ -54,4 +54,18 @@ public class OrderItemEntity extends BaseEntity {
 
     @Column(name = "confirmed_at")
     private LocalDateTime confirmedAt;
+
+    @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @org.hibernate.annotations.BatchSize(size = 50)
+    @Builder.Default
+    private java.util.List<OrderItemOptionEntity> options = new java.util.ArrayList<>();
+
+    public void addOption(OrderItemOptionEntity option) {
+        if (this.options == null) {
+            this.options = new java.util.ArrayList<>();
+        }
+        this.options.add(option);
+        option.setOrderItem(this);
+    }
 }
+

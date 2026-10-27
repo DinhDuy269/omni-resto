@@ -32,6 +32,26 @@ export const transformMenuItem = (raw: any): MenuItem => ({
   allergens: raw.allergens,
 });
 
+export const CATEGORY_MAP: Record<string, string> = {
+  'Phở & Bún Nước': 'cat-01',
+  'Cơm Tấm & Món Mặn': 'cat-02',
+  'Bánh Mì & Điểm Tâm': 'cat-03',
+  'Lẩu & Món Nhắm': 'cat-04',
+  'Khai Vị & Gỏi Cuốn': 'cat-05',
+  'Đồ Uống & Cà Phê': 'cat-06',
+  'Đồ Uống & Tráng Miệng': 'cat-06',
+  'Tráng Miệng & Chè': 'cat-07',
+  'Món Chay Thanh Tịnh': 'cat-08',
+  'Hải Sản Tươi Sống': 'cat-09',
+  'Combo Tiết Kiệm': 'cat-10',
+};
+
+export const resolveCategoryId = (categoryId?: string, categoryName?: string): string => {
+  if (categoryId && categoryId.startsWith('cat-')) return categoryId;
+  if (categoryName && CATEGORY_MAP[categoryName]) return CATEGORY_MAP[categoryName];
+  return categoryId || 'cat-01';
+};
+
 export const menuApi = {
   getMenuItems: async (period?: string): Promise<MenuItem[]> => {
     try {
@@ -65,10 +85,11 @@ export const menuApi = {
 
   createMenuItem: async (request: Partial<MenuItem>): Promise<MenuItem> => {
     try {
+      const catId = resolveCategoryId(request.category_id, request.category);
       const payload = {
         code: request.code,
         name: request.name,
-        category_id: request.category_id || 'cat-01',
+        category_id: catId,
         category_name: request.category,
         base_price: request.base_price,
         meal_periods: request.meal_periods || 'ALL_DAY',
@@ -88,9 +109,10 @@ export const menuApi = {
 
   updateMenuItem: async (id: string, request: Partial<MenuItem>): Promise<MenuItem> => {
     try {
+      const catId = resolveCategoryId(request.category_id, request.category);
       const payload = {
         name: request.name,
-        category_id: request.category_id || 'cat-01',
+        category_id: catId,
         category_name: request.category,
         base_price: request.base_price,
         meal_periods: request.meal_periods || 'ALL_DAY',

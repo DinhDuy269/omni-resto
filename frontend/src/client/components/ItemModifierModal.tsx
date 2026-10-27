@@ -79,36 +79,48 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
   // Tính toán sizes & toppings động dựa trên item.options hoặc danh mục kiểu món
   const categoryConfig = item ? DEFAULT_CATEGORY_OPTIONS[item.category] || Object.values(DEFAULT_CATEGORY_OPTIONS)[0] : null;
 
-  const sizes = React.useMemo(() => {
+  interface SizeOption {
+    id?: string;
+    name: string;
+    extraPrice: number;
+  }
+
+  interface ToppingOption {
+    id?: string;
+    name: string;
+    price: number;
+  }
+
+  const sizes: SizeOption[] = React.useMemo(() => {
     if (!item) return [];
     if (item.options && item.options.length > 0) {
-      const sizeOpts = item.options.filter((o) => o.option_type === 'SIZE');
+      const sizeOpts = item.options.filter((o) => (o.option_type || '').toUpperCase() === 'SIZE');
       if (sizeOpts.length > 0) {
-        const mapped = sizeOpts.map((o) => ({ name: o.name, extraPrice: Number(o.price) || 0 }));
+        const mapped: SizeOption[] = sizeOpts.map((o) => ({ id: o.id, name: o.name, extraPrice: Number(o.price) || 0 }));
         const hasBaseSize = mapped.some((s) => s.extraPrice === 0);
-        return hasBaseSize ? mapped : [{ name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 }, ...mapped];
+        return hasBaseSize ? mapped : [{ id: undefined, name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 }, ...mapped];
       }
     }
-    return categoryConfig?.sizes || [{ name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 }];
+    return (categoryConfig?.sizes || [{ name: 'Khẩu phần Chuẩn (Vừa)', extraPrice: 0 }]).map((s) => ({ ...s, id: undefined }));
   }, [item?.id, item?.options, item?.category]);
 
-  const availableToppings = React.useMemo(() => {
+  const availableToppings: ToppingOption[] = React.useMemo(() => {
     if (!item) return [];
     if (item.options && item.options.length > 0) {
-      const topOpts = item.options.filter((o) => o.option_type === 'TOPPING');
+      const topOpts = item.options.filter((o) => (o.option_type || '').toUpperCase() === 'TOPPING');
       if (topOpts.length > 0) {
-        return topOpts.map((o) => ({ name: o.name, price: Number(o.price) || 0 }));
+        return topOpts.map((o) => ({ id: o.id, name: o.name, price: Number(o.price) || 0 }));
       }
     }
-    return categoryConfig?.toppings || [];
+    return (categoryConfig?.toppings || []).map((t) => ({ ...t, id: undefined }));
   }, [item?.id, item?.options, item?.category]);
 
-  const [selectedSize, setSelectedSize] = useState<{ name: string; extraPrice: number }>({
+  const [selectedSize, setSelectedSize] = useState<SizeOption>({
     name: sizes[0]?.name || 'Khẩu phần Chuẩn',
     extraPrice: sizes[0]?.extraPrice || 0,
   });
 
-  const [selectedToppings, setSelectedToppings] = useState<Array<{ name: string; price: number }>>([]);
+  const [selectedToppings, setSelectedToppings] = useState<ToppingOption[]>([]);
   const [specialNote, setSpecialNote] = useState('');
   const [quantity, setQuantity] = useState(1);
 
@@ -126,9 +138,9 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
 
   if (!item) return null;
 
-  const toggleTopping = (topping: { name: string; price: number }) => {
-    if (selectedToppings.some((t) => t.name === topping.name)) {
-      setSelectedToppings(selectedToppings.filter((t) => t.name !== topping.name));
+  const toggleTopping = (topping: ToppingOption) => {
+    if (selectedToppings.some((t) => (t.id && topping.id ? t.id === topping.id : t.name === topping.name))) {
+      setSelectedToppings(selectedToppings.filter((t) => (t.id && topping.id ? t.id !== topping.id : t.name !== topping.name)));
     } else {
       setSelectedToppings([...selectedToppings, topping]);
     }
@@ -139,20 +151,46 @@ export const ItemModifierModal: React.FC<ItemModifierModalProps> = ({ item, onCl
   const totalPrice = unitPrice * quantity;
 
   const handleConfirmAdd = () => {
-    const noteSuffix = specialNote.trim() ? ` [Ghi chú: ${specialNote.trim()}]` : '';
-    const customizedName = `${item.name} (${selectedSize.name}${
-      selectedToppings.length > 0 ? ' + ' + selectedToppings.map((t) => t.name).join(', ') : ''
-    })${noteSuffix}`;
+    const chosenOptions: import('../../shared/types/client').CartItemOption[] = [];
+    const chosenOptionIds: string[] = [];
 
-    const uniqueCartKey = `${item.id}-${selectedSize.name}-${selectedToppings.map((t) => t.name).join('-')}`;
+    if (selectedSize && selectedSize.id) {
+      chosenOptionIds.push(selectedSize.id);
+      chosenOptions.push({
+        id: selectedSize.id,
+        option_id: selectedSize.id,
+        option_name: selectedSize.name,
+        option_type: 'SIZE',
+        price: selectedSize.extraPrice,
+      });
+    }
+
+    selectedToppings.forEach((t) => {
+      if (t.id) {
+        chosenOptionIds.push(t.id);
+      }
+      chosenOptions.push({
+        id: t.id,
+        option_id: t.id,
+        option_name: t.name,
+        option_type: 'TOPPING',
+        price: t.price,
+      });
+    });
+
+    const uniqueCartKey = `${item.id}-${chosenOptions.map((o) => o.option_name || o.id).join('-')}${specialNote.trim() ? '-' + specialNote.trim() : ''}`;
+
     addToCart(
       {
         id: uniqueCartKey,
         menu_item_id: item.id,
-        name: customizedName,
+        name: item.name,
         category: item.category,
         price: unitPrice,
         image: item.image,
+        notes: specialNote.trim() || undefined,
+        option_ids: chosenOptionIds,
+        options: chosenOptions,
       },
       quantity
     );

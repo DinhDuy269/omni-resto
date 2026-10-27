@@ -98,14 +98,21 @@ public class ReservationController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) OperatingShift shift,
+            @RequestParam(required = false) String shift,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
+        OperatingShift operatingShift = null;
+        if (shift != null && !shift.isBlank() && !"ALL".equalsIgnoreCase(shift)) {
+            try {
+                operatingShift = OperatingShift.valueOf(shift.toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
         Page<ReservationResponse> pageData = reservationService.getReservationsPaged(
                 status,
                 search,
                 date,
-                shift,
+                operatingShift,
                 pageable
         );
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách đặt bàn thành công", pageData));

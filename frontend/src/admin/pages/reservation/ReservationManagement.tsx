@@ -22,60 +22,60 @@ import './ReservationManagement.css';
 
 interface TableItem {
   id: string;
-  tableNo: string;
+  table_no: string;
   capacity: number;
   status: string;
 }
 
 interface ReservationItem {
   id: string;
-  reservationCode: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string | null;
-  partySize: number;
-  reservationTime: string;
+  reservation_code: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string | null;
+  party_size: number;
+  reservation_time: string;
   status: string;
-  tableId?: string | null;
-  tableNo?: string | null;
-  tableCapacity?: number | null;
-  specialNotes?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
+  table_id?: string | null;
+  table_no?: string | null;
+  table_capacity?: number | null;
+  special_notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
   shift?: string;
-  shiftName?: string;
+  shift_name?: string;
 }
 
 interface AssignModalState {
-  isOpen: boolean;
+  is_open: boolean;
   reservation: ReservationItem | null;
-  selectedTableIds: string[];
+  selected_table_ids: string[];
 }
 
 interface OfflineFormState {
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  partySize: number;
-  reservationDate: string;
-  reservationTime: string;
-  tableIds: string[];
-  specialNotes: string;
-  seatedImmediately: boolean;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  party_size: number;
+  reservation_date: string;
+  reservation_time: string;
+  table_ids: string[];
+  special_notes: string;
+  seated_immediately: boolean;
 }
 
 interface ShiftConfig {
   id: string;
   label: string;
-  timeRange: string;
+  time_range: string;
 }
 
 // Chỉ giữ lại Tất Cả, Ca Sáng, Ca Trưa và Ca Tối
 const OPERATING_SHIFTS: ShiftConfig[] = [
-  { id: 'ALL', label: 'Tất Cả Ca', timeRange: 'Toàn bộ' },
-  { id: 'MORNING', label: 'Ca Sáng', timeRange: '06:00 - 10:30' },
-  { id: 'NOON', label: 'Ca Trưa', timeRange: '10:30 - 14:30' },
-  { id: 'EVENING', label: 'Ca Tối', timeRange: '16:30 - 22:00' },
+  { id: 'ALL', label: 'Tất Cả Ca', time_range: 'Toàn bộ' },
+  { id: 'MORNING', label: 'Ca Sáng', time_range: '06:00 - 10:30' },
+  { id: 'NOON', label: 'Ca Trưa', time_range: '10:30 - 14:30' },
+  { id: 'EVENING', label: 'Ca Tối', time_range: '16:30 - 22:00' },
 ];
 
 function getShiftFromReservationTime(dateTimeStr: string): string {
@@ -162,22 +162,22 @@ export default function ReservationManagement(): React.ReactElement {
   const [toastAlert, setToastAlert] = useState<ReservationItem | null>(null);
 
   const [assignModal, setAssignModal] = useState<AssignModalState>({
-    isOpen: false,
+    is_open: false,
     reservation: null,
-    selectedTableIds: [],
+    selected_table_ids: [],
   });
 
   const [offlineModal, setOfflineModal] = useState<boolean>(false);
   const [offlineForm, setOfflineForm] = useState<OfflineFormState>({
-    customerName: '',
-    customerPhone: '',
-    customerEmail: '',
-    partySize: 15,
-    reservationDate: new Date().toISOString().split('T')[0],
-    reservationTime: '19:00',
-    tableIds: [],
-    specialNotes: '',
-    seatedImmediately: false,
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    party_size: 15,
+    reservation_date: new Date().toISOString().split('T')[0],
+    reservation_time: '19:00',
+    table_ids: [],
+    special_notes: '',
+    seated_immediately: false,
   });
 
   const notifyClientTabs = useCallback(() => {
@@ -215,7 +215,7 @@ export default function ReservationManagement(): React.ReactElement {
 
     reservationApi.getTables().then((t) => setTables(t.data || []));
 
-    speakReservationAlert(incoming.customerName, incoming.partySize, incoming.specialNotes);
+    speakReservationAlert(incoming.customer_name, incoming.party_size, incoming.special_notes);
 
     setToastAlert(incoming);
     setTimeout(() => {
@@ -285,9 +285,9 @@ export default function ReservationManagement(): React.ReactElement {
     if (isAvail) {
       setOfflineForm((prev) => ({
         ...prev,
-        tableIds: [table.id],
-        partySize: table.capacity,
-        seatedImmediately: false,
+        table_ids: [table.id],
+        party_size: table.capacity,
+        seated_immediately: false,
       }));
       setOfflineModal(true);
     }
@@ -296,31 +296,31 @@ export default function ReservationManagement(): React.ReactElement {
   const toggleAssignTableId = (tblId: string) => {
     setAssignModal((prev) => ({
       ...prev,
-      selectedTableIds: prev.selectedTableIds.includes(tblId)
-        ? prev.selectedTableIds.filter((id) => id !== tblId)
-        : [...prev.selectedTableIds, tblId],
+      selected_table_ids: prev.selected_table_ids.includes(tblId)
+        ? prev.selected_table_ids.filter((id) => id !== tblId)
+        : [...prev.selected_table_ids, tblId],
     }));
   };
 
   const toggleOfflineTableId = (tblId: string) => {
     setOfflineForm((prev) => ({
       ...prev,
-      tableIds: prev.tableIds.includes(tblId)
-        ? prev.tableIds.filter((id) => id !== tblId)
-        : [...prev.tableIds, tblId],
+      table_ids: prev.table_ids.includes(tblId)
+        ? prev.table_ids.filter((id) => id !== tblId)
+        : [...prev.table_ids, tblId],
     }));
   };
 
   const handleAssignTable = async () => {
-    if (!assignModal.reservation || assignModal.selectedTableIds.length === 0) {
+    if (!assignModal.reservation || assignModal.selected_table_ids.length === 0) {
       alert('Vui lòng chọn ít nhất một bàn để ghép/gán!');
       return;
     }
     try {
-      await reservationApi.assignTable(assignModal.reservation.id, assignModal.selectedTableIds);
-      alert(`Đã xếp thành công ${assignModal.selectedTableIds.length} bàn cho khách!`);
+      await reservationApi.assignTable(assignModal.reservation.id, assignModal.selected_table_ids);
+      alert(`Đã xếp thành công ${assignModal.selected_table_ids.length} bàn cho khách!`);
       notifyClientTabs();
-      setAssignModal({ isOpen: false, reservation: null, selectedTableIds: [] });
+      setAssignModal({ is_open: false, reservation: null, selected_table_ids: [] });
       setLoading(true);
       loadData();
     } catch (err: unknown) {
@@ -360,8 +360,8 @@ export default function ReservationManagement(): React.ReactElement {
     try {
       const payload = {
         ...offlineForm,
-        partySize: Number(offlineForm.partySize),
-        reservationTime: `${offlineForm.reservationDate}T${offlineForm.reservationTime}:00`,
+        party_size: Number(offlineForm.party_size),
+        reservation_time: `${offlineForm.reservation_date}T${offlineForm.reservation_time}:00`,
       };
       await reservationApi.createOffline(payload);
       alert('Tạo đơn đặt bàn hotline / offline thành công!');
@@ -382,11 +382,11 @@ export default function ReservationManagement(): React.ReactElement {
   const filteredReservations = useMemo(() => {
     return reservations.filter((r) => {
       const matchesSearch =
-        r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.customerPhone.includes(searchTerm) ||
-        r.reservationCode.toLowerCase().includes(searchTerm.toLowerCase());
+        r.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.customer_phone.includes(searchTerm) ||
+        r.reservation_code.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const itemShift = r.shift || getShiftFromReservationTime(r.reservationTime);
+      const itemShift = r.shift || getShiftFromReservationTime(r.reservation_time);
       const matchesShift = selectedShift === 'ALL' || itemShift === selectedShift;
 
       return matchesSearch && matchesShift;
@@ -403,11 +403,11 @@ export default function ReservationManagement(): React.ReactElement {
   }, [filteredReservations, startIndex, endIndex]);
 
   const assignTotalCapacity = tables
-    .filter((t) => assignModal.selectedTableIds.includes(t.id))
+    .filter((t) => assignModal.selected_table_ids.includes(t.id))
     .reduce((sum, t) => sum + (t.capacity || 0), 0);
 
   const offlineTotalCapacity = tables
-    .filter((t) => offlineForm.tableIds.includes(t.id))
+    .filter((t) => offlineForm.table_ids.includes(t.id))
     .reduce((sum, t) => sum + (t.capacity || 0), 0);
 
   return (
@@ -421,17 +421,17 @@ export default function ReservationManagement(): React.ReactElement {
 
           <div className="adm-toast-body">
             <div className="adm-toast-badge">
-              ĐƠN ĐẶT BÀN MỚI • {toastAlert.reservationCode}
+              ĐƠN ĐẶT BÀN MỚI • {toastAlert.reservation_code}
             </div>
             <div className="adm-toast-name">
-              {toastAlert.customerName} ({toastAlert.partySize} khách)
+              {toastAlert.customer_name} ({toastAlert.party_size} khách)
             </div>
             <div className="adm-toast-time">
-              Giờ hẹn: {new Date(toastAlert.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              Giờ hẹn: {new Date(toastAlert.reservation_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
             </div>
-            {toastAlert.specialNotes && (
+            {toastAlert.special_notes && (
               <div className="adm-toast-note">
-                {toastAlert.specialNotes}
+                {toastAlert.special_notes}
               </div>
             )}
           </div>
@@ -493,15 +493,15 @@ export default function ReservationManagement(): React.ReactElement {
             type="button"
             onClick={() => {
               setOfflineForm({
-                customerName: '',
-                customerPhone: '',
-                customerEmail: '',
-                partySize: 15,
-                reservationDate: new Date().toISOString().split('T')[0],
-                reservationTime: '19:00',
-                tableIds: [],
-                specialNotes: '',
-                seatedImmediately: false,
+                customer_name: '',
+                customer_phone: '',
+                customer_email: '',
+                party_size: 15,
+                reservation_date: new Date().toISOString().split('T')[0],
+                reservation_time: '19:00',
+                table_ids: [],
+                special_notes: '',
+                seated_immediately: false,
               });
               setOfflineModal(true);
             }}
@@ -551,12 +551,12 @@ export default function ReservationManagement(): React.ReactElement {
 
               const reservedOrder = reservations.find((r) => {
                 if (r.status !== 'CONFIRMED' && r.status !== 'SEATED') return false;
-                if (r.tableId === t.id) return true;
-                if (r.specialNotes && r.specialNotes.includes(t.id)) return true;
+                if (r.table_id === t.id) return true;
+                if (r.special_notes && r.special_notes.includes(t.id)) return true;
                 return false;
               });
 
-              const isMerged = reservedOrder && reservedOrder.tableNo && reservedOrder.tableNo.includes('+');
+              const isMerged = reservedOrder && reservedOrder.table_no && reservedOrder.table_no.includes('+');
 
               return (
                 <div
@@ -571,7 +571,7 @@ export default function ReservationManagement(): React.ReactElement {
                   )}
 
                   <div className="floor-table-top">
-                    <span className="floor-table-no">Bàn {t.tableNo}</span>
+                    <span className="floor-table-no">Bàn {t.table_no}</span>
                     <span className="floor-table-cap">{t.capacity} chỗ</span>
                   </div>
 
@@ -588,10 +588,10 @@ export default function ReservationManagement(): React.ReactElement {
                   {reservedOrder && (
                     <div className="floor-guest-info">
                       <div className="guest-name">
-                        <User size={13} /> {reservedOrder.customerName}
+                        <User size={13} /> {reservedOrder.customer_name}
                       </div>
                       <div className="guest-time">
-                        <Clock size={12} /> {new Date(reservedOrder.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({reservedOrder.partySize}k)
+                        <Clock size={12} /> {new Date(reservedOrder.reservation_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({reservedOrder.party_size}k)
                       </div>
 
                       {reservedOrder.status === 'CONFIRMED' && (
@@ -631,7 +631,7 @@ export default function ReservationManagement(): React.ReactElement {
               {OPERATING_SHIFTS.map((shift) => {
                 const isActive = selectedShift === shift.id;
                 const count = reservations.filter((r) => {
-                  const s = r.shift || getShiftFromReservationTime(r.reservationTime);
+                  const s = r.shift || getShiftFromReservationTime(r.reservation_time);
                   return shift.id === 'ALL' || s === shift.id;
                 }).length;
 
@@ -646,7 +646,7 @@ export default function ReservationManagement(): React.ReactElement {
                     className={`shift-chip-btn ${isActive ? 'active' : ''}`}
                   >
                     <span>{shift.label}</span>
-                    <span className="shift-chip-time">({shift.timeRange})</span>
+                    <span className="shift-chip-time">({shift.time_range})</span>
                     <span className="shift-chip-count">{count}</span>
                   </button>
                 );
@@ -714,21 +714,21 @@ export default function ReservationManagement(): React.ReactElement {
                   </tr>
                 ) : (
                   paginatedReservations.map((r) => {
-                    const isMulti = r.tableNo && r.tableNo.includes('+');
-                    const shiftKey = (r.shift || getShiftFromReservationTime(r.reservationTime)).toLowerCase();
+                    const isMulti = r.table_no && r.table_no.includes('+');
+                    const shiftKey = (r.shift || getShiftFromReservationTime(r.reservation_time)).toLowerCase();
                     const shiftConfig = OPERATING_SHIFTS.find((s) => s.id.toLowerCase() === shiftKey);
 
                     return (
                       <tr key={r.id}>
-                        <td className="code-font">{r.reservationCode}</td>
+                        <td className="code-font">{r.reservation_code}</td>
                         <td>
-                          <div style={{ fontWeight: 700, color: '#111827' }}>{r.customerName}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{r.customerPhone}</div>
+                          <div style={{ fontWeight: 700, color: '#111827' }}>{r.customer_name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{r.customer_phone}</div>
                         </td>
                         <td>
-                          <div>{new Date(r.reservationTime).toLocaleDateString('vi-VN')}</div>
+                          <div>{new Date(r.reservation_time).toLocaleDateString('vi-VN')}</div>
                           <div style={{ fontSize: '0.8rem', color: '#111827', fontWeight: 700 }}>
-                            {new Date(r.reservationTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(r.reservation_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                           {shiftConfig && shiftConfig.id !== 'ALL' && (
                             <span className={`badge-shift badge-shift-${shiftKey}`}>
@@ -737,12 +737,12 @@ export default function ReservationManagement(): React.ReactElement {
                           )}
                         </td>
                         <td className="text-center" style={{ fontWeight: 700 }}>
-                          {r.partySize} {r.partySize > 10 && <span title="Đoàn đông ghép bàn" style={{ color: '#d97706' }}>★</span>}
+                          {r.party_size} {r.party_size > 10 && <span title="Đoàn đông ghép bàn" style={{ color: '#d97706' }}>★</span>}
                         </td>
                         <td>
-                          {r.tableNo ? (
+                          {r.table_no ? (
                             <span className={isMulti ? "badge-assigned-table is-merged" : "badge-assigned-table"}>
-                              <Armchair size={13} /> {isMulti ? `Ghép: ${r.tableNo}` : `Bàn ${r.tableNo}`}
+                              <Armchair size={13} /> {isMulti ? `Ghép: ${r.table_no}` : `Bàn ${r.table_no}`}
                             </span>
                           ) : (
                             <span className="badge-unassigned">Chưa gán</span>
@@ -759,9 +759,9 @@ export default function ReservationManagement(): React.ReactElement {
                             <button
                               type="button"
                               onClick={() => setAssignModal({
-                                isOpen: true,
+                                is_open: true,
                                 reservation: r,
-                                selectedTableIds: r.tableId ? [r.tableId] : []
+                                selected_table_ids: r.table_id ? [r.table_id] : []
                               })}
                               className="btn-sm btn-assign"
                             >
@@ -884,25 +884,25 @@ export default function ReservationManagement(): React.ReactElement {
       )}
 
       {/* ── MODAL 1: XẾP / GHÉP NHIỀU BÀN CHO ĐƠN PENDING ── */}
-      {assignModal.isOpen && assignModal.reservation && (
+      {assignModal.is_open && assignModal.reservation && (
         <div className="adm-modal-backdrop">
           <div className="adm-modal-box modal-width-lg">
             <h3 className="modal-headline">
-              Xếp & Ghép Bàn Cho Phiếu: {assignModal.reservation.reservationCode}
+              Xếp & Ghép Bàn Cho Phiếu: {assignModal.reservation.reservation_code}
             </h3>
             <p className="modal-subtext">
-              Khách hàng: <strong>{assignModal.reservation.customerName}</strong> • Quy mô đoàn: <strong>{assignModal.reservation.partySize} người</strong>
+              Khách hàng: <strong>{assignModal.reservation.customer_name}</strong> • Quy mô đoàn: <strong>{assignModal.reservation.party_size} người</strong>
             </p>
 
-            <div className={`capacity-summary-bar ${assignTotalCapacity >= assignModal.reservation.partySize ? 'is-sufficient' : 'is-insufficient'}`}>
+            <div className={`capacity-summary-bar ${assignTotalCapacity >= assignModal.reservation.party_size ? 'is-sufficient' : 'is-insufficient'}`}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Users size={18} />
                 <span>
-                  Đã chọn: <strong>{assignModal.selectedTableIds.length} bàn</strong> • Tổng sức chứa: <strong>{assignTotalCapacity} ghế</strong> / {assignModal.reservation.partySize} khách
+                  Đã chọn: <strong>{assignModal.selected_table_ids.length} bàn</strong> • Tổng sức chứa: <strong>{assignTotalCapacity} ghế</strong> / {assignModal.reservation.party_size} khách
                 </span>
               </div>
               <span className="capacity-badge">
-                {assignTotalCapacity >= assignModal.reservation.partySize ? '✓ Đủ Sức Chứa' : '(! Cần ghép thêm bàn)'}
+                {assignTotalCapacity >= assignModal.reservation.party_size ? '✓ Đủ Sức Chứa' : '(! Cần ghép thêm bàn)'}
               </span>
             </div>
 
@@ -910,9 +910,9 @@ export default function ReservationManagement(): React.ReactElement {
               <label>Chọn một hoặc nhiều bàn trống để ghép cụm bàn:</label>
               <div className="modal-table-picker-grid">
                 {tables
-                  .filter((t) => t.status?.toLowerCase() === 'available' || assignModal.selectedTableIds.includes(t.id))
+                  .filter((t) => t.status?.toLowerCase() === 'available' || assignModal.selected_table_ids.includes(t.id))
                   .map((t) => {
-                    const isSelected = assignModal.selectedTableIds.includes(t.id);
+                    const isSelected = assignModal.selected_table_ids.includes(t.id);
                     return (
                       <div
                         key={t.id}
@@ -922,7 +922,7 @@ export default function ReservationManagement(): React.ReactElement {
                         <div className="chip-check-mark">
                           {isSelected && <Check size={12} strokeWidth={3} />}
                         </div>
-                        <div className="chip-table-no">Bàn {t.tableNo}</div>
+                        <div className="chip-table-no">Bàn {t.table_no}</div>
                         <div className="chip-table-cap">{t.capacity} chỗ ngồi</div>
                       </div>
                     );
@@ -934,7 +934,7 @@ export default function ReservationManagement(): React.ReactElement {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setAssignModal({ isOpen: false, reservation: null, selectedTableIds: [] })}
+                onClick={() => setAssignModal({ is_open: false, reservation: null, selected_table_ids: [] })}
               >
                 Hủy
               </button>
@@ -943,7 +943,7 @@ export default function ReservationManagement(): React.ReactElement {
                 className="btn-primary-action"
                 onClick={handleAssignTable}
               >
-                Xác Nhận Xếp {assignModal.selectedTableIds.length > 1 ? `Ghép ${assignModal.selectedTableIds.length} Bàn` : 'Bàn'}
+                Xác Nhận Xếp {assignModal.selected_table_ids.length > 1 ? `Ghép ${assignModal.selected_table_ids.length} Bàn` : 'Bàn'}
               </button>
             </div>
           </div>
@@ -965,8 +965,8 @@ export default function ReservationManagement(): React.ReactElement {
                   required
                   placeholder="VD: Anh Tuấn (Công ty FPT)"
                   className="modal-input-control"
-                  value={offlineForm.customerName}
-                  onChange={(e) => setOfflineForm({ ...offlineForm, customerName: e.target.value })}
+                  value={offlineForm.customer_name}
+                  onChange={(e) => setOfflineForm({ ...offlineForm, customer_name: e.target.value })}
                 />
               </div>
 
@@ -978,8 +978,8 @@ export default function ReservationManagement(): React.ReactElement {
                     required
                     placeholder="VD: 0912345678"
                     className="modal-input-control"
-                    value={offlineForm.customerPhone}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, customerPhone: e.target.value })}
+                    value={offlineForm.customer_phone}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, customer_phone: e.target.value })}
                   />
                 </div>
                 <div className="modal-field-block">
@@ -989,8 +989,8 @@ export default function ReservationManagement(): React.ReactElement {
                     min="1"
                     required
                     className="modal-input-control"
-                    value={offlineForm.partySize}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, partySize: Number(e.target.value) })}
+                    value={offlineForm.party_size}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, party_size: Number(e.target.value) })}
                   />
                 </div>
               </div>
@@ -1002,8 +1002,8 @@ export default function ReservationManagement(): React.ReactElement {
                     type="date"
                     required
                     className="modal-input-control"
-                    value={offlineForm.reservationDate}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, reservationDate: e.target.value })}
+                    value={offlineForm.reservation_date}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, reservation_date: e.target.value })}
                   />
                 </div>
                 <div className="modal-field-block">
@@ -1012,25 +1012,25 @@ export default function ReservationManagement(): React.ReactElement {
                     type="time"
                     required
                     className="modal-input-control"
-                    value={offlineForm.reservationTime}
-                    onChange={(e) => setOfflineForm({ ...offlineForm, reservationTime: e.target.value })}
+                    value={offlineForm.reservation_time}
+                    onChange={(e) => setOfflineForm({ ...offlineForm, reservation_time: e.target.value })}
                   />
                 </div>
               </div>
 
               <div className="modal-field-block">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label style={{ margin: 0 }}>Chọn các bàn cần ghép ({offlineForm.tableIds.length} bàn đã chọn):</label>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: offlineTotalCapacity >= offlineForm.partySize ? '#059669' : '#dc2626' }}>
-                    Sức chứa: {offlineTotalCapacity}/{offlineForm.partySize} ghế
+                  <label style={{ margin: 0 }}>Chọn các bàn cần ghép ({offlineForm.table_ids.length} bàn đã chọn):</label>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: offlineTotalCapacity >= offlineForm.party_size ? '#059669' : '#dc2626' }}>
+                    Sức chứa: {offlineTotalCapacity}/{offlineForm.party_size} ghế
                   </span>
                 </div>
 
                 <div className="modal-table-picker-grid">
                   {tables
-                    .filter((t) => t.status?.toLowerCase() === 'available' || offlineForm.tableIds.includes(t.id))
+                    .filter((t) => t.status?.toLowerCase() === 'available' || offlineForm.table_ids.includes(t.id))
                     .map((t) => {
-                      const isSelected = offlineForm.tableIds.includes(t.id);
+                      const isSelected = offlineForm.table_ids.includes(t.id);
                       return (
                         <div
                           key={t.id}
@@ -1040,7 +1040,7 @@ export default function ReservationManagement(): React.ReactElement {
                           <div className="chip-check-mark">
                             {isSelected && <Check size={12} strokeWidth={3} />}
                           </div>
-                          <div className="chip-table-no">Bàn {t.tableNo}</div>
+                          <div className="chip-table-no">Bàn {t.table_no}</div>
                           <div className="chip-table-cap">{t.capacity} chỗ</div>
                         </div>
                       );
@@ -1053,8 +1053,8 @@ export default function ReservationManagement(): React.ReactElement {
                   type="checkbox"
                   id="seatedImmediatelyCheck"
                   className="checkbox-custom"
-                  checked={offlineForm.seatedImmediately}
-                  onChange={(e) => setOfflineForm({ ...offlineForm, seatedImmediately: e.target.checked })}
+                  checked={offlineForm.seated_immediately}
+                  onChange={(e) => setOfflineForm({ ...offlineForm, seated_immediately: e.target.checked })}
                 />
                 <label htmlFor="seatedImmediatelyCheck">
                   Khách đang có mặt tại quán (Xếp vào ngồi ăn luôn - Check-in SEATED)
@@ -1067,8 +1067,8 @@ export default function ReservationManagement(): React.ReactElement {
                   type="text"
                   placeholder="VD: Kê bàn chữ U, chuẩn bị hoa sinh nhật..."
                   className="modal-input-control"
-                  value={offlineForm.specialNotes}
-                  onChange={(e) => setOfflineForm({ ...offlineForm, specialNotes: e.target.value })}
+                  value={offlineForm.special_notes}
+                  onChange={(e) => setOfflineForm({ ...offlineForm, special_notes: e.target.value })}
                 />
               </div>
 
@@ -1092,4 +1092,4 @@ export default function ReservationManagement(): React.ReactElement {
   );
 }
 
-export { ReservationManagement };
+export { ReservationManagement };

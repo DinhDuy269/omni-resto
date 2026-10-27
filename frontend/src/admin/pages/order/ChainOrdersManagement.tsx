@@ -364,9 +364,15 @@ export const ChainOrdersManagement: React.FC = () => {
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
                             }}
-                            title={ord.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}
+                            title={ord.items.map((i) => {
+                              const optStr = i.options && i.options.length > 0 ? ` (${i.options.map((o) => o.option_name || o.optionName).join(', ')})` : '';
+                              return `${i.quantity}x ${i.name}${optStr}`;
+                            }).join(', ')}
                           >
-                            {ord.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}
+                            {ord.items.map((i) => {
+                              const optStr = i.options && i.options.length > 0 ? ` (${i.options.map((o) => o.option_name || o.optionName).join(', ')})` : '';
+                              return `${i.quantity}x ${i.name}${optStr}`;
+                            }).join(', ')}
                           </div>
                         </td>
 
@@ -571,13 +577,38 @@ export const ChainOrdersManagement: React.FC = () => {
                         }}
                       >
                         <div>
-                          <strong style={{ color: 'var(--text-main)' }}>
-                            {item.quantity}x {item.name}
-                          </strong>
-                          {item.notes && (
-                            <span style={{ marginLeft: '8px', color: 'var(--danger)', fontSize: '0.78125rem', fontWeight: 600 }}>
-                              ({item.notes})
-                            </span>
+                          <div>
+                            <strong style={{ color: 'var(--text-main)' }}>
+                              {item.quantity}x {item.name}
+                            </strong>
+                            {item.notes && (
+                              <span style={{ marginLeft: '8px', color: 'var(--danger)', fontSize: '0.78125rem', fontWeight: 600 }}>
+                                ({item.notes})
+                              </span>
+                            )}
+                          </div>
+                          {item.options && item.options.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                              {item.options.map((opt, optIdx) => {
+                                const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                                return (
+                                  <span
+                                    key={optIdx}
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600,
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      background: isSize ? '#e0e7ff' : '#ecfdf5',
+                                      color: isSize ? '#3730a3' : '#065f46',
+                                      border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
+                                    }}
+                                  >
+                                    {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                  </span>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
                         <span style={{ color: 'var(--text-muted)', fontFeatureSettings: "'tnum' 1" }}>

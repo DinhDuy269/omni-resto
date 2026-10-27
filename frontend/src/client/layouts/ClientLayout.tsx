@@ -10,6 +10,7 @@ import { useWebSocket } from '../../shared/hooks/useWebSocket';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 import { ClientFooter } from '../components/ClientFooter';
 import { HandGestureWidget } from '../../shared/handGesture';
+import { useAdminStore } from '../../admin/store/adminStore';
 import './ClientLayout.css';
 
 const NAV_LINKS = [
@@ -78,10 +79,13 @@ export const ClientLayout: React.FC = () => {
     window.location.reload();
   };
 
-  // Lắng nghe sự kiện cập nhật trạng thái đơn hàng thời gian thực từ Server (Admin duyệt, bếp nấu, hoàn tất)
+  // Lắng nghe sự kiện cập nhật thời gian thực từ Server (Đơn hàng & Thực đơn món ăn)
   useWebSocket((event) => {
     if (event?.order) {
       handleServerOrderEvent(event.order);
+    }
+    if (event?.eventType?.startsWith('MENU_') || event?.event_type?.startsWith('MENU_')) {
+      useAdminStore.getState().handleWebSocketMenuEvent(event);
     }
   });
 

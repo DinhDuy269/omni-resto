@@ -5,59 +5,59 @@ export type OperatingShiftType = 'MORNING' | 'NOON' | 'BREAK' | 'EVENING' | 'CLO
 
 export interface TableItem {
   id: string;
-  tableNo: string;
+  table_no: string;
   capacity: number;
   status: string;
 }
 
 export interface ReservationItem {
   id: string;
-  reservationCode: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string | null;
-  partySize: number;
-  reservationTime: string;
+  reservation_code: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string | null;
+  party_size: number;
+  reservation_time: string;
   status: string;
-  tableId?: string | null;
-  tableNo?: string | null;
-  tableCapacity?: number | null;
-  specialNotes?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
+  table_id?: string | null;
+  table_no?: string | null;
+  table_capacity?: number | null;
+  special_notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
   shift?: string;
-  shiftName?: string;
+  shift_name?: string;
 }
 
 export interface OnlineReservationPayload {
-  customerName: string;
-  customerPhone: string;
-customerEmail?: string | null;
-  partySize: number;
-  reservationTime: string;
-  tableId?: string | null;
-  specialNotes?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string | null;
+  party_size: number;
+  reservation_time: string;
+  table_id?: string | null;
+  special_notes?: string;
 }
 
 export interface OfflineReservationPayload {
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string;
-  partySize: number;
-  reservationTime: string;
-  tableId?: string;
-  tableIds?: string[];
-  specialNotes?: string;
-  seatedImmediately?: boolean;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  party_size: number;
+  reservation_time: string;
+  table_id?: string;
+  table_ids?: string[];
+  special_notes?: string;
+  seated_immediately?: boolean;
 }
 
 export interface SpringPage<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
+  total_pages: number;
+  total_elements: number;
   size: number;
   number: number;
-  numberOfElements: number;
+  number_of_elements: number;
   first: boolean;
   last: boolean;
   empty: boolean;
@@ -196,4 +196,4 @@ export const reservationApi = {
   },
 };
 
-export default reservationApi;
+export default reservationApi;

@@ -196,6 +196,34 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   }}>
                     {item.name}
                   </span>
+                  {item.options && item.options.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '1px 0' }}>
+                      {item.options.map((opt, optIdx) => {
+                        const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                        return (
+                          <span
+                            key={optIdx}
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 600,
+                              padding: '1px 5px',
+                              borderRadius: 4,
+                              background: isSize ? '#e0e7ff' : '#ecfdf5',
+                              color: isSize ? '#3730a3' : '#065f46',
+                              border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
+                            }}
+                          >
+                            {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {item.notes && (
+                    <span style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600 }}>
+                      📝 {item.notes}
+                    </span>
+                  )}
                   {!isAvailable && (
                     <span style={{
                       fontSize: '0.6875rem', color: '#b91c1c', background: '#fee2e2',

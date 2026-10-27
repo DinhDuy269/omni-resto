@@ -23,4 +23,6 @@ public class OrderItemResponse {
     private LocalDateTime addedAt;
     private String confirmedByStaffId;
     private LocalDateTime confirmedAt;
+    private java.util.List<OrderItemOptionResponse> options = new java.util.ArrayList<>();
 }
+

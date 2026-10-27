@@ -9,7 +9,11 @@ export const KitchenDisplaySystem: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('KITCHEN_ACTIVE');
 
   // Real-time WebSocket connection hook
-  const { isConnected } = useWebSocket(handleWebSocketOrderEvent);
+  const { isConnected } = useWebSocket((event) => {
+    if (event?.order) {
+      handleWebSocketOrderEvent(event as any);
+    }
+  });
 
   // Filter orders relevant for Kitchen (PENDING, CONFIRMED, PREPARING, READY)
   const kitchenOrders = orders.filter((order) => {
@@ -282,6 +286,34 @@ export const KitchenDisplaySystem: React.FC = () => {
                             {item.name}
                           </span>
                         </div>
+
+                        {/* Modifiers / Options Badges (Sizes & Toppings) */}
+                        {item.options && item.options.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                            {item.options.map((opt, optIdx) => {
+                              const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                              return (
+                                <span
+                                  key={optIdx}
+                                  style={{
+                                    fontSize: '0.775rem',
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    background: isSize ? '#e0e7ff' : '#ecfdf5',
+                                    color: isSize ? '#3730a3' : '#065f46',
+                                    border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
 
                         {/* Special Kitchen Dặn Bếp Notes */}
                         {item.notes && (

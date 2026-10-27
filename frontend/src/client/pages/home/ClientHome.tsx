@@ -14,10 +14,6 @@ import {
   CreditCard,
   Plus,
   Award,
-  Coffee,
-  Sun,
-  Sunset,
-  Wine,
   Quote,
 } from 'lucide-react';
 import { useAdminStore } from '../../../admin/store/adminStore';

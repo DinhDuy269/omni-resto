@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  ChevronLeft,
   Utensils,
   Search,
   PlusCircle,
@@ -213,6 +212,7 @@ export const ClientOrdersPage: React.FC = () => {
       status: string;
       round_no: number;
       notes?: string;
+      options?: any[];
       order_number: string;
     }[] = [];
 
@@ -228,6 +228,7 @@ export const ClientOrdersPage: React.FC = () => {
           status: it.status || ord.status,
           round_no: it.round_no || 1,
           notes: it.notes,
+          options: it.options || [],
           order_number: ord.order_number,
         });
       });
@@ -628,6 +629,29 @@ export const ClientOrdersPage: React.FC = () => {
                                               <div className="cop-dish-name">
                                                 {it.name}
                                               </div>
+                                              {it.options && it.options.length > 0 && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '2px 0 4px' }}>
+                                                  {it.options.map((opt: any, optIdx: number) => {
+                                                    const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                                                    return (
+                                                      <span
+                                                        key={optIdx}
+                                                        style={{
+                                                          fontSize: '0.7rem',
+                                                          fontWeight: 600,
+                                                          padding: '1px 6px',
+                                                          borderRadius: 4,
+                                                          background: isSize ? '#e0e7ff' : '#ecfdf5',
+                                                          color: isSize ? '#3730a3' : '#065f46',
+                                                          border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
+                                                        }}
+                                                      >
+                                                        {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                                      </span>
+                                                    );
+                                                  })}
+                                                </div>
+                                              )}
                                               <div className="cop-dish-submeta">
                                                 SL: <strong>{it.quantity}</strong> ·{' '}
                                                 {(it.price * it.quantity).toLocaleString('vi-VN')}đ
@@ -722,6 +746,29 @@ export const ClientOrdersPage: React.FC = () => {
                       )}
                       <div className="cop-dish-details">
                         <div className="cop-dish-name">{item.name}</div>
+                        {item.options && item.options.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '2px 0 4px' }}>
+                            {item.options.map((opt: any, optIdx: number) => {
+                              const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                              return (
+                                <span
+                                  key={optIdx}
+                                  style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    padding: '1px 6px',
+                                    borderRadius: 4,
+                                    background: isSize ? '#e0e7ff' : '#ecfdf5',
+                                    color: isSize ? '#3730a3' : '#065f46',
+                                    border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
+                                  }}
+                                >
+                                  {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                         <div className="cop-dish-submeta">
                           Đơn {item.order_number}{' '}
                           {item.round_no && item.round_no > 1 ? `· Đợt ${item.round_no}` : ''} · SL:{' '}

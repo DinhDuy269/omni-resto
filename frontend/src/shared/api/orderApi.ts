@@ -25,6 +25,13 @@ export const orderApi = {
                     price: Number(it.price || 0),
                     notes: it.notes,
                     status: it.status?.toUpperCase() || 'PENDING',
+                    options: (it.options || []).map((opt: any) => ({
+                        id: opt.id,
+                        option_id: opt.option_id || opt.optionId,
+                        option_name: opt.option_name || opt.optionName,
+                        option_type: opt.option_type || opt.optionType,
+                        price: Number(opt.price || 0),
+                    })),
                 })),
                 created_at: o.created_at,
             }));

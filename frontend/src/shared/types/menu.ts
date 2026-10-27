@@ -23,7 +23,7 @@ export interface CategoryOption {
 
 export interface MenuItem {
   id: string;
-  code: string;
+  code?: string;
   name: string;
   category: string;
   category_id?: string;

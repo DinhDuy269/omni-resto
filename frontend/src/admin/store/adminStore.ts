@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { menuApi } from '../pages/menu/menuApi';
+import { menuApi, transformMenuItem } from '../pages/menu/menuApi';
 import { tableApi } from '../../shared/api/tableApi';
 import { orderApi } from '../../shared/api/orderApi';
 import { staffApi } from '../../shared/api/staffApi';
@@ -8,11 +8,16 @@ import { serviceRequestApi } from '../../shared/api/serviceRequestApi';
 import type { MenuItem, Order, StaffUser, TableInfo, CategoryOption, OrderStatus, VoucherInfo } from '../../shared/types/admin';
 
 export const DISH_CATEGORIES = [
-  { id: 'cat-pho', name: 'Phở & Bún Nước' },
-  { id: 'cat-com', name: 'Cơm Tấm & Món Mặn' },
-  { id: 'cat-banhmi', name: 'Bánh Mì & Điểm Tâm' },
-  { id: 'cat-lau', name: 'Lẩu & Món Nhắm' },
-  { id: 'cat-drink', name: 'Đồ Uống & Tráng Miệng' },
+  { id: 'cat-01', name: 'Phở & Bún Nước', alias: 'cat-pho' },
+  { id: 'cat-02', name: 'Cơm Tấm & Món Mặn', alias: 'cat-com' },
+  { id: 'cat-03', name: 'Bánh Mì & Điểm Tâm', alias: 'cat-banhmi' },
+  { id: 'cat-04', name: 'Lẩu & Món Nhắm', alias: 'cat-lau' },
+  { id: 'cat-05', name: 'Khai Vị & Gỏi Cuốn', alias: 'cat-khaivi' },
+  { id: 'cat-06', name: 'Đồ Uống & Cà Phê', alias: 'cat-drink' },
+  { id: 'cat-07', name: 'Tráng Miệng & Chè', alias: 'cat-trangmieng' },
+  { id: 'cat-08', name: 'Món Chay Thanh Tịnh', alias: 'cat-chay' },
+  { id: 'cat-09', name: 'Hải Sản Tươi Sống', alias: 'cat-haisan' },
+  { id: 'cat-10', name: 'Combo Tiết Kiệm', alias: 'cat-combo' },
 ];
 
 export interface ServiceRequestItem {
@@ -71,7 +76,8 @@ interface AdminState {
   // Orders
   updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
   addOrderFromClient: (order: Order) => void;
-  handleWebSocketOrderEvent: (event: { eventType: string; order: Order }) => void;
+  handleWebSocketOrderEvent: (event: { eventType: string; order?: Order }) => void;
+  handleWebSocketMenuEvent: (event: any) => void;
 
   // Staff
   addStaff: (staff: Omit<StaffUser, 'id' | 'created_at'>) => Promise<StaffUser>;
@@ -363,6 +369,40 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       created_at: (order as any).createdAt || order.created_at,
     };
     set((s) => ({ orders: upsertById(s.orders, normalized) }));
+  },
+  handleWebSocketMenuEvent: (event: any) => {
+    const eventType = event.eventType || event.event_type;
+    const rawItem = event.menuItem || event.menu_item;
+    const itemId = event.itemId || event.item_id || rawItem?.id;
+    if (!eventType) return;
+
+    if (eventType === 'MENU_ITEM_CREATED' && rawItem) {
+      const transformed = transformMenuItem(rawItem);
+      set((s) => ({
+        menu_items: [transformed, ...s.menu_items.filter((m) => m.id !== transformed.id)],
+      }));
+    } else if (eventType === 'MENU_ITEM_UPDATED' && rawItem) {
+      const transformed = transformMenuItem(rawItem);
+      set((s) => ({
+        menu_items: s.menu_items.map((m) => (m.id === transformed.id ? transformed : m)),
+      }));
+    } else if (eventType === 'MENU_ITEM_STATUS_CHANGED') {
+      const rawStatus = event.status || rawItem?.status || '';
+      const newStatus = rawStatus.toUpperCase() as MenuItem['status'];
+      if (itemId && newStatus) {
+        set((s) => ({
+          menu_items: s.menu_items.map((m) =>
+            m.id === itemId ? { ...m, status: newStatus } : m
+          ),
+        }));
+      }
+    } else if (eventType === 'MENU_ITEM_DELETED') {
+      if (itemId) {
+        set((s) => ({
+          menu_items: s.menu_items.filter((m) => m.id !== itemId),
+        }));
+      }
+    }
   },
 
   // ---------- Staff (Nối staffApi) ----------

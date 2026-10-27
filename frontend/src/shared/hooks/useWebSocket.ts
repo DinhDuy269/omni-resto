@@ -1,14 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Order } from '../types/admin';
 
-export interface OrderEventMessage {
+export interface WebSocketEventMessage {
   event_type: string;
   eventType: string;
-  order: Order;
+  order?: Order;
+  
+  menu_item?: any;
+
+  item_id?: string;
+  status?: string;
+  [key: string]: any;
 }
 
+export type OrderEventMessage = WebSocketEventMessage;
+
 export const useWebSocket = (
-  onOrderEvent?: (event: OrderEventMessage) => void
+  onEvent?: (event: WebSocketEventMessage) => void
 ) => {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
@@ -34,15 +42,14 @@ export const useWebSocket = (
         };
 
         ws.onmessage = (event) => {
-          if (isMounted && onOrderEvent) {
+          if (isMounted && onEvent) {
             try {
               const data = JSON.parse(event.data);
-              const event_type = data.event_type || data.eventType || 'ORDER_STATUS_CHANGED';
-              onOrderEvent({
+              const event_type = data.event_type || data.eventType || 'UNKNOWN';
+              onEvent({
                 ...data,
                 event_type,
                 eventType: event_type,
-                order: data.order,
               });
             } catch (err) {
               console.warn('Failed to parse WebSocket message:', err);

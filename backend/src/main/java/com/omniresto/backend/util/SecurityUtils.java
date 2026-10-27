@@ -34,6 +34,11 @@ public final class SecurityUtils {
             return Optional.empty();
         }
 
+        // Nếu là Staff / Admin (X-Staff-Key hoặc JWT Admin), không gán nhầm vào customer_id của bảng customers
+        if (hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")) {
+            return Optional.empty();
+        }
+
         String principal = authentication.getName();
         if (principal == null || principal.isBlank() || "anonymousUser".equalsIgnoreCase(principal)) {
             return Optional.empty();

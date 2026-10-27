@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CartItem, OrderMode, ClientOrderDraft, PlacedOrder, PlacedOrderStatus, TableSession, ClientPaymentMethod } from '../../shared/types/client';
+import type { CartItem, CartItemOption, OrderMode, ClientOrderDraft, PlacedOrder, PlacedOrderStatus, TableSession, ClientPaymentMethod } from '../../shared/types/client';
 import { useAdminStore } from '../../admin/store/adminStore';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../shared/config/paymentConfig';
 import { checkIsItemAvailableNow } from '../utils/mealPeriodUtils';
@@ -62,6 +62,15 @@ export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?
   const mappedItems: CartItem[] = (serverOrderData.items || []).map((it: any) => {
     const existingItem = existingOrder?.items?.find((c) => (c.menu_item_id || c.id) === (it.menu_item_id || it.id));
     const itemStatus = isCancelled ? 'CANCELLED' : ((it.status?.toUpperCase() as any) || 'CONFIRMED');
+    const rawOptions = it.options || existingItem?.options || [];
+    const mappedOptions: CartItemOption[] = rawOptions.map((opt: any) => ({
+      id: opt.id,
+      option_id: opt.option_id || opt.optionId || opt.id,
+      option_name: opt.option_name || opt.optionName || opt.name,
+      option_type: opt.option_type || opt.optionType,
+      price: Number(opt.price || 0),
+    }));
+
     return {
       id: it.id,
       menu_item_id: it.menu_item_id || it.id,
@@ -74,6 +83,8 @@ export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?
       round_no: it.round_no || 1,
       status: itemStatus,
       added_at: it.added_at,
+      options: mappedOptions,
+      option_ids: mappedOptions.map((o) => o.option_id || o.id!).filter(Boolean),
     };
   });
 
@@ -639,6 +650,23 @@ export const useClientStore = create<ClientState>((set, get) => ({
       return null;
     }
 
+    // Cart Guard: Kiểm tra trạng thái món còn hàng / ngừng kinh doanh theo thời gian thực
+    const currentMenuItems = useAdminStore.getState().menu_items;
+    const unavailableItems = state.cart.filter((it) => {
+      const itemId = it.menu_item_id || it.id;
+      const found = currentMenuItems.find((m) => m.id === itemId);
+      if (found) {
+        const s = (found.status || '').toUpperCase();
+        return s === 'OUT_OF_STOCK' || s === 'DISCONTINUED';
+      }
+      return false;
+    });
+    if (unavailableItems.length > 0) {
+      const names = unavailableItems.map((i) => `"${i.name}"`).join(', ');
+      alert(`⚠️ Đơn hàng có món hiện đang tạm hết hoặc ngừng phục vụ (${names}). Quý khách vui lòng xóa món này khỏi giỏ hàng trước khi gửi đơn!`);
+      return null;
+    }
+
     const session = state.table_session;
     const effectiveTableNo = draft.order_mode === 'DINE_IN'
       ? session?.table_no
@@ -691,9 +719,6 @@ export const useClientStore = create<ClientState>((set, get) => ({
       });
 
       if (!res.ok) {
-        if (res.status === 404 || res.status === 502 || res.status === 503) {
-          throw new Error('SERVER_OFFLINE');
-        }
         const errJson = await res.json().catch(() => ({}));
         const errorMsg = errJson.message || 'Đặt món không thành công. Quý khách vui lòng thử lại!';
         alert(`❌ ${errorMsg}`);
@@ -702,26 +727,9 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
       serverOrderData = await res.json();
     } catch (e: any) {
-      console.warn('Máy chủ đặt món chưa sẵn sàng, mô phỏng đơn hàng thành công để trải nghiệm thử:', e);
-      const simOrderNum = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-      serverOrderData = {
-        id: `ord-sim-${Date.now()}`,
-        order_number: simOrderNum,
-        table_no: effectiveTableNo,
-        order_mode: draft.order_mode === 'DINE_IN' ? 'DINE_IN' : draft.order_mode === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY',
-        status: 'pending',
-        payment_status: 'unpaid',
-        total_amount: state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-        items: state.cart.map((it, idx) => ({
-          id: `line-${Date.now()}-${idx}`,
-          menu_item_id: it.menu_item_id,
-          name: it.name,
-          quantity: it.quantity,
-          price: it.price,
-          status: 'PENDING',
-        })),
-        created_at: new Date().toISOString(),
-      };
+      console.error('Lỗi khi gửi đơn hàng lên máy chủ:', e);
+      alert('❌ Không thể kết nối đến máy chủ đặt món. Quý khách vui lòng kiểm tra kết nối mạng và thử lại!');
+      return null;
     }
 
     if (!serverOrderData) {
@@ -758,6 +766,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
         quantity: it.quantity,
         price: it.price,
         notes: it.notes,
+        options: it.options || [],
       })),
       total_amount: finalOrder.total_amount || 0,
       created_at: 'Vừa xong',

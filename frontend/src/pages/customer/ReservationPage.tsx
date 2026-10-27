@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { reservationApi, type TableItem, type ReservationItem } from '../../api/reservationApi';
 import { 
-  Calendar, Users, Phone, User, Mail, 
-  FileText, CheckCircle2, Clock, AlertCircle,
-  Armchair, ArrowLeft, Utensils, PhoneCall
+  Users, Phone, User, Mail, 
+  CheckCircle2, Clock, AlertCircle,
+  Armchair, ArrowLeft, Utensils, PhoneCall,
+  Sparkles, Calendar, ChevronRight
 } from 'lucide-react';
 import './ReservationPage.css';
 
 interface BookingFormState {
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  partySize: number;
-  reservationDate: string;
-  reservationTime: string;
-  specialNotes: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  party_size: number;
+  reservation_date: string;
+  reservation_time: string;
+  special_notes: string;
 }
 
 function extractErrorMessage(err: unknown): string {
@@ -30,6 +31,7 @@ function extractErrorMessage(err: unknown): string {
 }
 
 function checkOperatingHoursClient(timeStr: string): string | null {
+  if (!timeStr) return null;
   const [hStr, mStr] = timeStr.split(':');
   const totalMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
 
@@ -39,11 +41,11 @@ function checkOperatingHoursClient(timeStr: string): string | null {
   const eveningClose = 22 * 60;     // 22:00
 
   if (totalMinutes >= breakStart && totalMinutes < breakEnd) {
-    return 'Giờ này nhà hàng đang trong Giờ Nghỉ Bếp (14:30 - 16:30), bạn hãy đặt vào giờ khác!';
+    return 'Giờ này nhà hàng đang trong Giờ Nghỉ Bếp (14:30 - 16:30), quý khách vui lòng chọn khung giờ khác!';
   }
 
   if (totalMinutes < morningOpen || totalMinutes >= eveningClose) {
-    return 'Giờ này nhà hàng đang Đóng Cửa (22:00 - 06:00), bạn hãy đặt vào giờ khác (06:00 - 14:30 hoặc 16:30 - 22:00)!';
+    return 'Nhà hàng mở cửa đón khách từ 06:00 - 14:30 và 16:30 - 22:00, quý khách vui lòng chọn giờ trong khung hoạt động!';
   }
 
   return null;
@@ -61,13 +63,13 @@ export default function ReservationPage(): React.ReactElement {
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const [formData, setFormData] = useState<BookingFormState>({
-    customerName: '',
-    customerPhone: '',
-    customerEmail: '',
-    partySize: 2,
-    reservationDate: new Date().toISOString().split('T')[0],
-    reservationTime: '19:00',
-    specialNotes: '',
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    party_size: 2,
+    reservation_date: new Date().toISOString().split('T')[0],
+    reservation_time: '19:00',
+    special_notes: '',
   });
 
   const fetchTables = async () => {
@@ -82,9 +84,7 @@ export default function ReservationPage(): React.ReactElement {
   };
 
   useEffect(() => {
-    const initTimer = setTimeout(() => {
-      fetchTables();
-    }, 0);
+    fetchTables();
 
     let broadcastChannel: BroadcastChannel | null = null;
     try {
@@ -97,17 +97,11 @@ export default function ReservationPage(): React.ReactElement {
     }
 
     const eventSource = new EventSource('http://localhost:8080/api/tables/reservations/subscribe');
-
-    eventSource.addEventListener('NEW_RESERVATION', () => {
+    eventSource.onmessage = () => {
       fetchTables();
-    });
-
-    eventSource.addEventListener('UPDATE_RESERVATION', () => {
-      fetchTables();
-    });
+    };
 
     return () => {
-      clearTimeout(initTimer);
       eventSource.close();
       if (broadcastChannel) broadcastChannel.close();
     };
@@ -118,44 +112,24 @@ export default function ReservationPage(): React.ReactElement {
     setSelectedTable(table);
     setFormData((prev) => ({
       ...prev,
-      partySize: Math.min(prev.partySize || 2, table.capacity),
+      party_size: Math.min(prev.party_size, table.capacity),
     }));
     setErrorMsg('');
     setCurrentView('form');
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (name === 'reservationTime') {
-      const closedReason = checkOperatingHoursClient(value);
-      if (closedReason) {
-        setErrorMsg(closedReason);
-      } else {
-        setErrorMsg('');
-      }
-    }
-
-    if (name === 'customerPhone' && errorMsg.includes('Số điện thoại')) {
-      setErrorMsg('');
-    }
-  };
-
   const handlePhoneBlur = async () => {
-    const cleanPhone = formData.customerPhone.trim().replace(/[\s.-]+/g, '');
-    const vnPhoneRegex = /^(0|\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$/;
-    
-    if (vnPhoneRegex.test(cleanPhone)) {
+    const cleanPhone = formData.customer_phone.trim().replace(/[\s.-]+/g, '');
+    if (cleanPhone.length >= 10) {
       try {
         const hasActive = await reservationApi.checkActivePhone(cleanPhone);
         if (hasActive) {
-          setErrorMsg('⚠️ Số điện thoại này hiện đang có đơn đặt bàn chưa hoàn tất. Vui lòng không đặt trùng lặp!');
+          setErrorMsg('⚠️ Số điện thoại này hiện đang có đơn đặt bàn đang chờ phục vụ. Vui lòng kiểm tra lại!');
         } else if (errorMsg.includes('Số điện thoại này hiện đang có đơn')) {
           setErrorMsg('');
         }
       } catch {
-        // Bỏ qua lỗi kết nối ở bước blur
+        // Ignore network check error on blur
       }
     }
   };
@@ -166,46 +140,47 @@ export default function ReservationPage(): React.ReactElement {
 
     setErrorMsg('');
 
-    const closedReason = checkOperatingHoursClient(formData.reservationTime);
+    const closedReason = checkOperatingHoursClient(formData.reservation_time);
     if (closedReason) {
       setErrorMsg(closedReason);
       return;
     }
 
-    const cleanPhone = formData.customerPhone.trim().replace(/[\s.-]+/g, '');
+    const cleanPhone = formData.customer_phone.trim().replace(/[\s.-]+/g, '');
     const vnPhoneRegex = /^(0|\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$/;
     if (!vnPhoneRegex.test(cleanPhone)) {
-      setErrorMsg('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động hợp lệ tại Việt Nam (10 chữ số)!');
+      setErrorMsg('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động Việt Nam (10 chữ số)!');
       return;
     }
 
     try {
       const hasActive = await reservationApi.checkActivePhone(cleanPhone);
       if (hasActive) {
-        setErrorMsg('⚠️ Số điện thoại này hiện đang có đơn đặt bàn chưa hoàn tất. Vui lòng không đặt trùng lặp!');
+        setErrorMsg('⚠️ Số điện thoại này hiện đang có đơn đặt bàn đang chờ phục vụ. Vui lòng không đặt trùng lặp!');
         return;
       }
     } catch {
-      // Tiếp tục để backend kiểm tra
+      // Allow backend validation fallback
     }
 
     setLoading(true);
 
     try {
-      const fullDateTime = `${formData.reservationDate}T${formData.reservationTime}:00`;
-      const tableNote = `[Khách chọn: Bàn ${selectedTable.tableNo} (${selectedTable.capacity} chỗ)]`;
-      const combinedNotes = formData.specialNotes 
-        ? `${tableNote} - ${formData.specialNotes.trim()}` 
+      const fullDateTime = `${formData.reservation_date}T${formData.reservation_time}:00`;
+      const tableName = selectedTable.table_no;
+      const tableNote = `[Khách chọn: Bàn ${tableName} (${selectedTable.capacity} chỗ)]`;
+      const combinedNotes = formData.special_notes 
+        ? `${tableNote} - ${formData.special_notes.trim()}` 
         : tableNote;
 
       const payload = {
-        customerName: formData.customerName.trim(),
-        customerPhone: cleanPhone,
-        customerEmail: formData.customerEmail ? formData.customerEmail.trim() : null,
-        partySize: Number(formData.partySize),
-        reservationTime: fullDateTime,
-        tableId: selectedTable.id,
-        specialNotes: combinedNotes,
+        customer_name: formData.customer_name.trim(),
+        customer_phone: cleanPhone,
+        customer_email: formData.customer_email ? formData.customer_email.trim() : null,
+        party_size: Number(formData.party_size),
+        reservation_time: fullDateTime,
+        table_id: selectedTable.id,
+        special_notes: combinedNotes,
       };
 
       const res = await reservationApi.createOnline(payload);
@@ -231,281 +206,334 @@ export default function ReservationPage(): React.ReactElement {
   const isAvail = (status: string) => status?.toLowerCase() === 'available';
 
   return (
-    <div className="res-container">
-      {/* ── TOP HEADER ── */}
-      <div className="res-top-header">
-        <h1 className="res-main-title">Đặt Bàn Trực Tuyến</h1>
-        <p className="res-main-subtitle">Thưởng thức ẩm thực trọn vẹn trong không gian ấm cúng tại OmniResto</p>
-      </div>
-
-      {/* ── BANNER HOTLINE ĐOÀN ĐÔNG (> 8 NGƯỜI) ── */}
-      <div className="res-large-group-banner">
-        <div className="banner-left">
-          <div className="banner-icon-circle">
-            <PhoneCall size={22} />
+    <div className="lux-res-wrapper">
+      <div className="lux-res-container">
+        {/* ── HERO BANNER THƯỢNG HẠNG ── */}
+        <header className="lux-header-hero">
+          <div className="lux-tagline-badge">
+            <span className="lux-pulse-sparkle" />
+            <Sparkles size={13} />
+            <span>Trải Nghiệm Ẩm Thực Tinh Hoa</span>
           </div>
-          <div>
-            <h4 className="banner-title">Quý khách dự định đi đoàn đông?</h4>
-            <p className="banner-desc">
-              Nếu quý khách đi quá 8 người, xin hãy liên hệ số hotline để nhà hàng ghép bàn cho quý khách!
-            </p>
-          </div>
-        </div>
-        <a href="tel:02438259999" className="banner-hotline-btn">
-          <Phone size={15} /> Hotline: 024 3825 9999
-        </a>
-      </div>
+          <h1 className="lux-hero-title">
+            Đặt Bàn & <span>Không Gian Riêng Tư</span>
+          </h1>
+          <p className="lux-hero-desc">
+            Chọn vị trí ưng ý, cảm nhận phong vị tinh tế và dịch vụ chăm sóc chuẩn mực fine-dining tại OmniResto.
+          </p>
+        </header>
 
-      {/* ── VIEW 1: CHỌN BÀN ── */}
-      {currentView === 'tables' && (
-        <div className="res-box">
-          <div className="table-selection-header">
+        {/* ── BANNER HOTLINE ĐOÀN ĐÔNG ── */}
+        <section className="lux-hotline-bar">
+          <div className="lux-hotline-left">
+            <div className="lux-hotline-icon">
+              <PhoneCall size={20} />
+            </div>
             <div>
-              <h2 className="box-heading">Chọn Bàn Còn Trống</h2>
-              <p className="box-subheading">Bấm vào bàn trống bạn muốn ngồi để tiến hành đăng ký</p>
-            </div>
-            <div className="table-legend">
-              <span className="legend-tag legend-tag--avail">
-                <span className="status-dot dot-green"></span> Bàn trống (Chọn được)
-              </span>
-              <span className="legend-tag legend-tag--busy">
-                <span className="status-dot dot-red"></span> Đang có khách
-              </span>
+              <h4 className="lux-hotline-title">Quý khách tổ chức tiệc hoặc đi đoàn đông (&gt; 8 khách)?</h4>
+              <p className="lux-hotline-desc">
+                Liên hệ ngay hotline để bộ phận Maître d' sắp xếp cụm bàn ghép liền kề và thực đơn theo yêu cầu.
+              </p>
             </div>
           </div>
+          <a href="tel:02438259999" className="lux-hotline-cta">
+            <Phone size={14} /> Hotline: 024 3825 9999
+          </a>
+        </section>
 
-          {tablesLoading ? (
-            <div className="res-loading-state">
-              <div className="res-spinner"></div>
-              <p>Đang tải sơ đồ bàn ăn...</p>
-            </div>
-          ) : (
-            <div className="tables-layout-grid">
-              {tables.map((t) => {
-                const available = isAvail(t.status);
-                return (
-                  <div
-                    key={t.id}
-                    onClick={() => handleSelectTable(t)}
-                    className={`grid-table-card ${available ? 'is-available' : 'is-occupied'}`}
-                  >
-                    <div className="card-table-icon">
-                      <Armchair size={26} />
-                    </div>
-                    <h3 className="card-table-title">Bàn {t.tableNo}</h3>
-                    <span className="card-table-cap">Sức chứa: {t.capacity} khách</span>
-                    
-                    <div className={`card-table-badge ${available ? 'badge-green' : 'badge-gray'}`}>
-                      {available ? '🟢 Bàn Trống' : '🔴 Có Khách'}
-                    </div>
-
-                    {available && (
-                      <span className="card-table-action">Chọn bàn này →</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── VIEW 2: FORM ĐIỀN THÔNG TIN ── */}
-      {currentView === 'form' && selectedTable && (
-        <div className="res-box res-form-card">
-          {successBooking ? (
-            <div className="res-success-view">
-              <CheckCircle2 className="success-badge-icon" />
-              <h2 className="success-headline">Đặt Bàn Thành Công!</h2>
-              <p className="success-sub">Mã phiếu đặt bàn của bạn là:</p>
-              
-              <div className="success-code-token">{successBooking.reservationCode}</div>
-
-              <div className="success-details-summary">
-                <span>📍 Bàn đã chọn: <strong>Bàn {selectedTable.tableNo}</strong></span>
-                <span>👥 Số lượng: <strong>{formData.partySize} khách</strong></span>
-                <span>⏰ Thời gian: <strong>{formData.reservationTime} - {formData.reservationDate}</strong></span>
+        {/* ── VIEW 1: SƠ ĐỒ CHỌN BÀN ĂN ── */}
+        {currentView === 'tables' && (
+          <main className="lux-card-panel">
+            <div className="lux-panel-header">
+              <div className="lux-panel-title-wrap">
+                <h2>Sơ Đồ Bàn Trực Quan</h2>
+                <p>Khám phá và chọn bàn tiệc trống phù hợp với quy mô thực khách của bạn</p>
               </div>
 
-              <p className="success-note-text">
-                Nhân viên nhà hàng sẽ kiểm tra và liên hệ xác nhận bàn cho bạn trong thời gian sớm nhất.
-              </p>
-
-              <button
-                type="button"
-                className="res-btn-submit"
-                style={{ marginTop: 20 }}
-                onClick={() => {
-                  setSuccessBooking(null);
-                  setSelectedTable(null);
-                  setCurrentView('tables');
-                  setFormData({
-                    customerName: '',
-                    customerPhone: '',
-                    customerEmail: '',
-                    partySize: 2,
-                    reservationDate: new Date().toISOString().split('T')[0],
-                    reservationTime: '19:00',
-                    specialNotes: '',
-                  });
-                  fetchTables();
-                }}
-              >
-                ← Quay lại đặt thêm bàn khác
-              </button>
+              <div className="lux-status-legend">
+                <span className="lux-legend-item">
+                  <span className="lux-dot lux-dot-avail" /> Bàn Trống (Sẵn sàng đặt)
+                </span>
+                <span className="lux-legend-item">
+                  <span className="lux-dot lux-dot-busy" /> Đang Phục Vụ
+                </span>
+              </div>
             </div>
-          ) : (
-            <>
-              <div className="form-card-topbar">
+
+            {tablesLoading ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
+                <Clock className="spinning" size={32} style={{ margin: '0 auto 12px', color: '#d4af37' }} />
+                <p>Đang chuẩn bị sơ đồ bàn ăn trực quan...</p>
+              </div>
+            ) : (
+              <div className="lux-tables-matrix">
+                {tables.map((t) => {
+                  const available = isAvail(t.status);
+                  const tableNo = t.table_no;
+
+                  return (
+                    <article
+                      key={t.id}
+                      onClick={() => handleSelectTable(t)}
+                      className={`lux-table-tile ${available ? 'is-avail' : 'is-busy'}`}
+                    >
+                      <div className="lux-table-armchair">
+                        <Armchair size={26} strokeWidth={2.2} />
+                      </div>
+                      <h3 className="lux-table-number">Bàn {tableNo}</h3>
+                      <div className="lux-table-seats">
+                        <Users size={14} />
+                        <span>Sức chứa: <strong>{t.capacity} khách</strong></span>
+                      </div>
+
+                      <div className={`lux-table-badge ${available ? 'badge-lux-emerald' : 'badge-lux-ruby'}`}>
+                        {available ? '● Bàn Sẵn Sàng' : '✕ Đang Có Khách'}
+                      </div>
+
+                      {available && (
+                        <div className="lux-table-choose-cue">
+                          <span>Chọn bàn này</span>
+                          <ChevronRight size={13} />
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </main>
+        )}
+
+        {/* ── VIEW 2: FORM THÔNG TIN ĐẶT BÀN & THIỆP MỜI VIP ── */}
+        {currentView === 'form' && selectedTable && (
+          <main className="lux-card-panel lux-form-wrapper">
+            {successBooking ? (
+              <div className="lux-success-envelope">
+                <div className="lux-success-crown">
+                  <CheckCircle2 size={40} />
+                </div>
+                <h2 className="lux-success-title">Đặt Bàn Thành Công!</h2>
+                <p className="lux-success-sub">
+                  OmniResto đã ghi nhận yêu cầu đặt bàn và sẽ đón tiếp quý khách với chất lượng trọn vẹn nhất.
+                </p>
+
+                {/* VIP Dining Pass Card */}
+                <div className="lux-vip-card">
+                  <div className="lux-vip-code-label">MÃ PHIẾU ĐẶT BÀN VIP</div>
+                  <div className="lux-vip-code-val">
+                    {successBooking.reservation_code}
+                  </div>
+
+                  <div className="lux-vip-grid">
+                    <div>
+                      <span className="lux-vip-item-label">Bàn Danh Dự</span>
+                      <div className="lux-vip-item-val">
+                        Bàn {selectedTable.table_no}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="lux-vip-item-label">Số Thực Khách</span>
+                      <div className="lux-vip-item-val">{formData.party_size} Người</div>
+                    </div>
+                    <div>
+                      <span className="lux-vip-item-label">Ngày Thưởng Thức</span>
+                      <div className="lux-vip-item-val">
+                        {new Date(formData.reservation_date).toLocaleDateString('vi-VN')}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="lux-vip-item-label">Thời Gian Đón Tiếp</span>
+                      <div className="lux-vip-item-val">{formData.reservation_time}</div>
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setCurrentView('tables')}
-                  className="res-back-btn"
+                  className="lux-btn-submit"
+                  style={{ maxWidth: 360, margin: '0 auto' }}
+                  onClick={() => {
+                    setSuccessBooking(null);
+                    setSelectedTable(null);
+                    setCurrentView('tables');
+                    setFormData({
+                      customer_name: '',
+                      customer_phone: '',
+                      customer_email: '',
+                      party_size: 2,
+                      reservation_date: new Date().toISOString().split('T')[0],
+                      reservation_time: '19:00',
+                      special_notes: '',
+                    });
+                    fetchTables();
+                  }}
                 >
-                  <ArrowLeft size={16} /> Đổi Bàn Khác
+                  ← Đặt Thêm Bàn Tiệc Khác
                 </button>
+              </div>
+            ) : (
+              <form onSubmit={handleBookingSubmit}>
+                <div className="lux-form-top-nav">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('tables')}
+                    className="lux-back-btn"
+                  >
+                    <ArrowLeft size={15} /> Đổi Bàn Ăn Khác
+                  </button>
 
-                <div className="chosen-table-pill">
-                  <Utensils size={15} />
-                  <span>Đang đặt: <strong>Bàn {selectedTable.tableNo}</strong> (Tối đa {selectedTable.capacity} khách)</span>
+                  <div className="lux-selected-table-pill">
+                    <Utensils size={15} color="#d4af37" />
+                    <span>Vị trí: <strong>Bàn {selectedTable.table_no}</strong> (Tối đa {selectedTable.capacity} khách)</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="form-card-title-group">
-                <h2 className="box-heading">Thông Tin Đặt Bàn</h2>
-                <p className="box-subheading">Vui lòng điền thông tin để chúng tôi chuẩn bị đón tiếp chu đáo nhất</p>
-              </div>
+                {/* Timeline 3 Ca Ăn */}
+                <div className="lux-shift-timeline">
+                  <div className="lux-shift-card">
+                    <div className="lux-shift-title">🌅 Ca Sáng</div>
+                    <div className="lux-shift-time">06:00 - 10:30</div>
+                  </div>
+                  <div className="lux-shift-card">
+                    <div className="lux-shift-title">☀️ Ca Trưa</div>
+                    <div className="lux-shift-time">10:30 - 14:30</div>
+                  </div>
+                  <div className="lux-shift-card is-active">
+                    <div className="lux-shift-title">🌙 Ca Tối</div>
+                    <div className="lux-shift-time">16:30 - 22:00</div>
+                  </div>
+                </div>
 
-              {errorMsg && (
-                <div className="res-error-banner">
-                  <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                  <div>
+                {errorMsg && (
+                  <div className="lux-alert-error">
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
                     <span>{errorMsg}</span>
                   </div>
+                )}
+
+                <div className="lux-input-group">
+                  <label className="lux-label">
+                    <User size={15} color="#d4af37" /> Họ & Tên Quý Khách *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="VD: Nguyễn Tuấn Anh"
+                    className="lux-input-control"
+                    value={formData.customer_name}
+                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                  />
                 </div>
-              )}
 
-              <form onSubmit={handleBookingSubmit} className="res-styled-form">
-                <div className="res-form-2col">
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <User size={15} /> Họ và tên *
-                    </label>
-                    <input
-                      type="text"
-                      name="customerName"
-                      required
-                      value={formData.customerName}
-                      onChange={handleChange}
-                      placeholder="Nguyễn Văn A"
-                      className="res-field-input"
-                    />
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Phone size={15} /> Số điện thoại *
+                <div className="lux-grid-2col">
+                  <div className="lux-input-group">
+                    <label className="lux-label">
+                      <Phone size={15} color="#d4af37" /> Số Điện Thoại Di Động *
                     </label>
                     <input
                       type="tel"
-                      name="customerPhone"
                       required
-                      value={formData.customerPhone}
-                      onChange={handleChange}
+                      placeholder="VD: 0912 345 678"
+                      className="lux-input-control"
+                      value={formData.customer_phone}
+                      onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
                       onBlur={handlePhoneBlur}
-                      placeholder="0988111222"
-                      className="res-field-input"
                     />
                   </div>
 
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Mail size={15} /> Email (nếu có)
-                    </label>
-                    <input
-                      type="email"
-                      name="customerEmail"
-                      value={formData.customerEmail}
-                      onChange={handleChange}
-                      placeholder="example@gmail.com"
-                      className="res-field-input"
-                    />
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Users size={15} /> Số lượng khách *
+                  <div className="lux-input-group">
+                    <label className="lux-label">
+                      <Users size={15} color="#d4af37" /> Số Lượng Khách (Tối đa {selectedTable.capacity}) *
                     </label>
                     <input
                       type="number"
-                      name="partySize"
-                      min="1"
+                      min={1}
                       max={selectedTable.capacity}
                       required
-                      value={formData.partySize}
-                      onChange={handleChange}
-                      className="res-field-input"
-                    />
-                    <small className="field-hint">
-                      * Sức chứa tối đa bàn này: {selectedTable.capacity} người. (Nếu quý khách đi quá 8 người xin hãy liên hệ số hotline để nhà hàng ghép bàn cho quý khách).
-                    </small>
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Calendar size={15} /> Ngày dùng bữa *
-                    </label>
-                    <input
-                      type="date"
-                      name="reservationDate"
-                      required
-                      value={formData.reservationDate}
-                      onChange={handleChange}
-                      className="res-field-input"
-                    />
-                  </div>
-
-                  <div className="res-field-group">
-                    <label className="res-field-label">
-                      <Clock size={15} /> Giờ đến (Mở: 06:00-14:30 & 16:30-22:00) *
-                    </label>
-                    <input
-                      type="time"
-                      name="reservationTime"
-                      required
-                      value={formData.reservationTime}
-                      onChange={handleChange}
-                      className="res-field-input"
+                      className="lux-input-control"
+                      value={formData.party_size}
+                      onChange={(e) => setFormData({ ...formData, party_size: Number(e.target.value) })}
                     />
                   </div>
                 </div>
 
-                <div className="res-field-group">
-                  <label className="res-field-label">
-                    <FileText size={15} /> Yêu cầu đặc biệt (tùy chọn)
+                <div className="lux-grid-2col">
+                  <div className="lux-input-group">
+                    <label className="lux-label">
+                      <Calendar size={15} color="#d4af37" /> Ngày Dùng Bữa *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      className="lux-input-control"
+                      value={formData.reservation_date}
+                      onChange={(e) => setFormData({ ...formData, reservation_date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="lux-input-group">
+                    <label className="lux-label">
+                      <Clock size={15} color="#d4af37" /> Giờ Đến Dùng Bữa *
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      className="lux-input-control"
+                      value={formData.reservation_time}
+                      onChange={(e) => setFormData({ ...formData, reservation_time: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="lux-input-group">
+                  <label className="lux-label">
+                    <Mail size={15} color="#d4af37" /> Email Xác Nhận (Không bắt buộc)
                   </label>
-                  <textarea
-                    name="specialNotes"
-                    rows={3}
-                    value={formData.specialNotes}
-                    onChange={handleChange}
-                    placeholder="Ví dụ: Bàn tiệc sinh nhật, ghế ăn cho trẻ em..."
-                    className="res-field-textarea"
-                  ></textarea>
+                  <input
+                    type="email"
+                    placeholder="VD: khachhang@example.com"
+                    className="lux-input-control"
+                    value={formData.customer_email}
+                    onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
+                  />
+                </div>
+
+                <div className="lux-input-group">
+                  <label className="lux-label">
+                    <Sparkles size={15} color="#d4af37" /> Yêu Cầu Đặc Biệt Cho Bàn Tiệc
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: Hoa tươi kỉ niệm, ghế trẻ em, bàn nhìn ra cảnh đêm..."
+                    className="lux-input-control"
+                    value={formData.special_notes}
+                    onChange={(e) => setFormData({ ...formData, special_notes: e.target.value })}
+                  />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="res-btn-submit"
+                  className="lux-btn-submit"
                 >
-                  {loading ? 'Đang kiểm tra & xử lý...' : `Xác Nhận Đặt Bàn ${selectedTable.tableNo}`}
+                  {loading ? (
+                    <>
+                      <Clock size={18} className="spinning" />
+                      <span>Đang Khởi Tạo Đơn Đặt Bàn...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={18} />
+                      <span>Xác Nhận Đặt Bàn Thượng Hạng</span>
+                    </>
+                  )}
                 </button>
               </form>
-            </>
-          )}
-        </div>
-      )}
+            )}
+          </main>
+        )}
+      </div>
     </div>
   );
 }

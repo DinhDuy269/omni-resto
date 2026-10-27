@@ -1,4 +1,3 @@
-import type { MenuItem } from '../../shared/types/menu';
 
 export type ClientMealPeriod = 'MORNING' | 'NOON' | 'BREAK' | 'EVENING' | 'CLOSED';
 

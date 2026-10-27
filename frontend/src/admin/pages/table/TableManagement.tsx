@@ -93,7 +93,7 @@ export const TableManagement: React.FC = () => {
     confirmTablePayment,
     service_requests,
     resolveServiceRequestsByTable,
-    fetchAdminData,
+    fetchInitialData: fetchAdminData,
   } = useAdminStore();
 
   const [filterStatus, setFilterStatus] = useState<string>('ALL');

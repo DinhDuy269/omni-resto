@@ -1,12 +1,25 @@
 export type OrderType = 'dine_in' | 'takeaway' | 'delivery' | 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
 export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
 
+export interface OrderItemOptionInfo {
+  id?: string;
+  option_id?: string;
+  option_name?: string;
+  optionId?: string;
+  optionName?: string;
+  option_type?: string;
+  optionType?: string;
+  price?: number;
+}
+
 export interface OrderItemInfo {
   id: string;
   name: string;
   quantity: number;
   price: number;
   notes?: string;
+  status?: string;
+  options?: OrderItemOptionInfo[];
 }
 
 export interface Order {

@@ -6,8 +6,10 @@ import com.omniresto.backend.domain.CategoryOptionEntity;
 import com.omniresto.backend.domain.MenuItemEntity;
 import com.omniresto.backend.domain.OrderEntity;
 import com.omniresto.backend.domain.OrderItemEntity;
+import com.omniresto.backend.domain.OrderItemOptionEntity;
 import com.omniresto.backend.domain.TableSessionEntity;
 import com.omniresto.backend.domain.enums.MealPeriod;
+import com.omniresto.backend.domain.enums.MenuStatus;
 import com.omniresto.backend.domain.enums.OrderItemStatus;
 import com.omniresto.backend.domain.enums.OrderStatus;
 import com.omniresto.backend.domain.enums.OrderType;
@@ -22,6 +24,7 @@ import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.helper.MealPeriodHelper;
 import com.omniresto.backend.model.order.request.OrderItemRequest;
 import com.omniresto.backend.model.order.request.OrderRequest;
+import com.omniresto.backend.model.order.response.OrderItemOptionResponse;
 import com.omniresto.backend.model.order.response.OrderItemResponse;
 import com.omniresto.backend.model.order.response.OrderResponse;
 import com.omniresto.backend.repository.CategoryOptionRepository;
@@ -283,11 +286,18 @@ public class OrderService {
             MenuItemEntity m = menuItemRepository.findById(itemReq.getMenuItemId().trim())
                     .orElseThrow(() -> new BadRequestException("Món ăn không tồn tại hoặc đã ngừng phục vụ (ID: " + itemReq.getMenuItemId() + ")"));
 
+            validateMenuItemAvailability(m);
             validateMealPeriodForDish(m, now, currentPeriod);
 
-            // Tính đơn giá chính xác bao gồm giá gốc + phụ thu Topping/Size từ Database
-            BigDecimal unitPrice = calculateUnitPriceWithOptions(m, itemReq);
-            String displayItemName = buildItemDisplayName(m, itemReq);
+            // Xác thực và lấy danh sách options hợp lệ từ Database (chặn chọn chéo danh mục, kiểm tra còn hàng & tối đa 1 size)
+            List<CategoryOptionEntity> chosenOptions = validateAndResolveOptions(m, itemReq.getOptionIds());
+
+            BigDecimal optionsExtra = chosenOptions.stream()
+                    .map(CategoryOptionEntity::getPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal unitPrice = (m.getBasePrice() != null ? m.getBasePrice() : BigDecimal.ZERO).add(optionsExtra);
 
             int qty = (itemReq.getQuantity() != null && itemReq.getQuantity() > 0) ? itemReq.getQuantity() : 1;
             calculatedTotal = calculatedTotal.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
@@ -295,7 +305,7 @@ public class OrderService {
             OrderItemEntity item = OrderItemEntity.builder()
                     .order(saved)
                     .menuItemId(m.getId())
-                    .itemName(displayItemName)
+                    .itemName(m.getName()) // Tên món gốc chuẩn hóa
                     .quantity(qty)
                     .unitPrice(unitPrice)
                     .notes(itemReq.getNotes())
@@ -304,6 +314,17 @@ public class OrderService {
                     .addedAt(LocalDateTime.now(DEFAULT_ZONE))
                     .build();
             item.setId("item-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24));
+
+            for (CategoryOptionEntity opt : chosenOptions) {
+                OrderItemOptionEntity optEntity = OrderItemOptionEntity.builder()
+                        .optionId(opt.getId())
+                        .optionName(opt.getName())
+                        .optionType(opt.getOptionType())
+                        .price(opt.getPrice() != null ? opt.getPrice() : BigDecimal.ZERO)
+                        .build();
+                item.addOption(optEntity);
+            }
+
             saved.addItem(item);
             itemEntities.add(orderItemRepository.save(item));
         }
@@ -408,17 +429,25 @@ public class OrderService {
             MenuItemEntity m = menuItemRepository.findById(itemReq.getMenuItemId().trim())
                     .orElseThrow(() -> new BadRequestException("Món ăn gọi thêm không tồn tại hoặc đã ngừng phục vụ (ID: " + itemReq.getMenuItemId() + ")"));
 
+            validateMenuItemAvailability(m);
             validateMealPeriodForDish(m, now, currentPeriod);
 
-            BigDecimal unitPrice = calculateUnitPriceWithOptions(m, itemReq);
-            String displayItemName = buildItemDisplayName(m, itemReq);
+            // Xác thực và lấy danh sách options hợp lệ từ Database (chặn chọn chéo danh mục, kiểm tra còn hàng & tối đa 1 size)
+            List<CategoryOptionEntity> chosenOptions = validateAndResolveOptions(m, itemReq.getOptionIds());
+
+            BigDecimal optionsExtra = chosenOptions.stream()
+                    .map(CategoryOptionEntity::getPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal unitPrice = (m.getBasePrice() != null ? m.getBasePrice() : BigDecimal.ZERO).add(optionsExtra);
 
             int qty = (itemReq.getQuantity() != null && itemReq.getQuantity() > 0) ? itemReq.getQuantity() : 1;
 
             OrderItemEntity item = OrderItemEntity.builder()
                     .order(order)
                     .menuItemId(m.getId())
-                    .itemName(displayItemName)
+                    .itemName(m.getName()) // Tên món gốc chuẩn hóa
                     .quantity(qty)
                     .unitPrice(unitPrice)
                     .notes(itemReq.getNotes())
@@ -427,6 +456,17 @@ public class OrderService {
                     .addedAt(LocalDateTime.now(DEFAULT_ZONE))
                     .build();
             item.setId("item-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24));
+
+            for (CategoryOptionEntity opt : chosenOptions) {
+                OrderItemOptionEntity optEntity = OrderItemOptionEntity.builder()
+                        .optionId(opt.getId())
+                        .optionName(opt.getName())
+                        .optionType(opt.getOptionType())
+                        .price(opt.getPrice() != null ? opt.getPrice() : BigDecimal.ZERO)
+                        .build();
+                item.addOption(optEntity);
+            }
+
             newRoundItems.add(orderItemRepository.save(item));
         }
 
@@ -458,35 +498,15 @@ public class OrderService {
         return response;
     }
 
-    /**
-     * Tính đơn giá dòng món = Giá gốc + phụ thu các Options (Topping/Size)
-     */
-    private BigDecimal calculateUnitPriceWithOptions(MenuItemEntity menuItem, OrderItemRequest itemReq) {
-        BigDecimal unitPrice = menuItem.getBasePrice() != null ? menuItem.getBasePrice() : BigDecimal.ZERO;
-        if (itemReq.getOptionIds() != null && !itemReq.getOptionIds().isEmpty()) {
-            List<CategoryOptionEntity> options = categoryOptionRepository.findAllById(itemReq.getOptionIds());
-            BigDecimal optionsExtra = options.stream()
-                    .map(CategoryOptionEntity::getPrice)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            unitPrice = unitPrice.add(optionsExtra);
-        }
-        return unitPrice;
-    }
 
-    /**
-     * Tên món hiển thị kèm tóm tắt Options
-     */
-    private String buildItemDisplayName(MenuItemEntity menuItem, OrderItemRequest itemReq) {
-        if (itemReq.getOptionIds() == null || itemReq.getOptionIds().isEmpty()) {
-            return menuItem.getName();
+
+    private void validateMenuItemAvailability(MenuItemEntity menuItem) {
+        if (menuItem.getStatus() == MenuStatus.out_of_stock) {
+            throw new BadRequestException("Món '" + menuItem.getName() + "' hiện đã tạm hết hàng, quý khách vui lòng chọn món khác!");
         }
-        List<CategoryOptionEntity> options = categoryOptionRepository.findAllById(itemReq.getOptionIds());
-        if (options.isEmpty()) {
-            return menuItem.getName();
+        if (menuItem.getStatus() == MenuStatus.discontinued) {
+            throw new BadRequestException("Món '" + menuItem.getName() + "' hiện đã ngừng phục vụ!");
         }
-        String optNames = options.stream().map(CategoryOptionEntity::getName).collect(Collectors.joining(", "));
-        return menuItem.getName() + " (" + optNames + ")";
     }
 
     private void validateMealPeriodForDish(MenuItemEntity menuItem, LocalTime now, MealPeriod currentPeriod) {
@@ -501,6 +521,62 @@ public class OrderService {
                             + "), quý khách vui lòng chọn các món thuộc thực đơn hiện tại!"
             );
         }
+    }
+
+    /**
+     * Xác thực và phân giải danh sách tùy chọn (Options: Size/Topping) của món ăn
+     * Đảm bảo:
+     * 1. Option tồn tại trong Database
+     * 2. Option phải thuộc đúng Category của món ăn (chặn Cross-Category Injection)
+     * 3. Option đang mở bán (status = AVAILABLE)
+     * 4. Tối đa 1 option loại SIZE cho mỗi món
+     */
+    private List<CategoryOptionEntity> validateAndResolveOptions(MenuItemEntity menuItem, List<String> optionIds) {
+        if (optionIds == null || optionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Loại bỏ trùng lặp ID (ngăn chặn duplicate injection)
+        List<String> distinctIds = optionIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+
+        if (distinctIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<CategoryOptionEntity> options = categoryOptionRepository.findAllById(distinctIds);
+
+        if (options.size() != distinctIds.size()) {
+            throw new BadRequestException("Một hoặc nhiều tùy chọn món ăn không tồn tại trong hệ thống!");
+        }
+
+        String itemCategoryId = (menuItem.getCategory() != null) ? menuItem.getCategory().getId() : null;
+        int sizeCount = 0;
+
+        for (CategoryOptionEntity opt : options) {
+            // 1. Kiểm tra danh mục
+            if (itemCategoryId != null && opt.getCategory() != null && !itemCategoryId.equals(opt.getCategory().getId())) {
+                throw new BadRequestException("Tùy chọn '" + opt.getName() + "' không thuộc danh mục của món '" + menuItem.getName() + "'!");
+            }
+
+            // 2. Kiểm tra trạng thái còn hàng
+            if (opt.getStatus() != null && !"AVAILABLE".equalsIgnoreCase(opt.getStatus().trim())) {
+                throw new BadRequestException("Tùy chọn '" + opt.getName() + "' hiện đang tạm ngưng phục vụ!");
+            }
+
+            // 3. Quy tắc kiểm tra Size
+            if (opt.getOptionType() == com.omniresto.backend.domain.enums.OptionType.size) {
+                sizeCount++;
+                if (sizeCount > 1) {
+                    throw new BadRequestException("Món '" + menuItem.getName() + "' chỉ được chọn tối đa một kích cỡ (size)!");
+                }
+            }
+        }
+
+        return options;
     }
 
     private void validateOrderStatusTransition(OrderEntity order, OrderStatus targetStatus) {
@@ -721,6 +797,17 @@ public class OrderService {
             res.setAddedAt(i.getAddedAt());
             res.setConfirmedByStaffId(i.getConfirmedByStaffId());
             res.setConfirmedAt(i.getConfirmedAt());
+
+            if (i.getOptions() != null && !i.getOptions().isEmpty()) {
+                List<OrderItemOptionResponse> optResponses = i.getOptions().stream().map(opt -> OrderItemOptionResponse.builder()
+                        .id(opt.getId())
+                        .optionId(opt.getOptionId())
+                        .optionName(opt.getOptionName())
+                        .optionType(opt.getOptionType())
+                        .price(opt.getPrice())
+                        .build()).toList();
+                res.setOptions(optResponses);
+            }
             return res;
         }).toList();
 

@@ -43,7 +43,7 @@ export const ClientCart: React.FC = () => {
   // Voucher states
   const [availableVouchers, setAvailableVouchers] = useState<VoucherInfo[]>([]);
   const [voucherCode, setVoucherCode] = useState('');
-  const [appliedVoucher, setAppliedVoucher] = useState<VoucherInfo | null>(null);
+  const [appliedVoucher] = useState<VoucherInfo | null>(null);
   const [appliedVoucherPreview, setAppliedVoucherPreview] = useState<import('../../../shared/types').VoucherPreviewResponse | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
@@ -432,6 +432,34 @@ export const ClientCart: React.FC = () => {
                         }}>
                           {item.name}
                         </div>
+                        {item.options && item.options.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '2px 0 4px' }}>
+                            {item.options.map((opt, optIdx) => {
+                              const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                              return (
+                                <span
+                                  key={optIdx}
+                                  style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    padding: '1px 6px',
+                                    borderRadius: 4,
+                                    background: isSize ? '#e0e7ff' : '#ecfdf5',
+                                    color: isSize ? '#3730a3' : '#065f46',
+                                    border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
+                                  }}
+                                >
+                                  {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {item.notes && (
+                          <div style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600, marginBottom: 2 }}>
+                            📝 {item.notes}
+                          </div>
+                        )}
                         {!isAvailable && (
                           <div style={{
                             fontSize: '0.725rem',

@@ -1,7 +1,9 @@
 package com.omniresto.backend.controller;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.omniresto.backend.config.VnPayConfig;
+import com.omniresto.backend.exception.BadRequestException;
 import com.omniresto.backend.model.order.response.OrderResponse;
 import com.omniresto.backend.model.payment.VnPayCallbackResponse;
 import com.omniresto.backend.model.payment.VnPayPaymentResponse;
@@ -46,6 +48,7 @@ public class PaymentController {
     @Data
     public static class VnPayCreateRequest {
         @JsonProperty("order_id")
+        @JsonAlias({"orderId", "order_id"})
         private String orderId;
     }
 
@@ -54,6 +57,9 @@ public class PaymentController {
             @RequestBody VnPayCreateRequest req,
             HttpServletRequest request
     ) {
+        if (req == null || req.getOrderId() == null || req.getOrderId().isBlank()) {
+            throw new BadRequestException("Mã đơn hàng (order_id) không được để trống!");
+        }
         String clientIp = VnPayConfig.getIpAddress(request);
         return paymentService.generateVnPayPayment(req.getOrderId(), clientIp);
     }
@@ -95,17 +101,29 @@ public class PaymentController {
 
     @Data
     public static class WebhookRequest {
+        @JsonProperty("order_id")
+        @JsonAlias({"orderId", "order_id"})
         private String orderId;
+
+        @JsonProperty("transaction_id")
+        @JsonAlias({"transactionId", "transaction_id", "transactionReference", "transaction_reference", "refNo"})
         private String transactionId;
+
         private Double amount;
+
+        @JsonProperty("raw_payload")
+        @JsonAlias({"rawPayload", "raw_payload"})
         private String rawPayload;
     }
 
     @PostMapping("/webhook")
     public OrderResponse paymentWebhook(@RequestBody WebhookRequest request) {
+        if (request == null || request.getOrderId() == null || request.getOrderId().isBlank()) {
+            throw new BadRequestException("Mã đơn hàng (order_id) không được để trống!");
+        }
         return paymentService.handlePaymentWebhook(
-                request.getOrderId(),
-                request.getTransactionId() != null ? request.getTransactionId() : "TXN-" + System.currentTimeMillis(),
+                request.getOrderId().trim(),
+                request.getTransactionId() != null && !request.getTransactionId().isBlank() ? request.getTransactionId().trim() : "TXN-" + System.currentTimeMillis(),
                 request.getAmount(),
                 request.getRawPayload()
         );

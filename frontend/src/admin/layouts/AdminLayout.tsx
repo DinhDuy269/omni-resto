@@ -12,9 +12,17 @@ export const AdminLayout: React.FC = () => {
   const [isQuickActionModalOpen, setIsQuickActionModalOpen] = useState(false);
   const fetchInitialData = useAdminStore((s) => s.fetchInitialData);
   const handleWebSocketOrderEvent = useAdminStore((s) => s.handleWebSocketOrderEvent);
+  const handleWebSocketMenuEvent = useAdminStore((s) => s.handleWebSocketMenuEvent);
 
-  // Lắng nghe cập nhật đơn hàng toàn chuỗi theo thời gian thực từ Server
-  useWebSocket(handleWebSocketOrderEvent);
+  // Lắng nghe cập nhật đơn hàng & thực đơn toàn chuỗi theo thời gian thực từ Server
+  useWebSocket((event) => {
+    if (event?.order) {
+      handleWebSocketOrderEvent(event as any);
+    }
+    if (event?.eventType?.startsWith('MENU_') || event?.event_type?.startsWith('MENU_')) {
+      handleWebSocketMenuEvent(event);
+    }
+  });
 
   useEffect(() => {
     fetchInitialData();

@@ -4,6 +4,17 @@ import type { MenuCategory } from './menu';
 
 export type OrderItemLineStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED';
 
+export interface CartItemOption {
+  id?: string;
+  option_id?: string;
+  option_name?: string;
+  optionId?: string;
+  optionName?: string;
+  option_type?: string;
+  optionType?: string;
+  price?: number;
+}
+
 export interface CartItem {
   id?: string;
   menu_item_id?: string;
@@ -17,7 +28,14 @@ export interface CartItem {
   round_no?: number;
   status?: OrderItemLineStatus;
   added_at?: string;
+  option_ids?: string[];
+  options?: CartItemOption[];
+  is_available_now?: boolean;
+  availableNow?: boolean;
+  meal_periods?: string;
+  mealPeriods?: string;
 }
+
 
 export interface VietQRInfo {
   qr_image_url?: string;
