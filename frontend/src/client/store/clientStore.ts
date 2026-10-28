@@ -823,7 +823,17 @@ export const useClientStore = create<ClientState>((set, get) => ({
   fetchOrderById: async (orderId: string) => {
     if (!orderId) return null;
     try {
-      const res = await fetch(`/api/orders/${orderId}`);
+      const headers: Record<string, string> = {};
+      const targetOrder = get().orders.find((o) => o.id === orderId || o.order_number === orderId) || get().placed_order;
+      const sessionToken = get().table_session?.session_token || targetOrder?.session_token;
+      if (sessionToken) {
+        headers['X-Table-Session'] = sessionToken;
+      }
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(`/api/orders/${orderId}`, { headers });
       if (!res.ok) return null;
       const data = await res.json();
       const existing = get().orders.find((o) => o.id === data.id || o.order_number === data.order_number);
@@ -857,6 +867,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
     try {
       const headers: Record<string, string> = {};
       if (sessionToken) headers['X-Table-Session'] = sessionToken;
+      const token = localStorage.getItem('token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('/api/orders', { headers });
       if (!res.ok) return [];
       const data = await res.json();

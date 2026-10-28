@@ -261,21 +261,24 @@ export const KitchenDisplaySystem: React.FC = () => {
 
                   {/* Items List - High Contrast */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {order.items.map((item, idx) => (
+                    {order.items.map((item, idx) => {
+                      const isCancelled = item.status === 'CANCELLED';
+                      return (
                       <div
                         key={idx}
                         style={{
-                          background: 'var(--bg-app)',
+                          background: isCancelled ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-app)',
                           padding: '12px 14px',
                           borderRadius: 'var(--radius-md)',
-                          border: '1px solid var(--border-subtle)',
+                          border: isCancelled ? '1.5px dashed var(--danger)' : '1px solid var(--border-subtle)',
+                          opacity: isCancelled ? 0.7 : 1,
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1rem' }}>
+                          <span style={{ fontWeight: 800, color: isCancelled ? 'var(--text-muted)' : 'var(--text-main)', fontSize: '1rem', textDecoration: isCancelled ? 'line-through' : 'none' }}>
                             <span
                               style={{
-                                color: 'var(--primary)',
+                                color: isCancelled ? 'var(--danger)' : 'var(--primary)',
                                 marginRight: '8px',
                                 fontSize: '1.1rem',
                                 fontWeight: 900,
@@ -285,6 +288,11 @@ export const KitchenDisplaySystem: React.FC = () => {
                             </span>
                             {item.name}
                           </span>
+                          {isCancelled && (
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, backgroundColor: 'var(--danger)', color: '#ffffff', padding: '2px 8px', borderRadius: '4px' }}>
+                              ĐÃ HỦY - KHÔNG NẤU
+                            </span>
+                          )}
                         </div>
 
                         {/* Modifiers / Options Badges (Sizes & Toppings) */}
@@ -337,7 +345,8 @@ export const KitchenDisplaySystem: React.FC = () => {
                           </div>
                         )}
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
 
@@ -395,7 +404,7 @@ export const KitchenDisplaySystem: React.FC = () => {
 
                   {order.status === 'READY' && (
                     <button
-                      onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
+                      onClick={() => updateOrderStatus(order.id, 'COMPLETED', true)}
                       style={{
                         flex: 1,
                         padding: '12px',

@@ -6,96 +6,140 @@ export type UserStatus = 'PENDING_VERIFICATION' | 'ACTIVE' | 'INACTIVE' | 'BLOCK
 export type OtpPurpose = 'REGISTER_VERIFICATION' | 'PASSWORD_RESET';
 
 export interface RegisterRequest {
-  fullName: string;
+  full_name: string;
   email: string;
   phone: string;
   password: string;
+  date_of_birth: string;
+  otp?: string;
 }
 
 export interface VerifyRegisterOtpRequest {
-  email: string;
-  otpCode: string;
+  phone?: string;
+  email?: string;
+  otp_code: string;
 }
 
 export interface LoginRequest {
-  usernameOrEmail: string;
+  username_or_email?: string;
+  username?: string;
+  identifier?: string;
   password: string;
 }
 
 export interface AuthResponse {
   token: string;
-  userId: string;
-  fullName: string;
+  type?: string;
+  id?: string;
+  user_id?: string;
+  full_name: string;
+  phone?: string;
   email: string;
-  role: RoleType;
-  status: UserStatus;
+  customer_type?: string;
+  member_tier?: string;
+  points?: number;
+  role?: RoleType;
+  status?: UserStatus;
 }
 
 export interface SendOtpRequest {
-  email: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface VerifyResetOtpRequest {
-  email: string;
-  otpCode: string;
+  phone?: string;
+  email?: string;
+  otp_code: string;
 }
 
 export interface ResetPasswordRequest {
-  email: string;
-  otpCode: string;
-  newPassword: string;
+  phone?: string;
+  email?: string;
+  otp_code?: string;
+  otp?: string;
+  new_password?: string;
+  
 }
 
 export interface UserAdminDto {
   id: string;
-  fullName: string;
+  full_name: string;
   email: string;
   phone: string;
   role: RoleType;
   status: UserStatus;
-  createdAt: string;
+  created_at: string;
 }
 
 export const authApi = {
-  // 1. Đăng ký tài khoản
-  register: async (data: RegisterRequest) => {
+  // 1. Gửi mã OTP (đến SĐT hoặc Email)
+  sendOtp: async (data: SendOtpRequest): Promise<{ message: string; otp?: string }> => {
+    const res = await api.post('/auth/send-otp', data);
+    return res.data;
+  },
+
+  // 2. Đăng ký tài khoản (kèm date_of_birth và otp)
+  register: async (data: RegisterRequest): Promise<AuthResponse> => {
     const res = await api.post('/auth/register', data);
     return res.data;
   },
 
-  // 2. Xác minh OTP Đăng ký
+  // 3. Xác minh OTP Đăng ký
   verifyRegisterOtp: async (data: VerifyRegisterOtpRequest) => {
-    const res = await api.post('/auth/verify-register-otp', data);
+    const res = await api.post('/auth/verify-register-otp', {
+      phone: data.phone,
+      email: data.email,
+      otp: data.otp_code,
+    });
     return res.data;
   },
 
-  // 3. Đăng nhập
-  login: async (data: LoginRequest) => {
-    const res = await api.post('/auth/login', data);
+  // 4. Đăng nhập (gửi username, username_or_email, identifier để tương thích mọi DTO)
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
+    const target = data.username || data.username_or_email || data.identifier || '';
+    const res = await api.post('/auth/login', {
+      username: target,
+      username_or_email: target,
+      identifier: target,
+      password: data.password,
+    });
     return res.data;
   },
 
-  // 4. Yêu cầu mã OTP Quên mật khẩu
-  forgotPassword: async (data: SendOtpRequest) => {
-    const res = await api.post('/auth/forgot-password', data);
+  // 5. Yêu cầu mã OTP Quên mật khẩu
+  forgotPassword: async (data: SendOtpRequest): Promise<{ message: string; otp?: string }> => {
+    const res = await api.post('/auth/send-otp', data);
     return res.data;
   },
 
-  // 5. Xác minh OTP Quên mật khẩu
+  // 6. Xác minh OTP Quên mật khẩu
   verifyResetOtp: async (data: VerifyResetOtpRequest) => {
-    const res = await api.post('/auth/verify-reset-otp', data);
+    const res = await api.post('/auth/verify-reset-otp', {
+      phone: data.phone,
+      email: data.email,
+      otp: data.otp_code,
+    });
     return res.data;
   },
 
-  // 6. Đặt lại mật khẩu mới
+  // 7. Đặt lại mật khẩu mới (POST /auth/forgot-password)
   resetPassword: async (data: ResetPasswordRequest) => {
-    const res = await api.post('/auth/reset-password', data);
+    const payload = {
+      phone: data.phone,
+      email: data.email,
+      otp: data.otp || data.otp_code,
+      new_password: data.new_password ,
+      newPassword: data.new_password,
+    };
+    const res = await api.post('/auth/forgot-password', payload);
     return res.data;
   },
 
-  // 7. Gửi lại mã OTP
-  resendOtp: async (email: string, purpose: OtpPurpose) => {
-    const res = await api.post(`/auth/resend-otp?email=${encodeURIComponent(email)}&purpose=${purpose}`);
+  // 8. Gửi lại mã OTP
+  resendOtp: async (target: string, _purpose?: OtpPurpose) => {
+    const payload = target.includes('@') ? { email: target } : { phone: target };
+    const res = await api.post('/auth/send-otp', payload);
     return res.data;
   },
 

@@ -69,8 +69,7 @@ public class CustomerAuthService {
         String token = jwtService.generateToken(savedCustomer.getId(), Map.of(
                 "role", "CUSTOMER",
                 "phone", savedCustomer.getPhone(),
-                "fullName", savedCustomer.getFullName()
-        ));
+                "fullName", savedCustomer.getFullName()));
 
         return AuthResponse.builder()
                 .token(token)
@@ -98,10 +97,10 @@ public class CustomerAuthService {
         String token = jwtService.generateToken(customer.getId(), Map.of(
                 "role", "CUSTOMER",
                 "phone", customer.getPhone() != null ? customer.getPhone() : "",
-                "fullName", customer.getFullName() != null ? customer.getFullName() : ""
-        ));
+                "fullName", customer.getFullName() != null ? customer.getFullName() : ""));
 
-        String tierName = customer.getMembershipTier() != null ? customer.getMembershipTier().name() : MembershipTier.standard.name();
+        String tierName = customer.getMembershipTier() != null ? customer.getMembershipTier().name()
+                : MembershipTier.standard.name();
         int points = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
 
         return AuthResponse.builder()
@@ -188,7 +187,8 @@ public class CustomerAuthService {
         res.setEmail(entity.getEmail());
         res.setPhone(entity.getPhone());
         res.setDateOfBirth(entity.getDateOfBirth());
-        res.setMembershipTier(entity.getMembershipTier() != null ? entity.getMembershipTier() : MembershipTier.standard);
+        res.setMembershipTier(
+                entity.getMembershipTier() != null ? entity.getMembershipTier() : MembershipTier.standard);
         res.setLoyaltyPoints(entity.getLoyaltyPoints() != null ? entity.getLoyaltyPoints() : 0);
         res.setStatus(entity.getStatus() != null ? entity.getStatus() : CustomerStatus.active);
         res.setCreatedAt(entity.getCreatedAt());

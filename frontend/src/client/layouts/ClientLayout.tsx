@@ -14,11 +14,11 @@ import { useAdminStore } from '../../admin/store/adminStore';
 import './ClientLayout.css';
 
 const NAV_LINKS = [
-  { to: '/client/menu',        label: 'Thực đơn' },
-  { to: '/client/orders',      label: 'Đơn hàng' },
+  { to: '/client/menu', label: 'Thực đơn' },
+  { to: '/client/orders', label: 'Đơn hàng' },
   { to: '/client/reservation', label: 'Đặt bàn' },
-  { to: '/client/gacha',       label: 'Vòng quay' },
-  { to: '/client/about',       label: 'Giới thiệu' },
+  { to: '/client/gacha', label: 'Vòng quay' },
+  { to: '/client/about', label: 'Giới thiệu' },
 ];
 
 // ─── Layout Component ────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ const getInitials = (name?: string) => {
 
 export const ClientLayout: React.FC = () => {
   const { is_cart_open, openCart, closeCart, table_session, handleServerOrderEvent } = useClientStore();
-  const totalItems  = useClientStore(selectTotalItems);
+  const totalItems = useClientStore(selectTotalItems);
   const totalAmount = useClientStore(selectTotalAmount);
   const hasActiveOrder = useClientStore(selectHasActiveOrders);
 
@@ -196,7 +196,7 @@ export const ClientLayout: React.FC = () => {
               </div>
             ) : (
               <Link
-                to="/login"
+                to="/auth"
                 id="header-login-btn"
                 className="client-login-cta"
                 title="Đăng nhập tài khoản thành viên"

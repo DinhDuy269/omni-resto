@@ -894,7 +894,7 @@ export const ClientCart: React.FC = () => {
                   {showLoginPrompt && (
                     <button
                       type="button"
-                      onClick={() => navigate('/login')}
+                   onClick={() => navigate('/auth?redirect=/client/cart')}
                       style={{
                         alignSelf: 'flex-start',
                         padding: '6px 14px',
@@ -1348,19 +1348,19 @@ export const ClientCart: React.FC = () => {
                   </div>
                 )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPaymentModal(false);
-                      navigate(`/client/orders`);
-                    }}
-                    style={{
-                      background: 'none', border: 'none', color: '#64748b',
-                      fontSize: '0.8rem', cursor: 'pointer', padding: 4,
-                    }}
-                  >
-                    Đóng và theo dõi đơn hàng sau →
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    navigate(`/client/orders`);
+                  }}
+                  style={{
+                    background: 'none', border: 'none', color: '#64748b',
+                    fontSize: '0.8rem', cursor: 'pointer', padding: 4,
+                  }}
+                >
+                  Đóng và theo dõi đơn hàng sau →
+                </button>
               </div>
             ) : (
               <div>

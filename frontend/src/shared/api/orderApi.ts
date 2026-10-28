@@ -40,9 +40,46 @@ export const orderApi = {
         }
     },
 
-    updateStatus: async (orderId: string, status: OrderStatus): Promise<void> => {
+    updateStatus: async (orderId: string, status: OrderStatus, autoPay: boolean = false): Promise<void> => {
         try {
-            await apiClient.patch(`/orders/${orderId}/status?status=${status.toLowerCase()}`, null, { headers: STAFF_HEADERS });
+            const query = autoPay ? `?status=${status.toLowerCase()}&autoPay=true` : `?status=${status.toLowerCase()}`;
+            await apiClient.patch(`/orders/${orderId}/status${query}`, null, { headers: STAFF_HEADERS });
+        } catch (error) {
+            throw transformAxiosErrorResponse(error);
+        }
+    },
+
+    confirmPayment: async (
+        orderId: string,
+        paymentMethod?: string,
+        amountReceived?: number,
+        autoComplete: boolean = false
+    ): Promise<void> => {
+        try {
+            const params = new URLSearchParams();
+            if (paymentMethod) params.append('method', paymentMethod.toLowerCase());
+            if (amountReceived !== undefined) params.append('amountReceived', amountReceived.toString());
+            params.append('autoComplete', autoComplete.toString());
+
+            await apiClient.post(`/orders/${orderId}/confirm-payment?${params.toString()}`, null, { headers: STAFF_HEADERS });
+        } catch (error) {
+            throw transformAxiosErrorResponse(error);
+        }
+    },
+
+    cancelOrderItem: async (
+        orderId: string,
+        itemId: string,
+        reason: string = 'Khách yêu cầu hủy món',
+        staffId?: string
+    ): Promise<void> => {
+        try {
+            const params = new URLSearchParams();
+            if (reason) params.append('reason', reason);
+            const headers: Record<string, string> = { ...STAFF_HEADERS };
+            if (staffId) headers['X-Staff-Id'] = staffId;
+
+            await apiClient.post(`/orders/${orderId}/items/${itemId}/cancel?${params.toString()}`, null, { headers });
         } catch (error) {
             throw transformAxiosErrorResponse(error);
         }

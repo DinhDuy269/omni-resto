@@ -22,6 +22,9 @@ import com.omniresto.backend.exception.BadRequestException;
 import com.omniresto.backend.exception.ConflictException;
 import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.helper.MealPeriodHelper;
+import com.omniresto.backend.domain.PaymentTransactionEntity;
+import com.omniresto.backend.domain.enums.PaymentMethod;
+import com.omniresto.backend.domain.enums.PaymentTransactionStatus;
 import com.omniresto.backend.model.order.request.OrderItemRequest;
 import com.omniresto.backend.model.order.request.OrderRequest;
 import com.omniresto.backend.model.order.response.OrderItemOptionResponse;
@@ -31,6 +34,7 @@ import com.omniresto.backend.repository.CategoryOptionRepository;
 import com.omniresto.backend.repository.MenuItemRepository;
 import com.omniresto.backend.repository.OrderItemRepository;
 import com.omniresto.backend.repository.OrderRepository;
+import com.omniresto.backend.repository.PaymentTransactionRepository;
 import com.omniresto.backend.repository.TableSessionRepository;
 import com.omniresto.backend.repository.VoucherRedemptionRepository;
 import com.omniresto.backend.repository.VoucherRepository;
@@ -72,6 +76,7 @@ public class OrderService {
     private final VoucherRepository voucherRepository;
     private final VoucherRedemptionRepository voucherRedemptionRepository;
     private final VoucherService voucherService;
+    private final PaymentTransactionRepository paymentTransactionRepository;
 
     @Setter
     @Value("${restaurant.business-hours.enforce:true}")
@@ -122,14 +127,29 @@ public class OrderService {
                 .toList();
     }
 
+    public List<OrderResponse> getOrdersByCustomer(String customerId) {
+        if (customerId == null || customerId.isBlank()) {
+            return Collections.emptyList();
+        }
+        List<OrderEntity> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId.trim());
+        return orders.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
     public OrderResponse getOrderById(String id) {
         OrderEntity entity = findOrderById(id);
         return mapToResponse(entity);
     }
 
     private OrderEntity findOrderById(String id) {
-        return orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + id));
+        if (id == null || id.isBlank()) {
+            throw new ResourceNotFoundException("Mã đơn hàng không được để trống!");
+        }
+        String trimmed = id.trim();
+        return orderRepository.findById(trimmed)
+                .or(() -> orderRepository.findByOrderNumber(trimmed))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID hoặc mã: " + id));
     }
 
     @Transactional
@@ -580,6 +600,10 @@ public class OrderService {
     }
 
     private void validateOrderStatusTransition(OrderEntity order, OrderStatus targetStatus) {
+        validateOrderStatusTransition(order, targetStatus, false);
+    }
+
+    private void validateOrderStatusTransition(OrderEntity order, OrderStatus targetStatus, boolean autoPay) {
         OrderStatus current = order.getStatus();
         if (current == targetStatus) {
             return;
@@ -591,17 +615,27 @@ public class OrderService {
             throw new ConflictException("Đơn hàng #" + order.getOrderNumber() + " đã hoàn tất, không thể thay đổi trạng thái!");
         }
         if (targetStatus == OrderStatus.completed && order.getPaymentStatus() != PaymentStatus.paid) {
-            throw new BadRequestException("Không thể hoàn tất đơn hàng #" + order.getOrderNumber() 
-                    + " vì chưa thanh toán thành công (Trạng thái thanh toán: " + order.getPaymentStatus() + "). Vui lòng thu tiền trước khi hoàn tất!");
+            if (autoPay) {
+                order.setPaymentStatus(PaymentStatus.paid);
+                log.info("Đơn hàng #{} được tự động thu tiền / xác nhận thanh toán thành công khi hoàn tất (Trả Món).", order.getOrderNumber());
+            } else {
+                throw new BadRequestException("Không thể hoàn tất đơn hàng #" + order.getOrderNumber() 
+                        + " vì chưa thanh toán thành công (Trạng thái thanh toán: " + order.getPaymentStatus() + "). Vui lòng thu tiền trước khi hoàn tất!");
+            }
         }
     }
 
     @Transactional
     public OrderResponse updateOrderStatus(String id, OrderStatus status) {
+        return updateOrderStatus(id, status, false);
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(String id, OrderStatus status, boolean autoPay) {
         OrderEntity entity = findOrderById(id);
         List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
 
-        validateOrderStatusTransition(entity, status);
+        validateOrderStatusTransition(entity, status, autoPay);
 
         if (status == OrderStatus.cancelled) {
             // Hủy toàn bộ đơn: Hủy các món trong đơn và đưa tổng tiền về 0
@@ -638,12 +672,90 @@ public class OrderService {
         } else {
             // Cập nhật trạng thái tổng thể hợp lệ
             entity.setStatus(status);
+            if (status == OrderStatus.completed) {
+                // Khi hoàn tất đơn / trả món, chuyển toàn bộ các món chưa hủy thành served
+                for (OrderItemEntity it : items) {
+                    if (it.getStatus() != OrderItemStatus.cancelled && it.getStatus() != OrderItemStatus.served) {
+                        it.setStatus(OrderItemStatus.served);
+                        it.setConfirmedAt(LocalDateTime.now(DEFAULT_ZONE));
+                        orderItemRepository.save(it);
+                    }
+                }
+            }
         }
 
         OrderEntity updated = orderRepository.save(entity);
         OrderResponse response = mapToResponseWithItems(updated, items);
 
         sendWebSocketEvent("ORDER_STATUS_CHANGED", response);
+        return response;
+    }
+
+    /**
+     * Thu ngân / nhân viên xác nhận thanh toán trực tiếp cho một đơn hàng cụ thể
+     * (Đặc biệt hữu ích cho đơn Mang về - Takeaway và Giao hàng - Delivery)
+     */
+    @Transactional
+    public OrderResponse confirmOrderPayment(
+            String id,
+            PaymentMethod method,
+            BigDecimal amountReceived,
+            boolean autoComplete,
+            String staffId
+    ) {
+        OrderEntity entity = findOrderById(id);
+        if (entity.getStatus() == OrderStatus.cancelled) {
+            throw new BadRequestException("Không thể thu tiền cho đơn hàng đã bị hủy #" + entity.getOrderNumber());
+        }
+
+        entity.setPaymentStatus(PaymentStatus.paid);
+        if (method != null) {
+            entity.setPaymentMethod(method);
+        }
+
+        List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
+
+        if (autoComplete) {
+            entity.setStatus(OrderStatus.completed);
+            for (OrderItemEntity it : items) {
+                if (it.getStatus() != OrderItemStatus.cancelled && it.getStatus() != OrderItemStatus.served) {
+                    it.setStatus(OrderItemStatus.served);
+                    it.setConfirmedAt(LocalDateTime.now(DEFAULT_ZONE));
+                    orderItemRepository.save(it);
+                }
+            }
+        }
+
+        // Ghi nhận bản ghi thanh toán để đối soát doanh thu POS
+        try {
+            BigDecimal expected = entity.getTotalAmount() != null ? entity.getTotalAmount() : BigDecimal.ZERO;
+            BigDecimal received = (amountReceived != null && amountReceived.compareTo(BigDecimal.ZERO) > 0)
+                    ? amountReceived : expected;
+            PaymentTransactionEntity tx = PaymentTransactionEntity.builder()
+                    .orderId(entity.getId())
+                    .transactionReference("TXN-" + System.currentTimeMillis())
+                    .amountExpected(expected)
+                    .amountReceived(received)
+                    .paymentGateway(entity.getPaymentMethod() != null ? entity.getPaymentMethod().name() : "CASH")
+                    .status(PaymentTransactionStatus.success)
+                    .rawPayload("Staff confirmed: " + (staffId != null ? staffId : "STAFF-POS") + " for order #" + entity.getOrderNumber())
+                    .build();
+            tx.setId("tx-" + UUID.randomUUID().toString().substring(0, 8));
+            paymentTransactionRepository.save(tx);
+        } catch (Exception ex) {
+            log.warn("Không thể lưu payment transaction cho đơn #{}: {}", entity.getOrderNumber(), ex.getMessage());
+        }
+
+        OrderEntity saved = orderRepository.save(entity);
+        OrderResponse response = mapToResponseWithItems(saved, items);
+
+        sendWebSocketEvent("ORDER_PAYMENT_CONFIRMED", response);
+        if (autoComplete) {
+            sendWebSocketEvent("ORDER_STATUS_CHANGED", response);
+        }
+
+        log.info("✅ Xác nhận thanh toán thành công cho đơn #{} (Phương thức: {}, Hoàn tất đơn: {})",
+                entity.getOrderNumber(), entity.getPaymentMethod(), autoComplete);
         return response;
     }
 

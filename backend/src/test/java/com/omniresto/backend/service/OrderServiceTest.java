@@ -9,8 +9,11 @@ import com.omniresto.backend.domain.OrderItemEntity;
 import com.omniresto.backend.domain.TableSessionEntity;
 import com.omniresto.backend.domain.enums.OrderStatus;
 import com.omniresto.backend.domain.enums.OrderType;
+import com.omniresto.backend.domain.enums.PaymentMethod;
+import com.omniresto.backend.domain.enums.PaymentStatus;
 import com.omniresto.backend.domain.enums.TableSessionStatus;
 import com.omniresto.backend.exception.BadRequestException;
+import com.omniresto.backend.repository.PaymentTransactionRepository;
 import com.omniresto.backend.model.order.request.OrderItemRequest;
 import com.omniresto.backend.model.order.request.OrderRequest;
 import com.omniresto.backend.model.order.response.OrderResponse;
@@ -64,6 +67,9 @@ class OrderServiceTest {
 
     @Mock
     private ObjectMapper objectMapper;
+
+    @Mock
+    private PaymentTransactionRepository paymentTransactionRepository;
 
     @InjectMocks
     private OrderService orderService;
@@ -252,5 +258,89 @@ class OrderServiceTest {
         assertEquals(0, mockOrderEntity.getTotalAmount().compareTo(BigDecimal.ZERO));
         assertEquals(TableSessionStatus.active, session.getStatus());
         verify(tableSessionRepository, times(1)).save(session);
+    }
+
+    @Test
+    @DisplayName("Should successfully complete unpaid order when autoPay is true")
+    void updateOrderStatus_WithAutoPay_Success() {
+        // Arrange
+        mockOrderEntity.setPaymentStatus(PaymentStatus.unpaid);
+        mockOrderEntity.setStatus(OrderStatus.ready);
+
+        OrderItemEntity item = OrderItemEntity.builder()
+                .order(mockOrderEntity)
+                .itemName("Món Mang Về")
+                .unitPrice(new BigDecimal("150000"))
+                .quantity(1)
+                .build();
+        item.setId("item-02");
+
+        when(orderRepository.findById("ord-test-01")).thenReturn(Optional.of(mockOrderEntity));
+        when(orderItemRepository.findByOrder_Id("ord-test-01")).thenReturn(List.of(item));
+        when(orderRepository.save(any(OrderEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        OrderResponse updated = orderService.updateOrderStatus("ord-test-01", OrderStatus.completed, true);
+
+        // Assert
+        assertNotNull(updated);
+        assertEquals(OrderStatus.completed, updated.getStatus());
+        assertEquals(PaymentStatus.paid, mockOrderEntity.getPaymentStatus());
+        assertEquals(com.omniresto.backend.domain.enums.OrderItemStatus.served, item.getStatus());
+        verify(orderRepository, times(1)).save(mockOrderEntity);
+    }
+
+    @Test
+    @DisplayName("Should throw BadRequestException when completing unpaid order with autoPay false")
+    void updateOrderStatus_WithoutAutoPay_ThrowsBadRequest() {
+        // Arrange
+        mockOrderEntity.setPaymentStatus(PaymentStatus.unpaid);
+        mockOrderEntity.setStatus(OrderStatus.ready);
+
+        when(orderRepository.findById("ord-test-01")).thenReturn(Optional.of(mockOrderEntity));
+
+        // Act & Assert
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
+                orderService.updateOrderStatus("ord-test-01", OrderStatus.completed, false)
+        );
+
+        assertTrue(ex.getMessage().contains("chưa thanh toán thành công"));
+    }
+
+    @Test
+    @DisplayName("Should confirm payment and complete takeaway order via confirmOrderPayment")
+    void confirmOrderPayment_Success() {
+        // Arrange
+        mockOrderEntity.setOrderType(OrderType.takeaway);
+        mockOrderEntity.setPaymentStatus(PaymentStatus.unpaid);
+        mockOrderEntity.setStatus(OrderStatus.ready);
+
+        OrderItemEntity item = OrderItemEntity.builder()
+                .order(mockOrderEntity)
+                .itemName("Cơm Gà Mang Về")
+                .unitPrice(new BigDecimal("150000"))
+                .quantity(1)
+                .build();
+        item.setId("item-03");
+
+        when(orderRepository.findById("ord-test-01")).thenReturn(Optional.of(mockOrderEntity));
+        when(orderItemRepository.findByOrder_Id("ord-test-01")).thenReturn(List.of(item));
+        when(orderRepository.save(any(OrderEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        OrderResponse res = orderService.confirmOrderPayment(
+                "ord-test-01",
+                PaymentMethod.cash,
+                new BigDecimal("150000"),
+                true,
+                "STAFF-01"
+        );
+
+        // Assert
+        assertNotNull(res);
+        assertEquals(PaymentStatus.paid, mockOrderEntity.getPaymentStatus());
+        assertEquals(OrderStatus.completed, mockOrderEntity.getStatus());
+        assertEquals(com.omniresto.backend.domain.enums.OrderItemStatus.served, item.getStatus());
+        verify(orderRepository).save(mockOrderEntity);
     }
 }

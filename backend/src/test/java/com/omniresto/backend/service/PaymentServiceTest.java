@@ -24,6 +24,9 @@ class PaymentServiceTest {
     private OrderService orderService;
 
     @Mock
+    private com.omniresto.backend.repository.OrderRepository orderRepository;
+
+    @Mock
     private PaymentTransactionRepository paymentTransactionRepository;
 
     @Mock
@@ -64,21 +67,25 @@ class PaymentServiceTest {
         mockOrder.setTotalAmount(BigDecimal.valueOf(250000));
         mockOrder.setStatus(OrderStatus.pending);
 
-        OrderResponse mockPreparing = new OrderResponse();
-        mockPreparing.setId("ord-100");
-        mockPreparing.setStatus(OrderStatus.preparing);
+        com.omniresto.backend.domain.OrderEntity orderEntity = com.omniresto.backend.domain.OrderEntity.builder()
+                .orderNumber("ORD-8888")
+                .status(OrderStatus.pending)
+                .paymentStatus(com.omniresto.backend.domain.enums.PaymentStatus.unpaid)
+                .totalAmount(BigDecimal.valueOf(250000))
+                .build();
+        orderEntity.setId("ord-100");
 
         when(paymentTransactionRepository.findByTransactionReference("TXN-9999")).thenReturn(Optional.empty());
         when(orderService.getOrderById("ord-100")).thenReturn(mockOrder);
-        when(orderService.updateOrderStatus("ord-100", OrderStatus.preparing)).thenReturn(mockPreparing);
+        when(orderRepository.findById("ord-100")).thenReturn(Optional.of(orderEntity));
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
         OrderResponse response = paymentService.handlePaymentWebhook("ord-100", "TXN-9999", 250000.0);
 
         // Assert
         assertNotNull(response);
-        assertEquals(OrderStatus.preparing, response.getStatus());
-        verify(orderService, times(1)).updateOrderStatus("ord-100", OrderStatus.preparing);
+        verify(orderRepository, times(1)).save(orderEntity);
         verify(paymentTransactionRepository, times(1)).save(any());
     }
 }

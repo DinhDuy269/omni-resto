@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
   let currentStaff: { full_name?: string; role?: string; email?: string } | null = null;
   try {
     currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
-  } catch {}
+  } catch { }
   const staffName = currentStaff?.full_name || 'Lê Minh Tuấn';
   const staffRole = currentStaff?.role?.toUpperCase() || 'ADMIN';
   const initials = staffName
@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('customer');
     localStorage.removeItem('staff_user');
-    navigate('/login');
+    navigate('/auth');
   };
 
   return (

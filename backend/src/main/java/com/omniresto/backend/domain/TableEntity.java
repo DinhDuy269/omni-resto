@@ -23,7 +23,7 @@ public class TableEntity extends BaseEntity {
     private Integer capacity = 4;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20)")
     @Builder.Default
     private TableStatus status = TableStatus.available;
 

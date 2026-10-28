@@ -74,6 +74,18 @@ export const ClientOrdersPage: React.FC = () => {
     if (table_session?.session_token) {
       refreshTableSession();
     }
+
+    // Polling định kỳ mỗi 4 giây nếu còn đơn hàng đang hoạt động
+    const interval = setInterval(() => {
+      const hasActive = useClientStore.getState().orders.some(
+        (o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+      );
+      if (hasActive) {
+        fetchOrdersFromServer();
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, [table_session?.session_token, fetchOrdersFromServer, refreshTableSession]);
 
   // Lọc đơn hàng theo ô tìm kiếm

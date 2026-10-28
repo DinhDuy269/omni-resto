@@ -33,9 +33,48 @@ export const orderApi = {
     }
   },
 
-  updateOrderStatus: async (id: string, status: OrderStatus): Promise<Order> => {
+  updateOrderStatus: async (id: string, status: OrderStatus, autoPay: boolean = false): Promise<Order> => {
     try {
-      const res = await apiClient.patch<Order | OrderResponse>(`/orders/${id}/status`, null, { params: { status: status.toLowerCase() } });
+      const res = await apiClient.patch<Order | OrderResponse>(`/orders/${id}/status`, null, {
+        params: { status: status.toLowerCase(), autoPay },
+      });
+      if ('order' in res.data && res.data.order) return res.data.order;
+      return res.data as Order;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  confirmPayment: async (
+    id: string,
+    paymentMethod?: string,
+    amountReceived?: number,
+    autoComplete: boolean = false
+  ): Promise<Order> => {
+    try {
+      const params = new URLSearchParams();
+      if (paymentMethod) params.append('method', paymentMethod.toLowerCase());
+      if (amountReceived !== undefined) params.append('amountReceived', amountReceived.toString());
+      params.append('autoComplete', autoComplete.toString());
+
+      const res = await apiClient.post<Order | OrderResponse>(`/orders/${id}/confirm-payment?${params.toString()}`);
+      if ('order' in res.data && res.data.order) return res.data.order;
+      return res.data as Order;
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  cancelOrderItem: async (
+    orderId: string,
+    itemId: string,
+    reason: string = 'Khách yêu cầu hủy món'
+  ): Promise<Order> => {
+    try {
+      const params = new URLSearchParams();
+      if (reason) params.append('reason', reason);
+
+      const res = await apiClient.post<Order | OrderResponse>(`/orders/${orderId}/items/${itemId}/cancel?${params.toString()}`);
       if ('order' in res.data && res.data.order) return res.data.order;
       return res.data as Order;
     } catch (error) {

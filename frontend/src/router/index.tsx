@@ -29,8 +29,6 @@ import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
 import CustomersPage from '../admin/pages/customers';
 import ClientGacha from '../client/pages/gacha/ClientGacha';
 import { AuthPage } from '../client/pages/auth/AuthPage';
-import LoginPage from '../client/pages/login';
-import RegisterPage from '../client/pages/register';
 
 /** Normalizes uppercase or mixed-case paths (e.g. /Client -> /client) seamlessly */
 const PathCaseNormalizer: React.FC = () => {
@@ -103,8 +101,8 @@ export const AppRouter: React.FC = () => {
             AUTH FLOW — Customer Login, Register, OTP
             ══════════════════════════════════════════════════ */}
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<Navigate to="/auth" replace />} />
+        <Route path="/register" element={<AuthPage defaultMode="REGISTER" />} />
 
         {/* Global fallback */}
         <Route path="*" element={<Navigate to="/admin" replace />} />

@@ -149,6 +149,7 @@ public class SecurityConfig {
 
                 // 11. Order Management: Thao tác cập nhật trạng thái đơn/món của nhân viên
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/orders/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/orders/*/confirm-payment").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/orders/*/items/*/cancel").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(orderApiPatterns()).permitAll()
 

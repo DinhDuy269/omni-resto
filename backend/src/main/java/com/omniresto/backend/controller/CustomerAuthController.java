@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping({"/api/v1/auth/customer", "/api/v1/customer/auth", "/api/customers", "/api/auth"})
+@RequestMapping({ "/api/v1/auth/customer", "/api/v1/customer/auth", "/api/customers", "/api/auth" })
 @RequiredArgsConstructor
 public class CustomerAuthController {
 
@@ -52,14 +52,16 @@ public class CustomerAuthController {
     // 5. Xác minh OTP Đăng ký
     @PostMapping("/verify-register-otp")
     public ResponseEntity<Map<String, Object>> verifyRegisterOtp(@Valid @RequestBody VerifyOtpRequest request) {
-        boolean valid = customerAuthService.verifyOtp(request, com.omniresto.backend.domain.enums.OtpPurpose.REGISTER_VERIFICATION);
+        boolean valid = customerAuthService.verifyOtp(request,
+                com.omniresto.backend.domain.enums.OtpPurpose.REGISTER_VERIFICATION);
         return ResponseEntity.ok(Map.of("valid", valid, "message", "Xác thực OTP thành công!"));
     }
 
     // 6. Xác minh OTP Quên mật khẩu
     @PostMapping("/verify-reset-otp")
     public ResponseEntity<Map<String, Object>> verifyResetOtp(@Valid @RequestBody VerifyOtpRequest request) {
-        boolean valid = customerAuthService.verifyOtp(request, com.omniresto.backend.domain.enums.OtpPurpose.PASSWORD_RESET);
+        boolean valid = customerAuthService.verifyOtp(request,
+                com.omniresto.backend.domain.enums.OtpPurpose.PASSWORD_RESET);
         return ResponseEntity.ok(Map.of("valid", valid, "message", "Xác thực OTP thành công!"));
     }
 
@@ -87,6 +89,7 @@ public class CustomerAuthController {
         List<CustomerResponse> customers = customerAuthService.getAllCustomerResponses();
         return ResponseEntity.ok(customers);
     }
+
     // 10. Khóa / mở khóa tài khoản (Admin)
     @PatchMapping("/admin/customers/{id}/status")
     public ResponseEntity<CustomerResponse> updateCustomerStatus(

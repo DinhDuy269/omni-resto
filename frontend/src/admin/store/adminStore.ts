@@ -74,7 +74,9 @@ interface AdminState {
   confirmTablePayment: (tableNo: string) => void;
 
   // Orders
-  updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
+  updateOrderStatus: (id: string, status: Order['status'], autoPay?: boolean) => Promise<void>;
+  confirmOrderPayment: (id: string, paymentMethod?: string, amountReceived?: number, autoComplete?: boolean) => Promise<void>;
+  cancelOrderItem: (orderId: string, itemId: string, reason?: string) => Promise<void>;
   addOrderFromClient: (order: Order) => void;
   handleWebSocketOrderEvent: (event: { eventType: string; order?: Order }) => void;
   handleWebSocketMenuEvent: (event: any) => void;
@@ -335,11 +337,81 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   // ---------- Orders ----------
-  updateOrderStatus: async (id, status) => {
+  updateOrderStatus: async (id, status, autoPay = false) => {
     const prev = get().orders;
-    set({ orders: prev.map((o) => (o.id === id ? { ...o, status } : o)) });
+    set({
+      orders: prev.map((o) =>
+        o.id === id
+          ? {
+              ...o,
+              status,
+              ...(autoPay || (status === 'COMPLETED' && o.payment_status !== 'PAID')
+                ? { payment_status: 'PAID' }
+                : {}),
+              ...(status === 'COMPLETED'
+                ? { items: o.items.map((it) => (it.status !== 'CANCELLED' ? { ...it, status: 'SERVED' } : it)) }
+                : {}),
+            }
+          : o
+      ),
+    });
     try {
-      await orderApi.updateStatus(id, status);
+      await orderApi.updateStatus(id, status, autoPay);
+    } catch (err) {
+      set({ orders: prev });
+      throw err;
+    }
+  },
+  confirmOrderPayment: async (id, paymentMethod, amountReceived, autoComplete = false) => {
+    const prev = get().orders;
+    set({
+      orders: prev.map((o) =>
+        o.id === id
+          ? {
+              ...o,
+              payment_status: 'PAID',
+              ...(paymentMethod ? { payment_method: paymentMethod.toUpperCase() as any } : {}),
+              ...(autoComplete ? { status: 'COMPLETED' } : {}),
+              ...(autoComplete
+                ? { items: o.items.map((it) => (it.status !== 'CANCELLED' ? { ...it, status: 'SERVED' } : it)) }
+                : {}),
+            }
+          : o
+      ),
+    });
+    try {
+      await orderApi.confirmPayment(id, paymentMethod, amountReceived, autoComplete);
+    } catch (err) {
+      set({ orders: prev });
+      throw err;
+    }
+  },
+  cancelOrderItem: async (orderId, itemId, reason = 'Khách yêu cầu hủy món') => {
+    const prev = get().orders;
+    set({
+      orders: prev.map((ord) => {
+        if (ord.id !== orderId) return ord;
+        const updatedItems = ord.items.map((it) =>
+          it.id === itemId
+            ? {
+                ...it,
+                status: 'CANCELLED',
+                notes: it.notes ? `${it.notes} | [Đã hủy: ${reason}]` : `[Đã hủy: ${reason}]`,
+              }
+            : it
+        );
+        const recalculatedTotal = updatedItems
+          .filter((it) => it.status !== 'CANCELLED')
+          .reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 1), 0);
+        return {
+          ...ord,
+          items: updatedItems,
+          total_amount: recalculatedTotal,
+        };
+      }),
+    });
+    try {
+      await orderApi.cancelOrderItem(orderId, itemId, reason);
     } catch (err) {
       set({ orders: prev });
       throw err;
