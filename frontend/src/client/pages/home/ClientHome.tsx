@@ -33,7 +33,7 @@ const FALLBACK_SIGNATURE_DISHES: MenuItem[] = [
     description: 'Nước dùng ninh 24h từ xương ống bò tủy, thịt bò Wagyu vân mỡ cẩm thạch mềm tan cùng bánh phở thủ công tươi mới.',
     image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=800&auto=format&fit=crop&q=80',
     is_best_seller: true,
-    status: 'AVAILABLE',
+    status: 'available',
   },
   {
     id: 'dish-crab-hotpot',
@@ -43,7 +43,7 @@ const FALLBACK_SIGNATURE_DISHES: MenuItem[] = [
     description: 'Gạch cua đồng Cà Mau béo ngậy, giấm bỗng nếp truyền thống kết hợp bắp bò hoa giòn sần sật và rổ rau đồng quê.',
     image: 'https://images.unsplash.com/photo-1547928576-a4a33237cbc3?w=800&auto=format&fit=crop&q=80',
     is_best_seller: true,
-    status: 'AVAILABLE',
+    status: 'available',
   },
   {
     id: 'dish-lotus-tea',
@@ -53,7 +53,7 @@ const FALLBACK_SIGNATURE_DISHES: MenuItem[] = [
     description: 'Trà Ô long ủ lạnh thơm thanh khiết, hạt sen Huế bùi bở hòa quyện cùng cùi nhãn lồng mọng nước và bọt sữa mặn kem béo.',
     image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&auto=format&fit=crop&q=80',
     is_best_seller: true,
-    status: 'AVAILABLE',
+    status: 'available',
   },
   {
     id: 'dish-royal-spring-rolls',
@@ -63,7 +63,7 @@ const FALLBACK_SIGNATURE_DISHES: MenuItem[] = [
     description: 'Món ăn cung đình tái hiện tinh xảo với tôm sú tự nhiên, thịt cua biển và sốt chấm ngũ vị độc quyền của bếp trưởng.',
     image: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop&q=80',
     is_best_seller: true,
-    status: 'AVAILABLE',
+    status: 'available',
   },
 ];
 
@@ -96,7 +96,7 @@ export const ClientHome: React.FC = () => {
 
   // Lọc món Best Seller thực tế hoặc sử dụng danh mục món Signature
   const displayDishes = React.useMemo(() => {
-    const fromStore = menu_items.filter((m) => m.is_best_seller || m.status === 'AVAILABLE');
+    const fromStore = menu_items.filter((m) => m.is_best_seller || m.status === 'available');
     if (fromStore.length >= 4) {
       return fromStore.slice(0, 4);
     }

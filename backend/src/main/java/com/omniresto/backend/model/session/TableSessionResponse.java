@@ -47,6 +47,7 @@ public class TableSessionResponse {
     @AllArgsConstructor
     public static class VietQRInfo {
         private String qrImageUrl;
+        private String qrCode;
         private BigDecimal amount;
         private String bankId;
         private String accountNumber;

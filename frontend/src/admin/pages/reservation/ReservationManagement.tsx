@@ -377,7 +377,7 @@ export default function ReservationManagement(): React.ReactElement {
   const totalTables = tables.length;
   const availTables = tables.filter((t) => t.status?.toLowerCase() === 'available').length;
   const occupiedTables = tables.filter((t) => t.status?.toLowerCase() === 'occupied').length;
-  const pendingReservations = reservations.filter((r) => r.status === 'PENDING').length;
+  const pendingReservations = reservations.filter((r) => r.status === 'pending').length;
 
   const filteredReservations = useMemo(() => {
     return reservations.filter((r) => {
@@ -550,7 +550,7 @@ export default function ReservationManagement(): React.ReactElement {
               const isOccupied = t.status?.toLowerCase() === 'occupied';
 
               const reservedOrder = reservations.find((r) => {
-                if (r.status !== 'CONFIRMED' && r.status !== 'SEATED') return false;
+                if (r.status !== 'confirmed' && r.status !== 'seated') return false;
                 if (r.table_id === t.id) return true;
                 if (r.special_notes && r.special_notes.includes(t.id)) return true;
                 return false;
@@ -594,7 +594,7 @@ export default function ReservationManagement(): React.ReactElement {
                         <Clock size={12} /> {new Date(reservedOrder.reservation_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({reservedOrder.party_size}k)
                       </div>
 
-                      {reservedOrder.status === 'CONFIRMED' && (
+                      {reservedOrder.status === 'confirmed' && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -658,10 +658,10 @@ export default function ReservationManagement(): React.ReactElement {
             <div className="status-tab-group">
               {[
                 { label: 'Tất cả', value: '' },
-                { label: 'Chờ xếp bàn', value: 'PENDING' },
-                { label: 'Đã xếp bàn', value: 'CONFIRMED' },
-                { label: 'Đang dùng bữa', value: 'SEATED' },
-                { label: 'Đã hủy', value: 'CANCELLED' },
+                { label: 'Chờ xếp bàn', value: 'pending' },
+                { label: 'Đã xếp bàn', value: 'confirmed' },
+                { label: 'Đang dùng bữa', value: 'seated' },
+                { label: 'Đã hủy', value: 'cancelled' },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -749,13 +749,13 @@ export default function ReservationManagement(): React.ReactElement {
                           )}
                         </td>
                         <td>
-                          {r.status === 'PENDING' && <span className="status-chip chip-pending">Chờ xếp bàn</span>}
-                          {r.status === 'CONFIRMED' && <span className="status-chip chip-confirmed">Đã xếp bàn</span>}
-                          {r.status === 'SEATED' && <span className="status-chip chip-seated">Đang ăn</span>}
-                          {r.status === 'CANCELLED' && <span className="status-chip chip-cancelled">Đã hủy</span>}
+                          {r.status === 'pending' && <span className="status-chip chip-pending">Chờ xếp bàn</span>}
+                          {r.status === 'confirmed' && <span className="status-chip chip-confirmed">Đã xếp bàn</span>}
+                          {r.status === 'seated' && <span className="status-chip chip-seated">Đang ăn</span>}
+                          {r.status === 'cancelled' && <span className="status-chip chip-cancelled">Đã hủy</span>}
                         </td>
                         <td className="text-right">
-                          {r.status === 'PENDING' && (
+                          {r.status === 'pending' && (
                             <button
                               type="button"
                               onClick={() => setAssignModal({
@@ -768,7 +768,7 @@ export default function ReservationManagement(): React.ReactElement {
                               Xếp / Ghép Bàn
                             </button>
                           )}
-                          {r.status === 'CONFIRMED' && (
+                          {r.status === 'confirmed' && (
                             <button
                               type="button"
                               onClick={() => handleCheckIn(r.id)}
@@ -777,7 +777,7 @@ export default function ReservationManagement(): React.ReactElement {
                               Nhận Bàn
                             </button>
                           )}
-                          {r.status !== 'CANCELLED' && r.status !== 'SEATED' && (
+                          {r.status !== 'cancelled' && r.status !== 'seated' && (
                             <button
                               type="button"
                               onClick={() => handleCancel(r.id)}

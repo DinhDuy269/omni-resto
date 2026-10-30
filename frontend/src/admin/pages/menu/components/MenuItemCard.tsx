@@ -62,7 +62,7 @@ export const MenuItemCard: React.FC<Props> = ({ item, onToggleStatus }) => {
             onClick={() => onToggleStatus(item.id)}
             title="Đổi trạng thái"
           >
-            {item.status === 'AVAILABLE' ? <ToggleRight size={18} color="var(--success)" /> : <ToggleLeft size={18} color="var(--text-muted)" />}
+            {item.status === 'available' ? <ToggleRight size={18} color="var(--success)" /> : <ToggleLeft size={18} color="var(--text-muted)" />}
           </button>
         </div>
       </div>

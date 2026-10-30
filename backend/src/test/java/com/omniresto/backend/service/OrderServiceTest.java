@@ -333,7 +333,8 @@ class OrderServiceTest {
                 PaymentMethod.cash,
                 new BigDecimal("150000"),
                 true,
-                "STAFF-01"
+                "STAFF-01",
+                true
         );
 
         // Assert

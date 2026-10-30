@@ -13,10 +13,10 @@ export const orderApi = {
                 order_number: o.order_number || '',
                 table_no: o.table_no,
                 customer_name: o.customer_name || 'Khách vãng lai',
-                order_type: o.order_type || 'DINE_IN',
-                status: (o.status?.toUpperCase() || 'PENDING') as OrderStatus,
-                payment_status: o.payment_status || 'UNPAID',
-                payment_method: o.payment_method || 'CASH',
+                order_type: (o.order_type || 'dine_in').toLowerCase() as any,
+                status: (o.status?.toLowerCase() || 'pending') as OrderStatus,
+                payment_status: String(o.payment_status || 'unpaid').toLowerCase() as any,
+                payment_method: (o.payment_method || 'cash').toLowerCase() as any,
                 total_amount: Number(o.total_amount ?? 0),
                 items: (o.items || []).map((it: any) => ({
                     id: it.id,
@@ -24,12 +24,12 @@ export const orderApi = {
                     quantity: it.quantity,
                     price: Number(it.price || 0),
                     notes: it.notes,
-                    status: it.status?.toUpperCase() || 'PENDING',
+                    status: (it.status?.toLowerCase() || 'pending'),
                     options: (it.options || []).map((opt: any) => ({
                         id: opt.id,
-                        option_id: opt.option_id || opt.optionId,
-                        option_name: opt.option_name || opt.optionName,
-                        option_type: opt.option_type || opt.optionType,
+                        option_id: opt.option_id,
+                        option_name: opt.option_name,
+                        option_type: opt.option_type,
                         price: Number(opt.price || 0),
                     })),
                 })),
@@ -53,13 +53,15 @@ export const orderApi = {
         orderId: string,
         paymentMethod?: string,
         amountReceived?: number,
-        autoComplete: boolean = false
+        autoComplete: boolean = false,
+        forceConfirm: boolean = false
     ): Promise<void> => {
         try {
             const params = new URLSearchParams();
             if (paymentMethod) params.append('method', paymentMethod.toLowerCase());
             if (amountReceived !== undefined) params.append('amountReceived', amountReceived.toString());
             params.append('autoComplete', autoComplete.toString());
+            if (forceConfirm) params.append('forceConfirm', 'true');
 
             await apiClient.post(`/orders/${orderId}/confirm-payment?${params.toString()}`, null, { headers: STAFF_HEADERS });
         } catch (error) {

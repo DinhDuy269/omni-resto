@@ -1,5 +1,7 @@
 package com.omniresto.backend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.omniresto.backend.config.OrderWebSocketHandler;
 import com.omniresto.backend.domain.OrderEntity;
 import com.omniresto.backend.domain.OrderItemEntity;
 import com.omniresto.backend.domain.PaymentTransactionEntity;
@@ -7,6 +9,7 @@ import com.omniresto.backend.domain.TableEntity;
 import com.omniresto.backend.domain.TableSessionEntity;
 import com.omniresto.backend.domain.enums.*;
 import com.omniresto.backend.exception.BadRequestException;
+import com.omniresto.backend.exception.ConflictException;
 import com.omniresto.backend.exception.ResourceNotFoundException;
 import com.omniresto.backend.model.session.TableSessionResponse;
 import com.omniresto.backend.repository.OrderItemRepository;
@@ -24,10 +27,12 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,6 +45,9 @@ public class TableSessionService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final PaymentService paymentService;
+    private final OrderWebSocketHandler orderWebSocketHandler;
+    private final ObjectMapper objectMapper;
 
     // Configurable VietQR merchant credentials
     @Value("${vietqr.bank-id:MB}")
@@ -74,33 +82,42 @@ public class TableSessionService {
         );
         List<TableSessionEntity> activeSessions = tableSessionRepository.findByTableIdAndStatusIn(table.getId(), activeStatuses);
 
-        if (!activeSessions.isEmpty()) {
-            TableSessionEntity existing = activeSessions.get(0);
-            // Check if expired
-            if (existing.getExpiresAt().isBefore(LocalDateTime.now())) {
-                existing.setStatus(TableSessionStatus.expired);
-                existing.setClosedAt(LocalDateTime.now());
-                tableSessionRepository.save(existing);
-                log.info("Old session {} for table {} expired. Creating fresh session.", existing.getId(), table.getTableNo());
-            } else {
-                // CHÍNH SÁCH BÀN ĂN LINH HOẠT & CHỐNG DoS:
-                // Nếu bàn đã có phiên đang mở, thiết bị cùng bàn được phép tham gia (Join) vào phiên chung
-                String cleanReqDeviceToken = (deviceToken != null) ? deviceToken.trim() : "";
-                String existingDevToken = (existing.getDeviceToken() != null) ? existing.getDeviceToken().trim() : "";
-                boolean isSameDevice = !cleanReqDeviceToken.isEmpty() && cleanReqDeviceToken.equals(existingDevToken);
+        // Expire any sessions whose expiresAt has passed and flush immediately to release active_table_id constraint
+        TableSessionEntity currentActive = null;
+        for (TableSessionEntity ses : activeSessions) {
+            if (ses.getExpiresAt() != null && ses.getExpiresAt().isBefore(LocalDateTime.now())) {
+                ses.setStatus(TableSessionStatus.expired);
+                ses.setClosedAt(LocalDateTime.now());
+                tableSessionRepository.saveAndFlush(ses);
+                log.info("Old session {} for table {} expired and flushed.", ses.getId(), table.getTableNo());
+            } else if (currentActive == null) {
+                currentActive = ses;
+            }
+        }
 
-                existing.setLastActivityAt(LocalDateTime.now());
-                existing.setExpiresAt(LocalDateTime.now().plusHours(SESSION_TIMEOUT_HOURS));
-                TableSessionEntity saved = tableSessionRepository.save(existing);
-                log.info("Device ({}) joined active table session {} for table {}", cleanReqDeviceToken, saved.getId(), table.getTableNo());
+        if (currentActive != null) {
+            // CHÍNH SÁCH BẢO MẬT SINGLE-DEVICE & KHÔI PHỤC PHIÊN BÀN:
+            String cleanReqDeviceToken = (deviceToken != null) ? deviceToken.trim() : "";
+            String existingDevToken = (currentActive.getDeviceToken() != null) ? currentActive.getDeviceToken().trim() : "";
+            boolean isSameDevice = cleanReqDeviceToken.isEmpty() || existingDevToken.isEmpty() || cleanReqDeviceToken.equals(existingDevToken);
+
+            if (isSameDevice) {
+                currentActive.setLastActivityAt(LocalDateTime.now());
+                currentActive.setExpiresAt(LocalDateTime.now().plusHours(SESSION_TIMEOUT_HOURS));
+                if (existingDevToken.isEmpty() && !cleanReqDeviceToken.isEmpty()) {
+                    currentActive.setDeviceToken(cleanReqDeviceToken);
+                }
+                TableSessionEntity saved = tableSessionRepository.save(currentActive);
+                log.info("Device ({}) re-joined active table session {} for table {}", cleanReqDeviceToken, saved.getId(), table.getTableNo());
 
                 TableSessionResponse res = mapToResponse(saved);
-                res.setIsDeviceMaster(isSameDevice);
-                res.setMessage(isSameDevice
-                        ? "Chào mừng bạn quay lại " + table.getTableNo() + "! Phiên đặt món của bạn đang hoạt động."
-                        : "Chào mừng bạn đến " + table.getTableNo() + "! Bạn đã tham gia vào phiên gọi món của bàn.");
+                res.setIsDeviceMaster(true);
+                res.setMessage("Chào mừng bạn quay lại " + table.getTableNo() + "! Phiên đặt món của bạn đang hoạt động.");
                 return res;
             }
+
+            String tableDisplayName = table.getTableNo().startsWith("Bàn") ? table.getTableNo() : ("Bàn " + table.getTableNo());
+            throw new ConflictException(tableDisplayName + " hiện đang có phiên đặt món đang hoạt động bởi thiết bị khác. Quý khách vui lòng liên hệ nhân viên nhà hàng để được hỗ trợ mở bàn!");
         }
 
         // Tạo phiên bàn mới an toàn cho bàn (đảm bảo độ dài <= 36 ký tự cho cột varchar(36))
@@ -252,6 +269,26 @@ public class TableSessionService {
         TableSessionEntity saved = tableSessionRepository.save(session);
         log.info("❄️ Table session {} for table {} is now PAYMENT_REQUESTED (frozen for payment)", saved.getId(), saved.getTableNo());
 
+        // Đếm số món chưa hoàn tất phục vụ (chưa served và chưa cancelled)
+        long unservedCount = sessionOrders.stream()
+                .filter(o -> o.getStatus() != OrderStatus.cancelled)
+                .flatMap(o -> orderItemRepository.findByOrder_Id(o.getId()).stream())
+                .filter(it -> it.getStatus() != OrderItemStatus.served && it.getStatus() != OrderItemStatus.cancelled)
+                .count();
+
+        OrderEntity primaryOrder = sessionOrders.get(0);
+        BigDecimal totalAmount = primaryOrder.getTotalAmount() != null ? primaryOrder.getTotalAmount() : BigDecimal.ZERO;
+
+        // Bắn WebSocket thông báo Thu ngân: Bàn X đang yêu cầu thanh toán
+        sendWebSocketEvent("TABLE_PAYMENT_REQUESTED", Map.of(
+                "table_id", saved.getTableId(),
+                "table_no", saved.getTableNo(),
+                "session_token", saved.getSessionToken(),
+                "total_amount", totalAmount,
+                "unserved_items_count", unservedCount,
+                "payment_code", primaryOrder.getOrderNumber()
+        ));
+
         return mapToResponse(saved);
     }
 
@@ -270,6 +307,12 @@ public class TableSessionService {
         TableSessionEntity saved = tableSessionRepository.save(session);
         log.info("🔓 Table session {} for table {} cancelled payment request, back to ACTIVE", saved.getId(), saved.getTableNo());
 
+        sendWebSocketEvent("TABLE_PAYMENT_REQUEST_CANCELLED", Map.of(
+                "table_id", saved.getTableId(),
+                "table_no", saved.getTableNo(),
+                "session_token", saved.getSessionToken()
+        ));
+
         return mapToResponse(saved);
     }
 
@@ -278,11 +321,16 @@ public class TableSessionService {
      */
     @Transactional
     public TableSessionResponse confirmPayment(String sessionToken, String staffId, PaymentMethod method, BigDecimal amountReceived) {
+        return confirmPayment(sessionToken, staffId, method, amountReceived, false);
+    }
+
+    @Transactional
+    public TableSessionResponse confirmPayment(String sessionToken, String staffId, PaymentMethod method, BigDecimal amountReceived, boolean forceConfirm) {
         TableSessionEntity session = tableSessionRepository.findBySessionTokenWithLock(sessionToken.trim())
                 .orElseThrow(() -> new BadRequestException("Phiên bàn không tồn tại hoặc đã bị hủy."));
 
         if (session.getStatus() == TableSessionStatus.closed) {
-            throw new BadRequestException("Phiên bàn này đã được đóng và thanh toán trước đó.");
+            throw new ConflictException("Phiên bàn này đã được đóng và thanh toán trước đó.");
         }
 
         List<OrderEntity> sessionOrders = orderRepository.findByTableSessionIdOrderByCreatedAtDesc(session.getId());
@@ -290,66 +338,30 @@ public class TableSessionService {
                 .filter(o -> o.getStatus() != OrderStatus.cancelled && o.getStatus() != OrderStatus.completed)
                 .toList();
 
-        // Nếu không có đơn chưa completed, lấy các đơn completed nhưng chưa paid
         if (openOrders.isEmpty()) {
             openOrders = sessionOrders.stream()
                     .filter(o -> o.getStatus() != OrderStatus.cancelled && o.getPaymentStatus() != PaymentStatus.paid)
                     .toList();
         }
 
-        BigDecimal totalExpected = BigDecimal.ZERO;
-        for (OrderEntity order : openOrders) {
-            if (order.getTotalAmount() != null) {
-                totalExpected = totalExpected.add(order.getTotalAmount());
-            }
-            order.setPaymentStatus(PaymentStatus.paid);
-            order.setStatus(OrderStatus.completed);
-            if (method != null) {
-                order.setPaymentMethod(method);
-            }
-            // Đảm bảo các món trong đơn được chuyển thành SERVED nếu chưa hủy
-            List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(order.getId());
-            for (OrderItemEntity it : items) {
-                if (it.getStatus() != OrderItemStatus.cancelled && it.getStatus() != OrderItemStatus.served) {
-                    it.setStatus(OrderItemStatus.served);
-                    it.setConfirmedAt(LocalDateTime.now());
-                    orderItemRepository.save(it);
-                }
-            }
-            orderRepository.save(order);
+        if (openOrders.isEmpty()) {
+            throw new ConflictException("Bàn không có đơn hàng nào cần thanh toán.");
         }
 
-        if (!openOrders.isEmpty()) {
-            BigDecimal received = (amountReceived != null && amountReceived.compareTo(BigDecimal.ZERO) > 0) ? amountReceived : totalExpected;
-            PaymentTransactionEntity tx = PaymentTransactionEntity.builder()
-                    .orderId(openOrders.get(0).getId())
-                    .transactionReference("TXN-" + System.currentTimeMillis())
-                    .amountExpected(totalExpected)
-                    .amountReceived(received)
-                    .paymentGateway(method != null ? method.name() : "CASH")
-                    .status(PaymentTransactionStatus.success)
-                    .rawPayload("Staff confirmed: " + (staffId != null ? staffId : "POS") + " for session " + session.getId() + " (" + openOrders.size() + " orders settled)")
-                    .build();
-            tx.setId("tx-" + UUID.randomUUID().toString().substring(0, 8));
-            paymentTransactionRepository.save(tx);
-        }
+        OrderEntity primaryOrder = openOrders.get(0);
+        paymentService.completePayment(
+                primaryOrder.getId(),
+                "STAFF_POS:" + (staffId != null ? staffId : "POS"),
+                "TXN-" + System.currentTimeMillis(),
+                amountReceived,
+                method != null ? method : PaymentMethod.cash,
+                "Staff confirmed: " + (staffId != null ? staffId : "POS") + " for session " + session.getId(),
+                forceConfirm
+        );
 
-        LocalDateTime now = LocalDateTime.now();
-        session.setStatus(TableSessionStatus.closed);
-        session.setClosedAt(now);
-        TableSessionEntity saved = tableSessionRepository.save(session);
-        log.info("✅ Table session {} for table {} confirmed PAID and CLOSED", saved.getId(), saved.getTableNo());
-
-        // Giải phóng bàn về AVAILABLE để khách tiếp theo có thể quét QR
-        Optional<TableEntity> tableOpt = tableRepository.findById(session.getTableId());
-        tableOpt.ifPresent(t -> {
-            t.setStatus(TableStatus.available);
-            tableRepository.save(t);
-            notifyTableStatusChanged(t.getId(), TableStatus.available);
-        });
-
+        TableSessionEntity saved = tableSessionRepository.findById(session.getId()).orElse(session);
         TableSessionResponse response = mapToResponse(saved);
-        response.setMessage("Thanh toán thành công! Phiên bàn đã được đóng và giải phóng.");
+        response.setMessage("Thanh toán thành công! Bàn " + saved.getTableNo() + " đã chuyển sang trạng thái chờ dọn dẹp.");
         return response;
     }
 
@@ -358,15 +370,20 @@ public class TableSessionService {
      */
     @Transactional
     public TableSessionResponse confirmPaymentByTable(String tableId, String staffId, PaymentMethod method, BigDecimal amountReceived) {
+        return confirmPaymentByTable(tableId, staffId, method, amountReceived, false);
+    }
+
+    @Transactional
+    public TableSessionResponse confirmPaymentByTable(String tableId, String staffId, PaymentMethod method, BigDecimal amountReceived, boolean forceConfirm) {
         List<TableSessionStatus> activeStatuses = List.of(
                 TableSessionStatus.active,
                 TableSessionStatus.payment_requested,
                 TableSessionStatus.payment_pending,
                 TableSessionStatus.paid
         );
-        List<TableSessionEntity> sessions = tableSessionRepository.findByTableIdAndStatusIn(tableId, activeStatuses);
+        List<TableSessionEntity> sessions = tableSessionRepository.findByTableIdAndStatusInWithLock(tableId, activeStatuses);
         if (!sessions.isEmpty()) {
-            return confirmPayment(sessions.get(0).getSessionToken(), staffId, method, amountReceived);
+            return confirmPayment(sessions.get(0).getSessionToken(), staffId, method, amountReceived, forceConfirm);
         }
 
         Optional<TableEntity> tableOpt = tableRepository.findById(tableId);
@@ -387,19 +404,30 @@ public class TableSessionService {
             );
         }
 
-        for (OrderEntity order : openOrders) {
-            order.setPaymentStatus(PaymentStatus.paid);
-            order.setStatus(OrderStatus.completed);
-            orderRepository.save(order);
+        String tableLabel = table.getTableNo() != null && table.getTableNo().startsWith("Bàn")
+                ? table.getTableNo()
+                : "Bàn " + table.getTableNo();
+
+        if (openOrders.isEmpty()) {
+            throw new ConflictException(tableLabel + " hiện không có phiên hoặc đơn hàng mở nào cần thanh toán (Hóa đơn đã được thanh toán và đóng trước đó)!");
         }
 
-        table.setStatus(TableStatus.available);
-        tableRepository.save(table);
+        OrderEntity primaryOrder = openOrders.get(0);
+        paymentService.completePayment(
+                primaryOrder.getId(),
+                "STAFF_POS:" + (staffId != null ? staffId : "POS"),
+                "TXN-" + System.currentTimeMillis(),
+                amountReceived,
+                method != null ? method : PaymentMethod.cash,
+                "Staff confirmed by table " + tableId,
+                forceConfirm
+        );
 
         return TableSessionResponse.builder()
                 .tableId(tableId)
                 .tableNo(table.getTableNo())
-                .message("Thanh toán thành công! Bàn " + table.getTableNo() + " đã được thanh toán và giải phóng.")
+                .status(TableSessionStatus.closed)
+                .message("Thanh toán thành công! " + tableLabel + " đã chuyển sang trạng thái chờ dọn dẹp.")
                 .build();
     }
 
@@ -427,13 +455,63 @@ public class TableSessionService {
         Optional<TableEntity> tableOpt = tableRepository.findById(tableId);
         tableOpt.ifPresent(t -> {
             t.setStatus(TableStatus.available);
+            t.setCurrentOrderId(null);
             tableRepository.save(t);
             notifyTableStatusChanged(tableId, TableStatus.available);
         });
     }
 
+    /**
+     * Nhân viên / Thu ngân reset phiên bàn (khi khách bỏ về hoặc đổi máy)
+     */
+    @Transactional
+    public void resetSessionForTable(String tableId, String staffId) {
+        resetSessionForTable(tableId, staffId, "MANUAL_RESET");
+    }
+
+    @Transactional
+    public void resetSessionForTable(String tableId, String staffId, String reason) {
+        String effectiveReason = (reason != null && !reason.isBlank()) ? reason.trim() : "MANUAL_RESET";
+        closeSessionsForTable(tableId, "STAFF_RESET_SESSION:" + (staffId != null ? staffId : "STAFF") + ":" + effectiveReason);
+        tableRepository.findById(tableId).ifPresent(t -> {
+            t.setStatus(TableStatus.available);
+            t.setCurrentOrderId(null);
+            tableRepository.save(t);
+            notifyTableStatusChanged(t.getId(), TableStatus.available);
+        });
+        sendWebSocketEvent("TABLE_SESSION_RESET", Map.of(
+                "table_id", tableId,
+                "staff_id", (staffId != null ? staffId : "STAFF"),
+                "reason", effectiveReason,
+                "status", "available"
+        ));
+        log.warn("⚠️ [AUDIT] Nhân viên [{}] đã RESET toàn bộ phiên của bàn [{}]. Lý do: {}", (staffId != null ? staffId : "STAFF"), tableId, effectiveReason);
+    }
+
     private void notifyTableStatusChanged(String tableId, TableStatus newStatus) {
         log.debug("Table status changed: {} -> {}", tableId, newStatus);
+        sendWebSocketEvent("TABLE_STATUS_CHANGED", Map.of(
+                "table_id", tableId,
+                "status", newStatus.name().toLowerCase()
+        ));
+    }
+
+    private void sendWebSocketEvent(String eventType, Object payload) {
+        try {
+            Map<String, Object> event = new HashMap<>();
+            event.put("event_type", eventType);
+            event.put("eventType", eventType);
+            event.put("timestamp", System.currentTimeMillis());
+            if (payload instanceof Map) {
+                event.putAll((Map<String, Object>) payload);
+            } else {
+                event.put("data", payload);
+            }
+            String json = objectMapper.writeValueAsString(event);
+            orderWebSocketHandler.broadcast(json);
+        } catch (Exception e) {
+            log.warn("Không thể gửi WebSocket event {}: {}", eventType, e.getMessage());
+        }
     }
 
     public TableSessionResponse mapToResponse(TableSessionEntity entity) {
@@ -486,6 +564,7 @@ public class TableSessionService {
 
                 builder.vietQr(TableSessionResponse.VietQRInfo.builder()
                         .qrImageUrl(qrUrl)
+                        .qrCode(qrUrl)
                         .amount(order.getTotalAmount())
                         .bankId(bankId)
                         .accountNumber(accountNumber)

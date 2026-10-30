@@ -35,7 +35,7 @@ public class CustomerAuthService {
             throw new BadRequestException("Số điện thoại hoặc Email không được để trống!");
         }
         if (target.contains("@")) {
-            otpService.generateAndSendOtp(target, com.omniresto.backend.domain.enums.OtpPurpose.PASSWORD_RESET);
+            otpService.generateAndSendOtp(target, com.omniresto.backend.domain.enums.OtpPurpose.password_reset);
         } else {
             otpService.generateOtp(target);
         }
@@ -126,7 +126,7 @@ public class CustomerAuthService {
         if (request.getOtp() != null && !request.getOtp().isBlank()) {
             if (target.contains("@")) {
                 otpService.verifyOtp(target, request.getOtp(),
-                        com.omniresto.backend.domain.enums.OtpPurpose.PASSWORD_RESET);
+                        com.omniresto.backend.domain.enums.OtpPurpose.password_reset);
             } else {
                 otpService.validateOtp(target, request.getOtp());
             }

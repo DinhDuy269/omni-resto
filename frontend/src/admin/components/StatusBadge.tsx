@@ -1,22 +1,6 @@
-import React from 'react';
+  import React from 'react';
 
 type StatusType =
-  | 'ACTIVE'
-  | 'INACTIVE'
-  | 'MAINTENANCE'
-  | 'CLOSED'
-  | 'AVAILABLE'
-  | 'OUT_OF_STOCK'
-  | 'DISCONTINUED'
-  | 'PENDING'
-  | 'PREPARING'
-  | 'READY'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'OCCUPIED'
-  | 'RESERVED'
-  | 'CLEANING'
-  | 'EXPIRED' // <-- Thêm cho Voucher
   | 'active'
   | 'inactive'
   | 'maintenance'
@@ -32,7 +16,7 @@ type StatusType =
   | 'occupied'
   | 'reserved'
   | 'cleaning'
-  | 'expired'; // <-- Đã thêm cho Voucher
+  | 'expired';
 
 interface StatusBadgeProps {
   status: StatusType | string;
@@ -41,31 +25,30 @@ interface StatusBadgeProps {
 }
 
 const statusMap: Record<string, { label: string; bg: string; color: string; border: string }> = {
-  ACTIVE: { label: 'Đang hoạt động', bg: 'var(--success-bg)', color: 'var(--success)', border: 'var(--success-border)' },
-  INACTIVE: { label: 'Tạm khóa', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
-  MAINTENANCE: { label: 'Bảo trì', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
-  CLOSED: { label: 'Đóng cửa', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
+  active: { label: 'Đang hoạt động', bg: 'var(--success-bg)', color: 'var(--success)', border: 'var(--success-border)' },
+  inactive: { label: 'Tạm khóa', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
+  maintenance: { label: 'Bảo trì', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
+  closed: { label: 'Đóng cửa', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
 
-  AVAILABLE: { label: 'Còn món', bg: 'var(--success-bg)', color: 'var(--success)', border: 'var(--success-border)' },
-  OUT_OF_STOCK: { label: 'Hết món', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
-  DISCONTINUED: { label: 'Ngừng bán', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
+  available: { label: 'Còn món', bg: 'var(--success-bg)', color: 'var(--success)', border: 'var(--success-border)' },
+  out_of_stock: { label: 'Hết món', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
+  discontinued: { label: 'Ngừng bán', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
 
-  PENDING: { label: 'Mới đặt', bg: 'var(--info-bg)', color: 'var(--info)', border: 'var(--info-border)' },
-  PREPARING: { label: 'Đang làm', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
-  READY: { label: 'Chờ giao', bg: 'var(--purple-bg)', color: 'var(--purple)', border: '#ddd6fe' },
-  COMPLETED: { label: 'Hoàn tất', bg: 'var(--success-bg)', color: 'var(--success)', border: 'var(--success-border)' },
-  CANCELLED: { label: 'Đã hủy', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
+  pending: { label: 'Mới đặt', bg: 'var(--info-bg)', color: 'var(--info)', border: 'var(--info-border)' },
+  preparing: { label: 'Đang làm', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
+  ready: { label: 'Chờ giao', bg: 'var(--purple-bg)', color: 'var(--purple)', border: '#ddd6fe' },
+  completed: { label: 'Hoàn tất', bg: 'var(--success-bg)', color: 'var(--success)', border: 'var(--success-border)' },
+  cancelled: { label: 'Đã hủy', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
 
-  OCCUPIED: { label: 'Có khách', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
-  RESERVED: { label: 'Đã đặt bàn', bg: 'var(--info-bg)', color: 'var(--info)', border: 'var(--info-border)' },
-  CLEANING: { label: 'Cần dọn', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
+  occupied: { label: 'Có khách', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
+  reserved: { label: 'Đã đặt bàn', bg: 'var(--info-bg)', color: 'var(--info)', border: 'var(--info-border)' },
+  cleaning: { label: 'Cần dọn', bg: 'var(--warning-bg)', color: 'var(--warning)', border: 'var(--warning-border)' },
 
-  // <-- Đã thêm cho Voucher
-  EXPIRED: { label: 'Đã hết hạn', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
+  expired: { label: 'Đã hết hạn', bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-border)' },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 'md' }) => {
-  const normalizedKey = status ? String(status).toUpperCase() : '';
+  const normalizedKey = status ? String(status).toLowerCase() : '';
   const config = statusMap[normalizedKey] || {
     label: status,
     bg: 'var(--border-subtle)',
@@ -73,7 +56,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 
     border: 'var(--border-color)',
   };
 
-  // Nếu truyền prop label vào, nó sẽ ưu tiên ghi đè label mặc định trong statusMap
   const displayText = label || config.label;
 
   return (

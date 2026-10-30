@@ -101,14 +101,14 @@ public class ReservationService {
 
         // 3. Xử lý gán bàn (nếu khách có chọn bàn cụ thể)
         TableEntity assignedTable = null;
-        String initialStatus = "PENDING";
+        String initialStatus = "pending";
 
         if (request.getTableId() != null && !request.getTableId().isBlank()) {
             assignedTable = tableRepository.findById(request.getTableId().trim())
                     .orElseThrow(() -> new RuntimeException("Bàn bạn chọn không tồn tại!"));
 
             // Đơn có bàn chọn trước chuyển sang CONFIRMED để Admin có sẵn nút "Nhận Bàn"
-            initialStatus = "CONFIRMED";
+            initialStatus = "confirmed";
 
             // LƯU Ý: KHÔNG gọi table.setStatus(...) và KHÔNG save table tại đây!
         }
@@ -164,11 +164,11 @@ public class ReservationService {
 
             // CHỈ KHÓA BÀN NẾU KHÁCH ĂN NGAY TẠI CHỖ
             if (request.isSeatedImmediately()) {
-                updateTablesStatus(targetTableIds, TableStatus.OCCUPIED);
+                updateTablesStatus(targetTableIds, TableStatus.occupied);
             }
         }
 
-        String initialStatus = request.isSeatedImmediately() ? "SEATED" : (!targetTableIds.isEmpty() ? "CONFIRMED" : "PENDING");
+        String initialStatus = request.isSeatedImmediately() ? "seated" : (!targetTableIds.isEmpty() ? "confirmed" : "pending");
 
         ReservationEntity entity = ReservationEntity.builder()
                 .reservationCode(generateReservationCode("RSV-OFF"))
@@ -224,7 +224,7 @@ public class ReservationService {
             Pageable pageable
     ) {
         String cleanStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status))
-                ? status.trim().toUpperCase()
+                ? status.trim().toLowerCase()
                 : null;
 
         String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
@@ -285,7 +285,7 @@ public class ReservationService {
             res.setSpecialNotes(currentNotes);
         }
 
-        res.setStatus("CONFIRMED");
+        res.setStatus("confirmed");
         reservationRepository.save(res);
 
         ReservationResponse response = toResponse(res);
@@ -308,8 +308,8 @@ public class ReservationService {
         }
 
         // LÚC NÀY MỚI CHÍNH THỨC KHÓA BÀN SANG OCCUPIED TRONG DATABASE
-        updateTablesStatus(tableIds, TableStatus.OCCUPIED);
-        res.setStatus("SEATED");
+        updateTablesStatus(tableIds, TableStatus.occupied);
+        res.setStatus("seated");
         reservationRepository.save(res);
 
         ReservationResponse response = toResponse(res);
@@ -326,9 +326,9 @@ public class ReservationService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt bàn!"));
 
         List<String> tableIds = extractAllTableIds(res);
-        updateTablesStatus(tableIds, TableStatus.AVAILABLE);
+        updateTablesStatus(tableIds, TableStatus.available);
 
-        res.setStatus("CANCELLED");
+        res.setStatus("cancelled");
         if (reason != null && !reason.isBlank()) {
             String existingNotes = res.getSpecialNotes() != null ? res.getSpecialNotes() : "";
             res.setSpecialNotes(existingNotes + " | Lý do hủy: " + reason);
@@ -350,9 +350,9 @@ public class ReservationService {
 
         for (ReservationEntity res : expiredList) {
             List<String> tableIds = extractAllTableIds(res);
-            updateTablesStatus(tableIds, TableStatus.AVAILABLE);
+            updateTablesStatus(tableIds, TableStatus.available);
 
-            res.setStatus("CANCELLED");
+            res.setStatus("cancelled");
             String existingNotes = res.getSpecialNotes() != null ? res.getSpecialNotes() : "";
             res.setSpecialNotes(existingNotes + " | Hệ thống tự động hủy: Quá 30 phút so với giờ hẹn khách chưa tới nhận bàn.");
             reservationRepository.save(res);
@@ -410,7 +410,7 @@ public class ReservationService {
                 .customerEmail(entity.getCustomerEmail())
                 .partySize(entity.getPartySize())
                 .reservationTime(entity.getReservationTime())
-                .status(entity.getStatus())
+                .status(entity.getStatus() != null ? entity.getStatus().toLowerCase() : "pending")
                 .tableId(entity.getTable() != null ? entity.getTable().getId() : null)
                 .tableNo(displayTableNo)
                 .tableCapacity(totalCapacity)

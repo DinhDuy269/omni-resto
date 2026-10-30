@@ -96,7 +96,7 @@ export const TableManagement: React.FC = () => {
     fetchInitialData: fetchAdminData,
   } = useAdminStore();
 
-  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name-asc' | 'capacity-desc' | 'revenue-desc'>('name-asc');
@@ -112,7 +112,7 @@ export const TableManagement: React.FC = () => {
   const [tableForm, setTableForm] = useState({
     table_no: '',
     capacity: 4,
-    status: 'AVAILABLE' as TableStatus,
+    status: 'available' as TableStatus,
     zonePreset: 'FLOOR_1',
   });
 
@@ -120,7 +120,7 @@ export const TableManagement: React.FC = () => {
   const filteredTables = useMemo(() => {
     return tables
       .filter((t) => {
-        const matchesFilter = filterStatus === 'ALL' || t.status?.toUpperCase() === filterStatus;
+        const matchesFilter = filterStatus === 'all' || t.status?.toLowerCase() === filterStatus;
         const matchesSearch =
           (t.table_no || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
           getTableZone(t).name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -148,13 +148,13 @@ export const TableManagement: React.FC = () => {
   }, [tables, filterStatus, selectedZone, searchQuery, sortBy]);
 
   // Aggregate Counts & Metrics
-  const availableCount = tables.filter((t) => t.status?.toUpperCase() === 'AVAILABLE').length;
-  const occupiedCount = tables.filter((t) => t.status?.toUpperCase() === 'OCCUPIED').length;
-  const reservedCount = tables.filter((t) => t.status?.toUpperCase() === 'RESERVED').length;
-  const cleaningCount = tables.filter((t) => t.status?.toUpperCase() === 'CLEANING').length;
+  const availableCount = tables.filter((t) => t.status?.toLowerCase() === 'available').length;
+  const occupiedCount = tables.filter((t) => t.status?.toLowerCase() === 'occupied').length;
+  const reservedCount = tables.filter((t) => t.status?.toLowerCase() === 'reserved').length;
+  const cleaningCount = tables.filter((t) => t.status?.toLowerCase() === 'cleaning').length;
 
   const totalActiveRevenue = tables
-    .filter((t) => t.status?.toUpperCase() === 'OCCUPIED')
+    .filter((t) => t.status?.toLowerCase() === 'occupied')
     .reduce((sum, t) => sum + (t.current_order_amount || 0), 0);
 
   // Refresh handler
@@ -176,7 +176,7 @@ export const TableManagement: React.FC = () => {
     setTableForm({
       table_no: `Bàn ${formattedNum}`,
       capacity: 4,
-      status: 'AVAILABLE',
+      status: 'available',
       zonePreset: nextTableNum > 12 ? 'VIP' : nextTableNum > 6 ? 'FLOOR_2' : 'FLOOR_1',
     });
     setIsAddModalOpen(true);
@@ -188,7 +188,7 @@ export const TableManagement: React.FC = () => {
     setTableForm({
       table_no: tbl.table_no,
       capacity: tbl.capacity,
-      status: (tbl.status?.toUpperCase() || 'AVAILABLE') as TableStatus,
+      status: (tbl.status?.toLowerCase() || 'available') as TableStatus,
       zonePreset: getTableZone(tbl).id,
     });
   };
@@ -383,8 +383,8 @@ export const TableManagement: React.FC = () => {
           <div className="status-pills-row">
             <button
               type="button"
-              className={`status-pill-btn ${filterStatus === 'ALL' ? 'active' : ''}`}
-              onClick={() => setFilterStatus('ALL')}
+              className={`status-pill-btn ${filterStatus === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('all')}
             >
               <span className="status-pill-dot dot-all" />
               <span>Tất Cả</span>
@@ -393,8 +393,8 @@ export const TableManagement: React.FC = () => {
 
             <button
               type="button"
-              className={`status-pill-btn ${filterStatus === 'AVAILABLE' ? 'active' : ''}`}
-              onClick={() => setFilterStatus('AVAILABLE')}
+              className={`status-pill-btn ${filterStatus === 'available' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('available')}
             >
               <span className="status-pill-dot dot-available" />
               <span>Bàn Trống</span>
@@ -403,8 +403,8 @@ export const TableManagement: React.FC = () => {
 
             <button
               type="button"
-              className={`status-pill-btn ${filterStatus === 'OCCUPIED' ? 'active' : ''}`}
-              onClick={() => setFilterStatus('OCCUPIED')}
+              className={`status-pill-btn ${filterStatus === 'occupied' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('occupied')}
             >
               <span className="status-pill-dot dot-occupied" />
               <span>Có Khách</span>
@@ -413,8 +413,8 @@ export const TableManagement: React.FC = () => {
 
             <button
               type="button"
-              className={`status-pill-btn ${filterStatus === 'RESERVED' ? 'active' : ''}`}
-              onClick={() => setFilterStatus('RESERVED')}
+              className={`status-pill-btn ${filterStatus === 'reserved' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('reserved')}
             >
               <span className="status-pill-dot dot-reserved" />
               <span>Đã Đặt Trước</span>
@@ -423,8 +423,8 @@ export const TableManagement: React.FC = () => {
 
             <button
               type="button"
-              className={`status-pill-btn ${filterStatus === 'CLEANING' ? 'active' : ''}`}
-              onClick={() => setFilterStatus('CLEANING')}
+              className={`status-pill-btn ${filterStatus === 'cleaning' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('cleaning')}
             >
               <span className="status-pill-dot dot-cleaning" />
               <span>Cần Dọn</span>
@@ -483,19 +483,19 @@ export const TableManagement: React.FC = () => {
           </div>
         ) : (
           filteredTables.map((tbl) => {
-            const statusUpper = (tbl.status || 'AVAILABLE').toUpperCase();
+            const tblStatus = tbl.status?.toLowerCase() || 'available';
             const activeTableCalls = service_requests.filter(
               (sr) =>
                 (sr.table_no || '').toLowerCase() === (tbl.table_no || '').toLowerCase() &&
-                sr.status === 'OPEN'
+                sr.status === 'open'
             );
             const isFrozenForPayment = Boolean(tbl.payment_requested);
-            const isAwaitingVerification = statusUpper === 'OCCUPIED' && tbl.is_verified === false;
+            const isAwaitingVerification = tblStatus === 'occupied' && tbl.is_verified === false;
             const zone = getTableZone(tbl);
 
             const cardClasses = [
               'table-card-clean',
-              `status-${statusUpper.toLowerCase()}`,
+              `status-${tblStatus}`,
               isFrozenForPayment ? 'is-payment-frozen' : '',
               activeTableCalls.length > 0 ? 'has-active-alert' : '',
             ]
@@ -521,14 +521,14 @@ export const TableManagement: React.FC = () => {
 
                   <div className="table-card-header-right">
                     {/* Status Pill with accurate label */}
-                    <div className={`table-status-pill pill-${statusUpper.toLowerCase()}`}>
+                    <div className={`table-status-pill pill-${tblStatus}`}>
                       <span className="table-status-dot-sm" />
                       <span>
-                        {statusUpper === 'AVAILABLE'
+                        {tblStatus === 'available'
                           ? 'Bàn trống'
-                          : statusUpper === 'OCCUPIED'
+                          : tblStatus === 'occupied'
                           ? 'Có khách'
-                          : statusUpper === 'RESERVED'
+                          : tblStatus === 'reserved'
                           ? 'Đã đặt'
                           : 'Cần dọn'}
                       </span>
@@ -627,7 +627,7 @@ export const TableManagement: React.FC = () => {
 
                 {/* ── CARD BODY: Clean Structured State ── */}
                 <div className="table-card-body-clean">
-                  {statusUpper === 'OCCUPIED' ? (
+                  {tblStatus === 'occupied' ? (
                     <>
                       <div className="table-revenue-header-row">
                         <span className="table-revenue-title">Tạm tính hóa đơn</span>
@@ -657,7 +657,7 @@ export const TableManagement: React.FC = () => {
                         <span>{formatOccupiedDuration(tbl.occupied_since)}</span>
                       </div>
                     </>
-                  ) : statusUpper === 'RESERVED' ? (
+                  ) : tblStatus === 'reserved' ? (
                     <div className="table-reserved-state-body">
                       <div className="table-reserved-state-icon">
                         <Clock size={18} />
@@ -669,7 +669,7 @@ export const TableManagement: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                  ) : statusUpper === 'CLEANING' ? (
+                  ) : tblStatus === 'cleaning' ? (
                     <div className="table-cleaning-state-body">
                       <div className="table-cleaning-state-icon">
                         <Coffee size={18} />
@@ -698,18 +698,18 @@ export const TableManagement: React.FC = () => {
 
                 {/* ── CARD FOOTER: Clean, Spacious, Ergonomic Actions ── */}
                 <div className="table-card-footer-clean">
-                  {statusUpper === 'AVAILABLE' && (
+                  {tblStatus === 'available' && (
                     <button
                       type="button"
                       className="table-op-btn-full btn-open"
-                      onClick={() => updateTableStatus(tbl.id, 'OCCUPIED')}
+                      onClick={() => updateTableStatus(tbl.id, 'occupied')}
                     >
                       <Sparkles size={15} />
                       <span>Mở Bàn / Nhận Khách</span>
                     </button>
                   )}
 
-                  {statusUpper === 'OCCUPIED' && (
+                  {tblStatus === 'occupied' && (
                     <>
                       {!tbl.is_paid ? (
                         <>
@@ -720,7 +720,7 @@ export const TableManagement: React.FC = () => {
                               isFrozenForPayment ? 'btn-pay-frozen' : 'btn-pay'
                             }`}
                             title="Xác nhận khách đã thanh toán đủ"
-                            onClick={() => {
+                            onClick={async () => {
                               if (
                                 window.confirm(
                                   `Xác nhận đã nhận đủ ${(
@@ -728,7 +728,17 @@ export const TableManagement: React.FC = () => {
                                   ).toLocaleString('vi-VN')} đ cho ${tbl.table_no}?`
                                 )
                               ) {
-                                confirmTablePayment(tbl.table_no);
+                                try {
+                                  await confirmTablePayment(tbl.table_no);
+                                } catch (err: any) {
+                                  if (err?.message?.includes('chưa SERVED') || err?.status === 409) {
+                                    if (window.confirm(`${err.message}\n\nBạn có muốn GHI ĐÈ XÁC NHẬN (FORCE CONFIRM) để đóng bàn này không?`)) {
+                                      await confirmTablePayment(tbl.table_no, true);
+                                    }
+                                  } else {
+                                    alert('Lỗi xác nhận thanh toán: ' + (err.message || 'Không thể xác nhận'));
+                                  }
+                                }
                               }
                             }}
                           >
@@ -750,7 +760,7 @@ export const TableManagement: React.FC = () => {
                                     `Chuyển ${tbl.table_no} sang dọn bàn? Phiên của khách sẽ kết thúc.`
                                   )
                                 ) {
-                                  updateTableStatus(tbl.id, 'CLEANING');
+                                  updateTableStatus(tbl.id, 'cleaning');
                                   setTablePaymentRequested(tbl.table_no, false);
                                   await tableApi
                                     .closeSession(tbl.id, 'ADMIN_CHECKOUT')
@@ -778,9 +788,9 @@ export const TableManagement: React.FC = () => {
                                   )
                                 ) {
                                   await tableApi
-                                    .closeSession(tbl.id, 'STAFF_DEVICE_UNLOCK')
+                                    .resetSession(tbl.id)
                                     .catch(() => {});
-                                  updateTableStatus(tbl.id, 'AVAILABLE');
+                                  updateTableStatus(tbl.id, 'available');
                                   setTablePaymentRequested(tbl.table_no, false);
                                   window.dispatchEvent(
                                     new CustomEvent('omniresto:table_session_closed', {
@@ -805,7 +815,7 @@ export const TableManagement: React.FC = () => {
                                 `Khách ${tbl.table_no} đã rời bàn. Chuyển sang Cần Dọn Dẹp?`
                               )
                             ) {
-                              updateTableStatus(tbl.id, 'CLEANING');
+                              updateTableStatus(tbl.id, 'cleaning');
                               fetch(`/api/table-sessions/close?tableId=${tbl.id}`, {
                                 method: 'POST',
                               }).catch(() => {});
@@ -824,12 +834,12 @@ export const TableManagement: React.FC = () => {
                     </>
                   )}
 
-                  {statusUpper === 'CLEANING' && (
+                  {tblStatus === 'cleaning' && (
                     <button
                       type="button"
                       className="table-op-btn-full btn-clean-done"
                       onClick={() => {
-                        updateTableStatus(tbl.id, 'AVAILABLE');
+                        updateTableStatus(tbl.id, 'available');
                         fetch(`/api/table-sessions/close?tableId=${tbl.id}`, {
                           method: 'POST',
                         }).catch(() => {});
@@ -845,11 +855,11 @@ export const TableManagement: React.FC = () => {
                     </button>
                   )}
 
-                  {statusUpper === 'RESERVED' && (
+                  {tblStatus === 'reserved' && (
                     <button
                       type="button"
                       className="table-op-btn-full btn-seat-guest"
-                      onClick={() => updateTableStatus(tbl.id, 'OCCUPIED')}
+                      onClick={() => updateTableStatus(tbl.id, 'occupied')}
                     >
                       <Users size={15} />
                       <span>Xếp Khách Vào Bàn</span>

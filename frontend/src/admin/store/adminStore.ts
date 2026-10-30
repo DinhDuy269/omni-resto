@@ -26,7 +26,7 @@ export interface ServiceRequestItem {
   order_id?: string;
   request_text: string;
   timestamp: string;
-  status: 'OPEN' | 'RESOLVED';
+  status: 'open' | 'resolved';
 }
 
 interface AdminState {
@@ -71,11 +71,11 @@ interface AdminState {
   regenerateTableQrToken: (tableId: string) => Promise<void> | void;
   verifyTableSession: (tableNo: string) => void;
   setTablePaymentRequested: (tableNo: string, requested: boolean) => void;
-  confirmTablePayment: (tableNo: string) => void;
+  confirmTablePayment: (tableNo: string, forceConfirm?: boolean) => Promise<void>;
 
   // Orders
   updateOrderStatus: (id: string, status: Order['status'], autoPay?: boolean) => Promise<void>;
-  confirmOrderPayment: (id: string, paymentMethod?: string, amountReceived?: number, autoComplete?: boolean) => Promise<void>;
+  confirmOrderPayment: (id: string, paymentMethod?: string, amountReceived?: number, autoComplete?: boolean, forceConfirm?: boolean) => Promise<void>;
   cancelOrderItem: (orderId: string, itemId: string, reason?: string) => Promise<void>;
   addOrderFromClient: (order: Order) => void;
   handleWebSocketOrderEvent: (event: { eventType: string; order?: Order }) => void;
@@ -111,7 +111,7 @@ export const INITIAL_VOUCHERS: VoucherInfo[] = [
     code: 'WELCOME100',
     name: 'Quà Tặng Thành Viên Mới',
     description: 'Giảm ngay 100.000đ cho đơn hàng đầu tiên. Tự động tặng khi khách hàng mới đăng ký tài khoản thành công.',
-    discount_type: 'FIXED_AMOUNT',
+    discount_type: 'fixed_amount',
     discount_value: 100000,
     min_order_amount: 0,
     total_quantity: 99999,
@@ -119,7 +119,7 @@ export const INITIAL_VOUCHERS: VoucherInfo[] = [
     usage_limit_per_user: 1,
     start_date: '2026-01-01T00:00:00',
     end_date: '2027-12-31T23:59:59',
-    status: 'ACTIVE',
+    status: 'active',
     is_welcome_voucher: true,
     created_at: '2026-01-01T00:00:00',
   },
@@ -128,7 +128,7 @@ export const INITIAL_VOUCHERS: VoucherInfo[] = [
     code: 'FREELUNCH20',
     name: 'Trưa Vui Vẻ Giảm 20%',
     description: 'Giảm 20% tổng hóa đơn, tối đa 50.000đ. Áp dụng cho các bữa trưa tại nhà hàng.',
-    discount_type: 'PERCENTAGE',
+    discount_type: 'percentage',
     discount_value: 20,
     max_discount_amount: 50000,
     min_order_amount: 150000,
@@ -137,7 +137,7 @@ export const INITIAL_VOUCHERS: VoucherInfo[] = [
     usage_limit_per_user: 2,
     start_date: '2026-09-01T00:00:00',
     end_date: '2026-11-30T23:59:59',
-    status: 'ACTIVE',
+    status: 'active',
     is_welcome_voucher: false,
     created_at: '2026-08-25T00:00:00',
   },
@@ -146,7 +146,7 @@ export const INITIAL_VOUCHERS: VoucherInfo[] = [
     code: 'SUMMER2026',
     name: 'Chào Hè Rực Rỡ',
     description: 'Giảm 50.000đ phí giao hàng cho các đơn Takeaway / Delivery.',
-    discount_type: 'FIXED_AMOUNT',
+    discount_type: 'fixed_amount',
     discount_value: 50000,
     min_order_amount: 200000,
     total_quantity: 1000,
@@ -154,7 +154,7 @@ export const INITIAL_VOUCHERS: VoucherInfo[] = [
     usage_limit_per_user: 1,
     start_date: '2026-05-01T00:00:00',
     end_date: '2026-08-31T23:59:59',
-    status: 'EXPIRED',
+    status: 'expired',
     is_welcome_voucher: false,
     created_at: '2026-04-15T00:00:00',
   }
@@ -312,26 +312,29 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
   verifyTableSession: (tableNo) => {
     set((s) => ({
-      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: 'OCCUPIED' } : t)),
+      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: 'occupied' } : t)),
     }));
   },
   setTablePaymentRequested: (tableNo, requested) => {
     set((s) => ({
-      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: requested ? 'OCCUPIED' : t.status } : t)),
+      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: requested ? 'occupied' : t.status } : t)),
     }));
   },
-  confirmTablePayment: async (tableNo) => {
+  confirmTablePayment: async (tableNo, forceConfirm = false) => {
     const table = get().tables.find((t) => t.table_no === tableNo);
-    set((s) => ({
-      tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: 'CLEANING', is_paid: true } : t)),
-    }));
+    const prev = get().tables;
     if (table) {
       try {
-        await tableApi.confirmPayment(table.id);
+        await tableApi.confirmPayment(table.id, { forceConfirm });
+        set((s) => ({
+          tables: s.tables.map((t) => (t.table_no === tableNo ? { ...t, status: 'cleaning', is_paid: true } : t)),
+        }));
         const fresh = await tableApi.getAll();
         set({ tables: fresh });
       } catch (err) {
         console.error('Lỗi xác nhận thanh toán bàn:', err);
+        set({ tables: prev });
+        throw err;
       }
     }
   },
@@ -345,11 +348,11 @@ export const useAdminStore = create<AdminState>((set, get) => ({
           ? {
               ...o,
               status,
-              ...(autoPay || (status === 'COMPLETED' && o.payment_status !== 'PAID')
-                ? { payment_status: 'PAID' }
+              ...(autoPay || (status === 'completed' && o.payment_status?.toLowerCase() !== 'paid')
+                ? { payment_status: 'paid' }
                 : {}),
-              ...(status === 'COMPLETED'
-                ? { items: o.items.map((it) => (it.status !== 'CANCELLED' ? { ...it, status: 'SERVED' } : it)) }
+              ...(status === 'completed'
+                ? { items: o.items.map((it) => (it.status !== 'cancelled' ? { ...it, status: 'served' } : it)) }
                 : {}),
             }
           : o
@@ -362,25 +365,25 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       throw err;
     }
   },
-  confirmOrderPayment: async (id, paymentMethod, amountReceived, autoComplete = false) => {
+  confirmOrderPayment: async (id, paymentMethod, amountReceived, autoComplete = false, forceConfirm = false) => {
     const prev = get().orders;
-    set({
-      orders: prev.map((o) =>
-        o.id === id
-          ? {
-              ...o,
-              payment_status: 'PAID',
-              ...(paymentMethod ? { payment_method: paymentMethod.toUpperCase() as any } : {}),
-              ...(autoComplete ? { status: 'COMPLETED' } : {}),
-              ...(autoComplete
-                ? { items: o.items.map((it) => (it.status !== 'CANCELLED' ? { ...it, status: 'SERVED' } : it)) }
-                : {}),
-            }
-          : o
-      ),
-    });
     try {
-      await orderApi.confirmPayment(id, paymentMethod, amountReceived, autoComplete);
+      await orderApi.confirmPayment(id, paymentMethod, amountReceived, autoComplete, forceConfirm);
+      set({
+        orders: prev.map((o) =>
+          o.id === id
+            ? {
+                ...o,
+                payment_status: 'paid',
+                ...(paymentMethod ? { payment_method: paymentMethod.toLowerCase() as any } : {}),
+                ...(autoComplete ? { status: 'completed' } : {}),
+                ...(autoComplete
+                  ? { items: o.items.map((it) => (it.status !== 'cancelled' ? { ...it, status: 'served' } : it)) }
+                  : {}),
+              }
+            : o
+        ),
+      });
     } catch (err) {
       set({ orders: prev });
       throw err;
@@ -395,13 +398,13 @@ export const useAdminStore = create<AdminState>((set, get) => ({
           it.id === itemId
             ? {
                 ...it,
-                status: 'CANCELLED',
+                status: 'cancelled',
                 notes: it.notes ? `${it.notes} | [Đã hủy: ${reason}]` : `[Đã hủy: ${reason}]`,
               }
             : it
         );
         const recalculatedTotal = updatedItems
-          .filter((it) => it.status !== 'CANCELLED')
+          .filter((it) => it.status !== 'cancelled')
           .reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 1), 0);
         return {
           ...ord,
@@ -418,17 +421,58 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     }
   },
   addOrderFromClient: (order) => set((s) => ({ orders: upsertById(s.orders, order) })),
-  handleWebSocketOrderEvent: ({ order }) => {
+  handleWebSocketOrderEvent: (event: any) => {
+    const eventType = event.eventType || event.event_type;
+    const order = event.order || (event.data && event.data.order) || (event.data && event.data.id ? event.data : null);
+
+    if (eventType === 'TABLE_PAYMENT_REQUESTED') {
+      const tableNo = event.table_no || event.tableNo || event.data?.table_no;
+      if (tableNo) {
+        get().setTablePaymentRequested(tableNo, true);
+      }
+    } else if (eventType === 'TABLE_PAYMENT_REQUEST_CANCELLED') {
+      const tableNo = event.table_no || event.tableNo || event.data?.table_no;
+      if (tableNo) {
+        get().setTablePaymentRequested(tableNo, false);
+      }
+    } else if (eventType === 'TABLE_STATUS_CHANGED') {
+      const tableId = event.table_id || event.tableId || event.data?.table_id;
+      const status = (event.status || event.data?.status)?.toLowerCase();
+      if (tableId && status) {
+        set((s) => ({
+          tables: s.tables.map((t) => (t.id === tableId ? { ...t, status: status as any } : t)),
+        }));
+      }
+    } else if (eventType === 'TABLE_SESSION_CLOSED') {
+      const tableId = event.table_id || event.tableId || event.data?.table_id;
+      const tableNo = event.table_no || event.tableNo || event.data?.table_no;
+      if (tableNo) {
+        get().setTablePaymentRequested(tableNo, false);
+      }
+      if (tableId) {
+        set((s) => ({
+          tables: s.tables.map((t) => (t.id === tableId ? { ...t, status: 'cleaning' as any, current_order_amount: 0, is_paid: true } : t)),
+        }));
+      }
+    } else if (eventType === 'TABLE_SESSION_RESET') {
+      const tableId = event.table_id || event.tableId || event.data?.table_id;
+      if (tableId) {
+        set((s) => ({
+          tables: s.tables.map((t) => (t.id === tableId ? { ...t, status: 'available' as any, current_order_amount: 0, payment_requested: false } : t)),
+        }));
+      }
+    }
+
     if (!order) return;
     const normalized: Order = {
       id: order.id,
       order_number: (order as any).orderNumber || order.order_number || '',
       table_no: (order as any).tableNo || order.table_no,
       customer_name: (order as any).customerName || order.customer_name || 'Khách vãng lai',
-      order_type: (order as any).orderType || order.order_type || 'DINE_IN',
-      status: ((order.status || 'PENDING').toUpperCase()) as OrderStatus,
-      payment_status: (order as any).paymentStatus || order.payment_status || 'UNPAID',
-      payment_method: (order as any).paymentMethod || order.payment_method || 'CASH',
+      order_type: ((order as any).orderType || order.order_type || 'dine_in').toLowerCase() as any,
+      status: ((order.status || 'pending').toLowerCase()) as OrderStatus,
+      payment_status: String((order as any).paymentStatus || order.payment_status || 'unpaid').toLowerCase() as any,
+      payment_method: String((order as any).paymentMethod || order.payment_method || 'cash').toLowerCase() as any,
       total_amount: Number((order as any).totalAmount || order.total_amount || 0),
       items: ((order.items || []) as any[]).map((it) => ({
         id: it.id,
@@ -436,7 +480,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         quantity: it.quantity,
         price: Number(it.price || 0),
         notes: it.notes,
-        status: it.status?.toUpperCase() || 'PENDING',
+        status: it.status?.toLowerCase() || 'pending',
       })),
       created_at: (order as any).createdAt || order.created_at,
     };
@@ -460,7 +504,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       }));
     } else if (eventType === 'MENU_ITEM_STATUS_CHANGED') {
       const rawStatus = event.status || rawItem?.status || '';
-      const newStatus = rawStatus.toUpperCase() as MenuItem['status'];
+      const newStatus = rawStatus.toLowerCase() as MenuItem['status'];
       if (itemId && newStatus) {
         set((s) => ({
           menu_items: s.menu_items.map((m) =>
@@ -506,14 +550,14 @@ export const useAdminStore = create<AdminState>((set, get) => ({
           order_id,
           request_text,
           timestamp: new Date().toISOString(),
-          status: 'OPEN',
+          status: 'open',
         },
         ...s.service_requests,
       ],
     })),
   resolveServiceRequest: async (id) => {
     set((s) => ({
-      service_requests: s.service_requests.map((r) => (r.id === id ? { ...r, status: 'RESOLVED' } : r)),
+      service_requests: s.service_requests.map((r) => (r.id === id ? { ...r, status: 'resolved' } : r)),
     }));
     try {
       await serviceRequestApi.resolveRequest(id);
@@ -523,7 +567,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
   resolveServiceRequestsByTable: async (table_no) => {
     set((s) => ({
-      service_requests: s.service_requests.map((r) => (r.table_no === table_no ? { ...r, status: 'RESOLVED' } : r)),
+      service_requests: s.service_requests.map((r) => (r.table_no === table_no ? { ...r, status: 'resolved' } : r)),
     }));
     try {
       await serviceRequestApi.resolveTableRequests(table_no);

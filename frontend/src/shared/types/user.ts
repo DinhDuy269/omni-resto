@@ -1,5 +1,5 @@
-export type RoleType = 'admin' | 'store_manager' | 'cashier' | 'waiter' | 'chef' | 'HQ_ADMIN' | 'BRANCH_MANAGER' | 'CHEF' | 'WAITER' | 'CASHIER';
-export type UserStatus = 'active' | 'inactive' | 'ACTIVE' | 'INACTIVE';
+export type RoleType = 'admin' | 'store_manager' | 'cashier' | 'waiter' | 'chef';
+export type UserStatus = 'active' | 'inactive';
 
 export interface StaffUser {
   id: string;

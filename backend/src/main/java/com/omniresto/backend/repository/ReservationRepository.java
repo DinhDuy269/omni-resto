@@ -23,11 +23,11 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 
     @Query("SELECT r FROM ReservationEntity r " +
             "WHERE r.customerPhone = :phone " +
-            "AND r.status IN ('PENDING', 'CONFIRMED')")
+            "AND LOWER(r.status) IN ('pending', 'confirmed')")
     List<ReservationEntity> findActiveReservationsByPhone(@Param("phone") String phone);
 
     @Query("SELECT r FROM ReservationEntity r WHERE r.table.id = :tableId " +
-            "AND r.status IN ('CONFIRMED', 'SEATED') " +
+            "AND LOWER(r.status) IN ('confirmed', 'seated') " +
             "AND r.reservationTime BETWEEN :startTime AND :endTime " +
             "AND (:excludeReservationId IS NULL OR r.id != :excludeReservationId)")
     List<ReservationEntity> findConflictingReservations(
@@ -38,14 +38,14 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
     );
 
     @Query("SELECT r FROM ReservationEntity r " +
-            "WHERE r.status IN ('PENDING', 'CONFIRMED') " +
+            "WHERE LOWER(r.status) IN ('pending', 'confirmed') " +
             "AND r.reservationTime < :threshold")
     List<ReservationEntity> findExpiredReservations(@Param("threshold") LocalDateTime threshold);
 
     // Query phân trang kết hợp lọc ca (tính theo phút trong ngày), trạng thái, ngày và từ khóa tìm kiếm
     @Query(
             value = "SELECT r FROM ReservationEntity r WHERE " +
-                    "(:status IS NULL OR :status = '' OR r.status = :status) " +
+                    "(:status IS NULL OR :status = '' OR LOWER(r.status) = LOWER(:status)) " +
                     "AND (:search IS NULL OR :search = '' OR " +
                     "     LOWER(r.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
                     "     r.customerPhone LIKE CONCAT('%', :search, '%') OR " +
@@ -56,7 +56,7 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
                     "     (:isOvernight = false AND (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) >= :startMinute AND (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) < :endMinute) OR " +
                     "     (:isOvernight = true AND ((HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) >= :startMinute OR (HOUR(r.reservationTime) * 60 + MINUTE(r.reservationTime)) < :endMinute)))",
             countQuery = "SELECT COUNT(r) FROM ReservationEntity r WHERE " +
-                    "(:status IS NULL OR :status = '' OR r.status = :status) " +
+                    "(:status IS NULL OR :status = '' OR LOWER(r.status) = LOWER(:status)) " +
                     "AND (:search IS NULL OR :search = '' OR " +
                     "     LOWER(r.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
                     "     r.customerPhone LIKE CONCAT('%', :search, '%') OR " +

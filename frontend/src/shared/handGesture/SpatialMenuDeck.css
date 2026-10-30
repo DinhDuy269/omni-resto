@@ -1,0 +1,578 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   SPATIAL MENU DECK — CINEMATIC HANDS-FREE RESTAURANT EXPERIENCE (HIGH-PERF 60-120FPS)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.spatial-deck-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: radial-gradient(circle at 50% 30%, rgba(18, 22, 34, 0.97), rgba(8, 10, 16, 0.99));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  user-select: none;
+  animation: spatialFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes spatialFadeIn {
+  from { opacity: 0; transform: scale(1.01); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── 1. Top Header ── */
+.spatial-deck-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.8), transparent);
+  z-index: 10;
+}
+
+.spatial-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+}
+
+.spatial-brand-text h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  background: linear-gradient(90deg, #ffffff, #fde68a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.spatial-brand-text span {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Category Pills Bar */
+.spatial-categories-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  max-width: 50vw;
+  padding: 4px;
+}
+
+.spatial-category-pill {
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+  white-space: nowrap;
+}
+
+.spatial-category-pill--active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #f59e0b;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+}
+
+/* Header Right Actions */
+.spatial-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Speed Preset Pill */
+.spatial-speed-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  user-select: none;
+}
+
+.spatial-speed-pill:hover {
+  transform: scale(1.05);
+}
+
+.spatial-speed-pill--fast {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.3);
+}
+
+.spatial-speed-pill--balanced {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.spatial-speed-pill--relaxed {
+  background: rgba(74, 222, 128, 0.16);
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+/* Mini Camera HUD */
+.spatial-camera-hud {
+  position: relative;
+  width: 96px;
+  height: 72px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: #000000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.spatial-camera-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.spatial-camera-live-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #22c55e;
+  color: #052e16;
+  letter-spacing: 0.5px;
+}
+
+/* Cart Button */
+.spatial-cart-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  color: #f8fafc;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.spatial-cart-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ea580c;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.spatial-close-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.spatial-close-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* ── 2. Center 3D Card Deck ── */
+.spatial-deck-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  perspective: 1200px;
+  padding: 10px 0;
+  contain: layout style;
+}
+
+/* Spatial Zone Floating Indicators */
+.spatial-zone-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease, color 0.18s ease;
+  z-index: 15;
+}
+
+.spatial-zone-indicator--left {
+  left: 28px;
+}
+
+.spatial-zone-indicator--right {
+  right: 28px;
+}
+
+.spatial-zone-indicator.is-active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(234, 88, 12, 0.4));
+  border: 1.5px solid #f59e0b;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
+  transform: translateY(-50%) scale(1.08);
+}
+
+/* Floating Navigation Arrows */
+.spatial-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.spatial-nav-arrow--left {
+  left: 140px;
+}
+
+.spatial-nav-arrow--right {
+  right: 140px;
+}
+
+.spatial-nav-arrow:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #f59e0b;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Cards Carousel */
+.spatial-cards-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  height: 500px;
+  transform-style: preserve-3d;
+  contain: layout;
+}
+
+/* Individual Dish Card (Tối ưu hóa: 0.22s cực nhạy, GPU Accelerated) */
+.spatial-dish-card {
+  position: absolute;
+  width: 350px;
+  height: 470px;
+  border-radius: 28px;
+  background: rgba(18, 22, 34, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  will-change: transform, opacity;
+  cursor: pointer;
+}
+
+/* Tốc độ chuyển thẻ đồng bộ theo chế độ nhạy (Speed Preset) */
+.spatial-speed--fast .spatial-dish-card {
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.14s ease;
+}
+
+.spatial-speed--balanced .spatial-dish-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+.spatial-speed--relaxed .spatial-dish-card {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+/* Center Active Card */
+.spatial-dish-card--active {
+  z-index: 5;
+  transform: translate3d(0, 0, 80px) scale(1.05);
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 25px rgba(245, 158, 11, 0.2);
+}
+
+/* Left Dimmed Card (Không dùng CSS blur để tránh ngốn GPU) */
+.spatial-dish-card--prev {
+  z-index: 2;
+  transform: translate3d(-240px, 0, -60px) rotateY(18deg) scale(0.85);
+  opacity: 0.45;
+}
+
+.spatial-dish-card--prev:hover {
+  opacity: 0.75;
+}
+
+/* Right Dimmed Card */
+.spatial-dish-card--next {
+  z-index: 2;
+  transform: translate3d(240px, 0, -60px) rotateY(-18deg) scale(0.85);
+  opacity: 0.45;
+}
+
+.spatial-dish-card--next:hover {
+  opacity: 0.75;
+}
+
+/* Card Image */
+.spatial-card-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+}
+
+.spatial-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.spatial-card-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.9);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+/* Card Body */
+.spatial-card-body {
+  flex: 1;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(180deg, rgba(18, 22, 34, 0.85), rgba(12, 14, 22, 0.98));
+}
+
+.spatial-card-title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.3;
+}
+
+.spatial-card-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.spatial-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spatial-card-price {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.spatial-card-price span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.spatial-grab-cue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #4ade80;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ── 3. Bottom Gesture HUD & Action Banners ── */
+.spatial-deck-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px 20px;
+  background: linear-gradient(0deg, rgba(8, 10, 16, 0.96), transparent);
+  z-index: 10;
+}
+
+/* Real-Time Action Toast Banner */
+.spatial-action-banner {
+  padding: 8px 24px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f59e0b, #ea580c);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35);
+  animation: spatialBannerPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes spatialBannerPop {
+  from { opacity: 0; transform: translateY(6px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Gestures Dock Guide */
+.spatial-gesture-dock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 14px;
+  border-radius: 20px;
+}
+
+.spatial-gesture-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.spatial-gesture-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.spatial-gesture-badge--active {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+  color: #4ade80;
+  font-weight: 800;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+}
+
+.spatial-gesture-badge--braking {
+  background: rgba(234, 179, 8, 0.25);
+  border-color: #eab308;
+  color: #facc15;
+  font-weight: 800;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(234, 179, 8, 0.4);
+}
+
+/* Flying Dish Animation */
+.spatial-flying-item {
+  position: fixed;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.7);
+  border: 2px solid #fbbf24;
+  z-index: 9999999;
+  pointer-events: none;
+  animation: spatialFlyToCart 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes spatialFlyToCart {
+  0% {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 1;
+  }
+  50% {
+    top: 30%;
+    left: 70%;
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    top: 30px;
+    left: calc(100vw - 120px);
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+}

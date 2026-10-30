@@ -19,7 +19,7 @@ import './Sidebar.css';
 export const Sidebar: React.FC = () => {
   const { orders } = useAdminStore();
   const pendingOrdersCount = orders.filter(
-    (o) => o.status?.toUpperCase() === 'PENDING'
+    (o) => o.status === 'pending'
   ).length;
 
   const savedStaffStr = localStorage.getItem('staff_user');

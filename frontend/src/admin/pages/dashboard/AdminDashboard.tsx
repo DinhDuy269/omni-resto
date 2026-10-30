@@ -24,10 +24,10 @@ export const AdminDashboard: React.FC = () => {
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
   const totalRevenue = orders
-    .filter((o) => o.status === 'COMPLETED' || o.payment_status === 'PAID')
+    .filter((o) => o.status === 'completed' || o.payment_status === 'paid')
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
   const totalOrders = orders.length;
-  const occupiedTablesCount = tables.filter((t) => t.status === 'OCCUPIED').length;
+  const occupiedTablesCount = tables.filter((t) => t.status === 'occupied').length;
   const bestSellers = menu_items.filter((item) => item.is_best_seller);
 
   const savedStaffStr = localStorage.getItem('staff_user');

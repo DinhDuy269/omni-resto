@@ -144,7 +144,7 @@ export const ClientCheckIn: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#888' }}>Chế độ phục vụ:</span>
                 <span style={{ color: '#ea580c', fontWeight: 700 }}>
-                  {session.mode === 'PAY_FIRST' ? 'Thanh toán trước' : 'Dùng bữa trước, thanh toán tại quầy'}
+                  {session.mode === 'pay_first' ? 'Thanh toán trước' : 'Dùng bữa trước, thanh toán tại quầy'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>

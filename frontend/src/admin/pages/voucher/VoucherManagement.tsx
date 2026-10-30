@@ -29,7 +29,7 @@ export const VoucherManagement: React.FC = () => {
     code: '',
     name: '',
     description: '',
-    discount_type: 'FIXED_AMOUNT' as DiscountType,
+    discount_type: 'fixed_amount' as DiscountType,
     discount_value: 0,
     max_discount_amount: 0,
     min_order_amount: 0,
@@ -37,7 +37,7 @@ export const VoucherManagement: React.FC = () => {
     usage_limit_per_user: 1,
     start_date: new Date().toISOString().slice(0, 10),
     end_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-    status: 'ACTIVE' as VoucherStatus,
+    status: 'active' as VoucherStatus,
   };
 
   const [voucherForm, setVoucherForm] = useState(initialForm);
@@ -87,7 +87,7 @@ export const VoucherManagement: React.FC = () => {
         code: voucherForm.code.trim().toUpperCase(),
         discount_value: Number(voucherForm.discount_value),
         max_discount_amount:
-          voucherForm.discount_type === 'PERCENTAGE' && Number(voucherForm.max_discount_amount) > 0
+          voucherForm.discount_type === 'percentage' && Number(voucherForm.max_discount_amount) > 0
             ? Number(voucherForm.max_discount_amount)
             : undefined,
         min_order_amount: Number(voucherForm.min_order_amount) || 0,
@@ -117,7 +117,7 @@ export const VoucherManagement: React.FC = () => {
         code: voucherForm.code.trim().toUpperCase(),
         discount_value: Number(voucherForm.discount_value),
         max_discount_amount:
-          voucherForm.discount_type === 'PERCENTAGE' && Number(voucherForm.max_discount_amount) > 0
+          voucherForm.discount_type === 'percentage' && Number(voucherForm.max_discount_amount) > 0
             ? Number(voucherForm.max_discount_amount)
             : undefined,
         min_order_amount: Number(voucherForm.min_order_amount) || 0,
@@ -222,26 +222,26 @@ export const VoucherManagement: React.FC = () => {
       <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '12px 16px' }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
-            className={`btn btn-sm ${filterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('ALL')}
+            className={`btn btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setFilterStatus('all')}
           >
             Tất Cả ({summaryCount.all})
           </button>
           <button
-            className={`btn btn-sm ${filterStatus === 'ACTIVE' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('ACTIVE')}
+            className={`btn btn-sm ${filterStatus === 'active' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setFilterStatus('active')}
           >
             Đang Hoạt Động ({summaryCount.active})
           </button>
           <button
-            className={`btn btn-sm ${filterStatus === 'INACTIVE' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('INACTIVE')}
+            className={`btn btn-sm ${filterStatus === 'inactive' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setFilterStatus('inactive')}
           >
             Tạm Dừng ({summaryCount.inactive})
           </button>
           <button
-            className={`btn btn-sm ${filterStatus === 'EXPIRED' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('EXPIRED')}
+            className={`btn btn-sm ${filterStatus === 'expired' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setFilterStatus('expired')}
           >
             Đã Hết Hạn ({summaryCount.expired})
           </button>
@@ -262,7 +262,7 @@ export const VoucherManagement: React.FC = () => {
               voucher={voucher}
               onEdit={() => handleOpenEditModal(voucher)}
               onToggleStatus={(id, currentStatus) => {
-                const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+                const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
                 toggleVoucherStatus(id, newStatus);
               }}
             />
@@ -305,14 +305,14 @@ export const VoucherManagement: React.FC = () => {
                 value={voucherForm.discount_type}
                 onChange={(e) => setVoucherForm({ ...voucherForm, discount_type: e.target.value as DiscountType })}
               >
-                <option value="FIXED_AMOUNT">Giảm Tiền Mặt (VNĐ)</option>
-                <option value="PERCENTAGE">Giảm Theo Phần Trăm (%)</option>
+                <option value="fixed_amount">Giảm Tiền Mặt (VNĐ)</option>
+                <option value="percentage">Giảm Theo Phần Trăm (%)</option>
               </select>
             </div>
 
             <div className="form-group">
               <label className="form-label">
-                {voucherForm.discount_type === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
+                {voucherForm.discount_type === 'percentage' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
               </label>
               <input
                 type="number"
@@ -332,8 +332,8 @@ export const VoucherManagement: React.FC = () => {
                 type="number"
                 className="form-input"
                 min={0}
-                disabled={voucherForm.discount_type !== 'PERCENTAGE'}
-                placeholder={voucherForm.discount_type !== 'PERCENTAGE' ? 'Không áp dụng' : 'VD: 50000'}
+                disabled={voucherForm.discount_type !== 'percentage'}
+                placeholder={voucherForm.discount_type !== 'percentage' ? 'Không áp dụng' : 'VD: 50000'}
                 value={voucherForm.max_discount_amount}
                 onChange={(e) => setVoucherForm({ ...voucherForm, max_discount_amount: Number(e.target.value) })}
               />
@@ -445,14 +445,14 @@ export const VoucherManagement: React.FC = () => {
                 value={voucherForm.discount_type}
                 onChange={(e) => setVoucherForm({ ...voucherForm, discount_type: e.target.value as DiscountType })}
               >
-                <option value="FIXED_AMOUNT">Giảm Tiền Mặt (VNĐ)</option>
-                <option value="PERCENTAGE">Giảm Theo Phần Trăm (%)</option>
+                <option value="fixed_amount">Giảm Tiền Mặt (VNĐ)</option>
+                <option value="percentage">Giảm Theo Phần Trăm (%)</option>
               </select>
             </div>
 
             <div className="form-group">
               <label className="form-label">
-                {voucherForm.discount_type === 'PERCENTAGE' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
+                {voucherForm.discount_type === 'percentage' ? 'Phần Trăm Giảm (%)*' : 'Mức Giảm (VNĐ)*'}
               </label>
               <input
                 type="number"
@@ -472,7 +472,7 @@ export const VoucherManagement: React.FC = () => {
                 type="number"
                 className="form-input"
                 min={0}
-                disabled={voucherForm.discount_type !== 'PERCENTAGE'}
+                disabled={voucherForm.discount_type !== 'percentage'}
                 value={voucherForm.max_discount_amount}
                 onChange={(e) => setVoucherForm({ ...voucherForm, max_discount_amount: Number(e.target.value) })}
               />

@@ -10,11 +10,11 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  { key: 'PENDING',    label: 'Tiếp nhận', subLabel: 'Chờ duyệt bàn',        Icon: Clock },
-  { key: 'CONFIRMED',  label: 'Đã duyệt',  subLabel: 'Hàng đợi bếp (Chờ nấu)', Icon: Clock },
-  { key: 'PREPARING',  label: 'Bếp nấu',    subLabel: 'Đầu bếp đang nấu',    Icon: ChefHat },
-  { key: 'READY',      label: 'Sẵn sàng',   subLabel: 'Đang bưng ra bàn',    Icon: Bell },
-  { key: 'COMPLETED',  label: 'Hoàn tất',   subLabel: 'Đã lên bàn xong',     Icon: Check },
+  { key: 'pending',    label: 'Tiếp nhận', subLabel: 'Chờ duyệt bàn',        Icon: Clock },
+  { key: 'confirmed',  label: 'Đã duyệt',  subLabel: 'Hàng đợi bếp (Chờ nấu)', Icon: Clock },
+  { key: 'preparing',  label: 'Bếp nấu',    subLabel: 'Đầu bếp đang nấu',    Icon: ChefHat },
+  { key: 'ready',      label: 'Sẵn sàng',   subLabel: 'Đang bưng ra bàn',    Icon: Bell },
+  { key: 'completed',  label: 'Hoàn tất',   subLabel: 'Đã lên bàn xong',     Icon: Check },
 ];
 
 interface Props {
@@ -24,9 +24,9 @@ interface Props {
 }
 
 export const OrderStatusStepper: React.FC<Props> = ({ status, currentStatus, estimatedMinutes }) => {
-  const activeStatus = currentStatus || status || 'PENDING';
+  const activeStatus = currentStatus || status || 'pending';
 
-  if (activeStatus === 'CANCELLED') {
+  if (activeStatus === 'cancelled') {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
@@ -47,7 +47,7 @@ export const OrderStatusStepper: React.FC<Props> = ({ status, currentStatus, est
 
   return (
     <div style={{ padding: '24px 0' }}>
-      {estimatedMinutes && activeStatus !== 'COMPLETED' && (
+      {estimatedMinutes && activeStatus !== 'completed' && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           marginBottom: 20, padding: '10px 16px',
@@ -60,92 +60,88 @@ export const OrderStatusStepper: React.FC<Props> = ({ status, currentStatus, est
           </span>
         </div>
       )}
-      {/* Progress track top */}
-      <div style={{
-        height: 4,
-        backgroundColor: '#E2E8F0',
-        borderRadius: 2,
-        marginBottom: 20,
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
+
+      {/* Progress Bar Container */}
+      <div style={{ position: 'relative', margin: '0 20px' }}>
+        {/* Track Line */}
         <div style={{
-          height: '100%',
-          width: `${progressPercent}%`,
-          backgroundColor: '#FF6B00',
-          borderRadius: 2,
+          position: 'absolute', top: 16, left: 0, right: 0,
+          height: 3, background: 'var(--c-border, #e5e7eb)', zIndex: 0,
+        }} />
+        {/* Active Line */}
+        <div style={{
+          position: 'absolute', top: 16, left: 0,
+          width: `${progressPercent}%`, height: 3,
+          background: 'var(--c-primary, #e85d26)', zIndex: 0,
           transition: 'width 0.4s ease',
         }} />
-      </div>
 
-      {/* Steps */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
-        {STEPS.map((step, idx) => {
-          const isCompleted = idx < currentIdx;
-          const isActive    = idx === currentIdx;
+        {/* Steps */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+          {STEPS.map((step, idx) => {
+            const isDone = idx < currentIdx;
+            const isCurrent = idx === currentIdx;
+            const StepIcon = step.Icon;
 
-          return (
-            <React.Fragment key={step.key}>
-              {/* Step node */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                {/* Circle icon */}
+            return (
+              <div key={step.key} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                textAlign: 'center', maxWidth: 90,
+              }}>
+                {/* Node Circle */}
                 <div style={{
-                  width: 48, height: 48, borderRadius: '50%',
+                  width: 32, height: 32, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.4s ease',
-                  flexShrink: 0,
-                  ...(isCompleted ? {
-                    background: 'var(--c-success)',
-                    boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
-                  } : isActive ? {
-                    background: 'var(--c-primary)',
-                    boxShadow: 'var(--c-shadow-orange)',
-                    animation: 'c-badge-pop 1.5s ease-in-out infinite',
-                  } : {
-                    background: 'var(--c-border-light)',
-                    border: '2px dashed var(--c-border)',
-                  }),
+                  background: isDone
+                    ? 'var(--c-primary, #e85d26)'
+                    : isCurrent
+                    ? '#ffffff'
+                    : '#ffffff',
+                  border: isCurrent
+                    ? '3px solid var(--c-primary, #e85d26)'
+                    : isDone
+                    ? 'none'
+                    : '2px solid var(--c-border, #e5e7eb)',
+                  boxShadow: isCurrent ? '0 0 0 4px var(--c-primary-light, #fff0ea)' : 'none',
+                  transition: 'all 0.3s ease',
+                  marginBottom: 8,
                 }}>
-                  {isCompleted ? (
-                    <Check size={20} color="#fff" strokeWidth={3} />
+                  {isDone ? (
+                    <Check size={16} color="#ffffff" strokeWidth={3} />
                   ) : (
-                    <step.Icon
-                      size={20}
-                      strokeWidth={2}
+                    <StepIcon
+                      size={15}
+                      strokeWidth={isCurrent ? 2.5 : 1.8}
                     />
                   )}
                 </div>
 
-                {/* Labels — Gestalt Proximity: label directly under icon */}
-                <div style={{ textAlign: 'center', marginTop: 8, padding: '0 4px' }}>
-                  <div style={{
-                    fontSize: '0.75rem', fontWeight: 700, lineHeight: 1.3,
-                    color: isCompleted ? 'var(--c-success)' : isActive ? 'var(--c-primary)' : 'var(--c-text-muted)',
-                  }}>
-                    {step.label}
-                  </div>
-                  {isActive && (
-                    <div style={{
-                      fontSize: '0.6875rem', color: 'var(--c-text-muted)',
-                      marginTop: 2, lineHeight: 1.3,
-                    }}>
-                      {step.subLabel}
-                    </div>
-                  )}
-                </div>
-              </div>
+                {/* Label */}
+                <span style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: isCurrent ? 700 : isDone ? 600 : 400,
+                  color: isCurrent
+                    ? 'var(--c-primary, #e85d26)'
+                    : isDone
+                    ? 'var(--c-text, #1f2937)'
+                    : 'var(--c-muted, #9ca3af)',
+                  marginBottom: 2,
+                }}>
+                  {step.label}
+                </span>
 
-              {/* Connector line — Gestalt Continuity */}
-              {idx < STEPS.length - 1 && (
-                <div style={{
-                  height: 3, flex: 0.5, marginTop: 22, borderRadius: 2,
-                  background: idx < currentIdx ? 'var(--c-success)' : 'var(--c-border)',
-                  transition: 'background 0.6s ease',
-                }} />
-              )}
-            </React.Fragment>
-          );
-        })}
+                {/* SubLabel */}
+                <span style={{
+                  fontSize: '0.6875rem',
+                  color: isCurrent ? 'var(--c-primary, #e85d26)' : 'var(--c-muted, #9ca3af)',
+                  lineHeight: 1.2,
+                }}>
+                  {step.subLabel}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

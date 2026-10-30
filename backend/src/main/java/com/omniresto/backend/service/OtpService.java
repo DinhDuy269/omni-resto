@@ -101,7 +101,7 @@ public class OtpService {
 
         otpVerificationRepository.save(otpEntity);
 
-        String purposeText = purpose == OtpPurpose.REGISTER_VERIFICATION
+        String purposeText = purpose == OtpPurpose.register_verification
                 ? "Xác minh đăng ký tài khoản"
                 : "Đặt lại mật khẩu";
 

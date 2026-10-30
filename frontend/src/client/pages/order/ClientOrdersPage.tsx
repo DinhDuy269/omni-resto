@@ -78,7 +78,7 @@ export const ClientOrdersPage: React.FC = () => {
     // Polling định kỳ mỗi 4 giây nếu còn đơn hàng đang hoạt động
     const interval = setInterval(() => {
       const hasActive = useClientStore.getState().orders.some(
-        (o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+        (o) => o.status !== 'completed' && o.status !== 'cancelled'
       );
       if (hasActive) {
         fetchOrdersFromServer();
@@ -103,15 +103,15 @@ export const ClientOrdersPage: React.FC = () => {
   }, [orders, searchQuery]);
 
   const activeOrders = useMemo(
-    () => filteredOrders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'),
+    () => filteredOrders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled'),
     [filteredOrders]
   );
   const completedOrders = useMemo(
-    () => filteredOrders.filter((o) => o.status === 'COMPLETED'),
+    () => filteredOrders.filter((o) => o.status === 'completed'),
     [filteredOrders]
   );
   const cancelledOrders = useMemo(
-    () => filteredOrders.filter((o) => o.status === 'CANCELLED'),
+    () => filteredOrders.filter((o) => o.status === 'cancelled'),
     [filteredOrders]
   );
 
@@ -150,7 +150,7 @@ export const ClientOrdersPage: React.FC = () => {
   // Từ điển trạng thái F&B đồng bộ thời gian thực
   const getStatusInfo = (status: PlacedOrder['status']) => {
     switch (status) {
-      case 'PENDING':
+      case 'pending':
         return {
           label: 'Đang tiếp nhận',
           color: '#0284c7',
@@ -159,7 +159,7 @@ export const ClientOrdersPage: React.FC = () => {
           dishTag: 'Chờ nấu',
           icon: Clock,
         };
-      case 'PREPARING':
+      case 'preparing':
         return {
           label: 'Bếp đang nấu',
           color: '#ea580c',
@@ -168,7 +168,7 @@ export const ClientOrdersPage: React.FC = () => {
           dishTag: 'Đang nấu',
           icon: Flame,
         };
-      case 'READY':
+      case 'ready':
         return {
           label: 'Món sẵn sàng',
           color: '#16a34a',
@@ -177,7 +177,7 @@ export const ClientOrdersPage: React.FC = () => {
           dishTag: 'Đang bưng ra',
           icon: ConciergeBell,
         };
-      case 'CANCELLED':
+      case 'cancelled':
         return {
           label: 'Đã hủy',
           color: '#dc2626',
@@ -200,13 +200,13 @@ export const ClientOrdersPage: React.FC = () => {
 
   const getItemStatusBadge = (status?: string) => {
     switch (status) {
-      case 'SERVED':
+      case 'served':
         return { text: 'Đã lên bàn', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', Icon: CheckCheck };
-      case 'READY':
+      case 'ready':
         return { text: 'Đang bưng ra', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', Icon: ConciergeBell };
-      case 'PREPARING':
+      case 'preparing':
         return { text: 'Bếp đang nấu', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa', Icon: Flame };
-      case 'CANCELLED':
+      case 'cancelled':
         return { text: 'Đã hủy', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', Icon: XCircle };
       default:
         return { text: 'Chờ nấu', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', Icon: Clock };
@@ -230,7 +230,7 @@ export const ClientOrdersPage: React.FC = () => {
 
     activeOrders.forEach((ord) => {
       ord.items.forEach((it, idx) => {
-        if (it.status === 'CANCELLED') return;
+        if (it.status === 'cancelled') return;
         list.push({
           key: `${ord.id}-${it.menu_item_id}-${it.name}-${idx}`,
           name: it.name,
@@ -251,11 +251,11 @@ export const ClientOrdersPage: React.FC = () => {
 
   // Thống kê tổng tiền và tổng số món đang hoạt động
   const totalTableAmount = activeOrders.reduce(
-    (sum, o) => sum + (o.status === 'CANCELLED' ? 0 : o.total_amount),
+    (sum, o) => sum + (o.status === 'cancelled' ? 0 : o.total_amount),
     0
   );
   const totalTableDishCount = activeOrders.reduce(
-    (sum, o) => sum + o.items.filter((it) => it.status !== 'CANCELLED').reduce((s, it) => s + it.quantity, 0),
+    (sum, o) => sum + o.items.filter((it) => it.status !== 'cancelled').reduce((s, it) => s + it.quantity, 0),
     0
   );
 
@@ -267,12 +267,12 @@ export const ClientOrdersPage: React.FC = () => {
         order_number: 'ORD-8821',
         table_no: table_session?.table_no || 'Bàn 04',
         customer_name: 'Nguyễn Văn A',
-        status: 'PREPARING',
-        order_mode: 'DINE_IN',
+        status: 'preparing',
+        order_mode: 'dine_in',
         placed_at: '19:45',
         estimated_minutes: 12,
         total_amount: 315000,
-        payment_method: 'QR_CODE',
+        payment_method: 'qr_code',
         items: [
           {
             id: 'item-1',
@@ -282,7 +282,7 @@ export const ClientOrdersPage: React.FC = () => {
             price: 185000,
             quantity: 1,
             round_no: 1,
-            status: 'PREPARING',
+            status: 'preparing',
             notes: 'Ít hành lá, nhiều ớt tươi',
             image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=300&auto=format&fit=crop&q=80',
           },
@@ -294,7 +294,7 @@ export const ClientOrdersPage: React.FC = () => {
             price: 65000,
             quantity: 2,
             round_no: 1,
-            status: 'READY',
+            status: 'ready',
             image: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=300&auto=format&fit=crop&q=80',
           },
         ],
@@ -304,12 +304,12 @@ export const ClientOrdersPage: React.FC = () => {
         order_number: 'ORD-8825',
         table_no: table_session?.table_no || 'Bàn 04',
         customer_name: 'Nguyễn Văn A',
-        status: 'PENDING',
-        order_mode: 'DINE_IN',
+        status: 'pending',
+        order_mode: 'dine_in',
         placed_at: '20:05',
         estimated_minutes: 8,
         total_amount: 85000,
-        payment_method: 'CASH',
+        payment_method: 'cash',
         items: [
           {
             id: 'item-3',
@@ -319,7 +319,7 @@ export const ClientOrdersPage: React.FC = () => {
             price: 85000,
             quantity: 1,
             round_no: 2,
-            status: 'PENDING',
+            status: 'pending',
             notes: 'Dùng sau bữa ăn',
             image: 'https://images.unsplash.com/photo-1528975604071-b4dc52a2d18c?w=300&auto=format&fit=crop&q=80',
           },
@@ -644,7 +644,7 @@ export const ClientOrdersPage: React.FC = () => {
                                               {it.options && it.options.length > 0 && (
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '2px 0 4px' }}>
                                                   {it.options.map((opt: any, optIdx: number) => {
-                                                    const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                                                    const isSize = opt.option_type?.toLowerCase() === 'size';
                                                     return (
                                                       <span
                                                         key={optIdx}
@@ -658,7 +658,7 @@ export const ClientOrdersPage: React.FC = () => {
                                                           border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
                                                         }}
                                                       >
-                                                        {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                                        {isSize ? '📏' : '➕'} {opt.option_name}
                                                       </span>
                                                     );
                                                   })}
@@ -703,9 +703,9 @@ export const ClientOrdersPage: React.FC = () => {
                         <span className="cop-batch-pay-info">
                           Hình thức thanh toán:{' '}
                           <strong>
-                            {order.payment_method === 'QR_CODE'
+                            {order.payment_method === 'qr_code'
                               ? 'Quét VietQR'
-                              : order.payment_method === 'VNPAY_QR'
+                              : order.payment_method === 'vnpay_qr'
                               ? 'VNPAY'
                               : 'Tiền mặt/Tại quầy'}
                           </strong>
@@ -761,7 +761,7 @@ export const ClientOrdersPage: React.FC = () => {
                         {item.options && item.options.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '2px 0 4px' }}>
                             {item.options.map((opt: any, optIdx: number) => {
-                              const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                              const isSize = opt.option_type?.toLowerCase() === 'size';
                               return (
                                 <span
                                   key={optIdx}
@@ -775,7 +775,7 @@ export const ClientOrdersPage: React.FC = () => {
                                     border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
                                   }}
                                 >
-                                  {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                  {isSize ? '📏' : '➕'} {opt.option_name}
                                 </span>
                               );
                             })}
@@ -1072,7 +1072,7 @@ export const ClientOrdersPage: React.FC = () => {
                           otp: vnpayOtp,
                         });
                       }
-                      await confirmPaymentDemo('VNPAY_QR');
+                      await confirmPaymentDemo('vnpay_qr');
                       setIsPaymentModalOpen(false);
                       alert('🎉 Thanh toán VNPAY Sandbox thành công! Cảm ơn quý khách đã dùng bữa tại OmniResto.');
                     } catch (err: any) {
@@ -1297,7 +1297,7 @@ export const ClientOrdersPage: React.FC = () => {
                       {/* Simulated Webhook for Demonstration */}
                       <button
                         onClick={async () => {
-                          await confirmPaymentDemo('QR_CODE');
+                          await confirmPaymentDemo('qr_code');
                           setIsPaymentModalOpen(false);
                           alert('🎉 Thanh toán VietQR thành công! Cảm ơn quý khách đã dùng bữa tại OmniResto.');
                         }}
@@ -1353,7 +1353,7 @@ export const ClientOrdersPage: React.FC = () => {
 
                 <button
                   onClick={async () => {
-                    await confirmPaymentDemo('CASH');
+                    await confirmPaymentDemo('cash');
                     setIsPaymentModalOpen(false);
                     alert('✅ Nhân viên đã xác nhận thu tiền tại bàn thành công!');
                   }}

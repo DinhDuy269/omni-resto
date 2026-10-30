@@ -1,7 +1,5 @@
-// shared/types/admin.ts (Thêm vào cùng file chứa TableStatus)
-
-export type VoucherStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
-export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
+export type VoucherStatus = 'active' | 'inactive' | 'expired';
+export type DiscountType = 'percentage' | 'fixed_amount';
 
 export interface VoucherInfo {
   id: string;
@@ -23,6 +21,6 @@ export interface VoucherInfo {
 }
 
 export interface VoucherFilterParams {
-  status?: VoucherStatus | 'ALL';
+  status?: VoucherStatus | 'all';
   searchQuery?: string;
 }

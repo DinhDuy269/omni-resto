@@ -51,5 +51,5 @@ public class VoucherRedemptionEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private RedemptionStatus status = RedemptionStatus.APPLIED;
+    private RedemptionStatus status = RedemptionStatus.applied;
 }

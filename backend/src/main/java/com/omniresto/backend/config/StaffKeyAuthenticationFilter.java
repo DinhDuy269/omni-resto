@@ -40,17 +40,29 @@ public class StaffKeyAuthenticationFilter extends OncePerRequestFilter {
         // Kiểm tra xác thực bằng X-Staff-Key hợp lệ (cho POS, KDS, Upload và Admin Portal)
         if (staffKey != null && !staffKey.isBlank() && isKeyValid(staffKey, configuredStaffKey)) {
             String staffRoleHeader = request.getHeader("X-Staff-Role");
+            String staffIdHeader = request.getHeader("X-Staff-Id");
             List<SimpleGrantedAuthority> authorities;
 
-            if (staffRoleHeader != null && (
+            boolean isWaiterOrStaff = (staffRoleHeader != null && (
                     "WAITER".equalsIgnoreCase(staffRoleHeader) ||
                     "CASHIER".equalsIgnoreCase(staffRoleHeader) ||
                     "CHEF".equalsIgnoreCase(staffRoleHeader) ||
-                    "STAFF".equalsIgnoreCase(staffRoleHeader))) {
-                authorities = List.of(new SimpleGrantedAuthority("ROLE_STAFF"));
-            } else if (staffRoleHeader != null && (
+                    "STAFF".equalsIgnoreCase(staffRoleHeader)))
+                    || (staffIdHeader != null && (
+                    staffIdHeader.toUpperCase().contains("WAITER") ||
+                    staffIdHeader.toUpperCase().contains("STAFF") ||
+                    staffIdHeader.toUpperCase().contains("CHEF")));
+
+            boolean isManager = (staffRoleHeader != null && (
                     "STORE_MANAGER".equalsIgnoreCase(staffRoleHeader) ||
-                    "MANAGER".equalsIgnoreCase(staffRoleHeader))) {
+                    "MANAGER".equalsIgnoreCase(staffRoleHeader)))
+                    || (staffIdHeader != null && (
+                    staffIdHeader.toUpperCase().contains("MANAGER") ||
+                    staffIdHeader.toUpperCase().contains("MGR")));
+
+            if (isWaiterOrStaff && !isManager) {
+                authorities = List.of(new SimpleGrantedAuthority("ROLE_STAFF"));
+            } else if (isManager) {
                 authorities = List.of(
                         new SimpleGrantedAuthority("ROLE_STAFF"),
                         new SimpleGrantedAuthority("ROLE_STORE_MANAGER")

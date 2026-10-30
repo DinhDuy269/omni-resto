@@ -1,7 +1,7 @@
 import { apiClient, transformAxiosErrorResponse } from '../shared/api/client';
 import type { ApiResponse } from '../shared/types/common';
 
-export type OperatingShiftType = 'MORNING' | 'NOON' | 'BREAK' | 'EVENING' | 'CLOSED';
+export type OperatingShiftType = 'morning' | 'noon' | 'break_time' | 'evening' | 'closed';
 
 export interface TableItem {
   id: string;

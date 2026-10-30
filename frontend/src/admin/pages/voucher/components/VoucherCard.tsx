@@ -10,9 +10,9 @@ interface Props {
 }
 
 export const VoucherCard: React.FC<Props> = ({ voucher, onToggleStatus, onEdit }) => {
-  const isPercentage = voucher.discount_type === 'PERCENTAGE' || (voucher.discount_type as any) === 'percentage';
-  const isActive = voucher.status === 'ACTIVE' || (voucher.status as any) === 'active';
-  const isExpired = voucher.status === 'EXPIRED' || (voucher.status as any) === 'expired';
+  const isPercentage = voucher.discount_type === 'percentage';
+  const isActive = voucher.status === 'active';
+  const isExpired = voucher.status === 'expired';
 
   const usagePercent = voucher.total_quantity > 0 
     ? Math.round((voucher.used_quantity / voucher.total_quantity) * 100) 

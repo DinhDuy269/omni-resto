@@ -32,7 +32,7 @@ const INITIAL_GREETING: ChatMessage = {
 
 const getStorageKey = (): string => {
   const session = useClientStore.getState().table_session;
-  const sessionId = session?.id || session?.table_no || session?.tableNo || 'default';
+  const sessionId = session?.id || session?.table_no || 'default';
   return `${STORAGE_PREFIX}${sessionId}`;
 };
 
@@ -128,8 +128,8 @@ export const useAiChatStore = create<AiChatState>((set, get) => ({
     }));
 
     const session = useClientStore.getState().table_session;
-    const sessionToken = session?.session_token || session?.sessionToken;
-    const tableNo = session?.table_no || session?.tableNo;
+    const sessionToken = session?.session_token;
+    const tableNo = session?.table_no;
 
     let customerName: string | undefined;
     let memberTier: string | undefined;

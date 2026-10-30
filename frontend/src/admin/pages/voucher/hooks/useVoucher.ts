@@ -6,13 +6,13 @@ export const useVoucher = () => {
   const { vouchers, toggleVoucherStatus } = useAdminStore();
 
   // 2. State cho các bộ lọc
-  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // 3. Logic lọc tự động
   const filteredVouchers = useMemo(() => {
     return vouchers.filter((v) => {
-      const matchStatus = filterStatus === 'ALL' || v.status === filterStatus;
+      const matchStatus = filterStatus === 'all' || v.status === filterStatus;
       const matchSearch = 
         v.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
         v.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -25,10 +25,10 @@ export const useVoucher = () => {
   const summaryCount = useMemo(() => {
     return {
       all: vouchers.length,
-      active: vouchers.filter(v => v.status === 'ACTIVE').length,
-      inactive: vouchers.filter(v => v.status === 'INACTIVE').length,
-      expired: vouchers.filter(v => v.status === 'EXPIRED').length,
-    }
+      active: vouchers.filter((v) => v.status === 'active').length,
+      inactive: vouchers.filter((v) => v.status === 'inactive').length,
+      expired: vouchers.filter((v) => v.status === 'expired').length,
+    };
   }, [vouchers]);
 
   return { 
@@ -38,6 +38,6 @@ export const useVoucher = () => {
     setFilterStatus,
     searchQuery,
     setSearchQuery,
-    toggleVoucherStatus // Trả hàm này ra cho UI dùng
+    toggleVoucherStatus,
   };
 };

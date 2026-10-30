@@ -21,16 +21,16 @@ import static org.mockito.Mockito.*;
 class PaymentServiceTest {
 
     @Mock
-    private OrderService orderService;
-
-    @Mock
     private com.omniresto.backend.repository.OrderRepository orderRepository;
 
     @Mock
     private PaymentTransactionRepository paymentTransactionRepository;
 
     @Mock
-    private SimpMessagingTemplate messagingTemplate;
+    private com.omniresto.backend.config.OrderWebSocketHandler orderWebSocketHandler;
+
+    @Mock
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -39,12 +39,15 @@ class PaymentServiceTest {
     @DisplayName("Should generate valid VietQR response with correctly formatted image URL")
     void generateVietQR_Success() {
         // Arrange
-        OrderResponse mockOrder = new OrderResponse();
-        mockOrder.setId("ord-100");
-        mockOrder.setOrderNumber("ORD-8888");
-        mockOrder.setTotalAmount(BigDecimal.valueOf(250000));
+        com.omniresto.backend.domain.OrderEntity orderEntity = com.omniresto.backend.domain.OrderEntity.builder()
+                .orderNumber("ORD-8888")
+                .status(OrderStatus.pending)
+                .paymentStatus(com.omniresto.backend.domain.enums.PaymentStatus.unpaid)
+                .totalAmount(BigDecimal.valueOf(250000))
+                .build();
+        orderEntity.setId("ord-100");
 
-        when(orderService.getOrderById("ord-100")).thenReturn(mockOrder);
+        when(orderRepository.findById("ord-100")).thenReturn(Optional.of(orderEntity));
 
         // Act
         PaymentService.VietQRResponse qrResponse = paymentService.generateVietQR("ord-100");
@@ -61,12 +64,6 @@ class PaymentServiceTest {
     @DisplayName("Should process payment webhook and set order status to preparing")
     void handlePaymentWebhook_Success() {
         // Arrange
-        OrderResponse mockOrder = new OrderResponse();
-        mockOrder.setId("ord-100");
-        mockOrder.setOrderNumber("ORD-8888");
-        mockOrder.setTotalAmount(BigDecimal.valueOf(250000));
-        mockOrder.setStatus(OrderStatus.pending);
-
         com.omniresto.backend.domain.OrderEntity orderEntity = com.omniresto.backend.domain.OrderEntity.builder()
                 .orderNumber("ORD-8888")
                 .status(OrderStatus.pending)
@@ -76,7 +73,6 @@ class PaymentServiceTest {
         orderEntity.setId("ord-100");
 
         when(paymentTransactionRepository.findByTransactionReference("TXN-9999")).thenReturn(Optional.empty());
-        when(orderService.getOrderById("ord-100")).thenReturn(mockOrder);
         when(orderRepository.findById("ord-100")).thenReturn(Optional.of(orderEntity));
         when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

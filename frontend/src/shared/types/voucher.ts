@@ -1,6 +1,6 @@
-export type VoucherStatus = 'active' | 'inactive' | 'expired' | 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+export type VoucherStatus = 'active' | 'inactive' | 'expired';
 
-export type DiscountType = 'percentage' | 'fixed_amount' | 'PERCENTAGE' | 'FIXED_AMOUNT';
+export type DiscountType = 'percentage' | 'fixed_amount';
 
 export interface VoucherInfo {
   id: string;
@@ -60,4 +60,4 @@ export interface VoucherPreviewResponse {
   discount_amount: number;
   final_amount: number;
   message: string;
-}
+}

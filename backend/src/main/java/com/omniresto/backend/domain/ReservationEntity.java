@@ -35,7 +35,7 @@ public class ReservationEntity extends BaseEntity {
 
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private String status = "PENDING"; // PENDING, CONFIRMED, SEATED, COMPLETED, CANCELLED
+    private String status = "pending"; // pending, confirmed, seated, completed, cancelled
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id")

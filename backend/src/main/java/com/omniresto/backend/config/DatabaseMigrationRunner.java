@@ -23,6 +23,12 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         safeExecute("ALTER TABLE `tables` ADD COLUMN `current_order_id` VARCHAR(36) NULL");
         safeExecute("ALTER TABLE `reservations` ADD COLUMN `table_id` VARCHAR(36) NULL");
         safeExecute("ALTER TABLE `reservations` ADD COLUMN `special_notes` TEXT NULL");
+        safeExecute("UPDATE `vouchers` SET `status` = LOWER(`status`), `discount_type` = LOWER(`discount_type`), `voucher_type` = LOWER(`voucher_type`)");
+        safeExecute("UPDATE `voucher_redemptions` SET `status` = LOWER(`status`)");
+        safeExecute("UPDATE `reservations` SET `status` = LOWER(`status`)");
+        safeExecute("UPDATE `tables` SET `status` = LOWER(`status`)");
+        safeExecute("UPDATE `orders` SET `status` = LOWER(`status`), `payment_status` = LOWER(`payment_status`)");
+        safeExecute("UPDATE `order_items` SET `status` = LOWER(`status`)");
         log.info("✅ Schema self-healing patch completed.");
     }
 

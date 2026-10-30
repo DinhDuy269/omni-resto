@@ -75,6 +75,30 @@
   100% { transform: scale(0.9); opacity: 0.8; }
 }
 
+.gesture-fab-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gesture-fab-label {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+}
+
+.gesture-fab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #ffffff;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
 /* ── 2. Picture-in-Picture (PiP) Window ── */
 .gesture-pip-window {
   position: fixed;
@@ -484,4 +508,88 @@
 @keyframes gestureBounce {
   from { transform: translateX(-50%) translateY(0); }
   to { transform: translateX(-50%) translateY(-5px); }
+}
+
+
+/* ── 7. Dwell-to-Click Circular Progress Ring ── */
+.gesture-dwell-svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  pointer-events: none;
+}
+
+.gesture-dwell-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 3;
+}
+
+.gesture-dwell-fill {
+  fill: none;
+  stroke: #22c55e;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.05s linear;
+  filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.6));
+}
+
+/* ── 8. Dedicated Virtual Scroll Dock (Cạnh phải màn hình) ── */
+.gesture-scroll-dock {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.gesture-scroll-dock-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  color: #f1f5f9;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  gap: 2px;
+}
+
+.gesture-scroll-dock-btn span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.gesture-scroll-dock-btn:hover {
+  background: rgba(30, 41, 59, 0.96);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  transform: scale(1.08);
+  box-shadow: 0 10px 28px rgba(56, 189, 248, 0.3);
+}
+
+.gesture-scroll-dock-btn:hover span {
+  color: #38bdf8;
+}
+
+.gesture-scroll-dock-btn:active {
+  transform: scale(0.95);
+  background: rgba(56, 189, 248, 0.2);
 }

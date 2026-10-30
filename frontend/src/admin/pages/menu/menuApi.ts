@@ -5,9 +5,9 @@ export const transformCategoryOption = (opt: any): CategoryOption => ({
   id: opt.id,
   category_id: opt.category_id,
   name: opt.name,
-  option_type: opt.option_type || 'TOPPING',
+  option_type: opt.option_type?.toLowerCase() || 'topping',
   price: Number(opt.price || 0),
-  status: opt.status || 'AVAILABLE',
+  status: opt.status?.toLowerCase() || 'available',
   display_order: opt.display_order,
 });
 
@@ -20,7 +20,7 @@ export const transformMenuItem = (raw: any): MenuItem => ({
   base_price: Number(raw.base_price ?? 0),
   description: raw.description || '',
   ingredients: raw.ingredients || '',
-  status: (raw.status?.toUpperCase() || 'AVAILABLE') as MenuStatus,
+  status: (raw.status?.toLowerCase() || 'available') as MenuStatus,
   is_best_seller: Boolean(raw.is_best_seller),
   meal_periods: raw.meal_periods || 'ALL_DAY',
   is_available_now: raw.is_available_now,

@@ -63,12 +63,12 @@ public class VoucherEntity extends BaseEntity {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private VoucherStatus status = VoucherStatus.ACTIVE;
+    private VoucherStatus status = VoucherStatus.active;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "voucher_type", nullable = false, length = 20)
-    private com.omniresto.backend.domain.enums.VoucherType voucherType = com.omniresto.backend.domain.enums.VoucherType.GENERAL;
+    private com.omniresto.backend.domain.enums.VoucherType voucherType = com.omniresto.backend.domain.enums.VoucherType.general;
 
     @Builder.Default
     @Column(name = "is_welcome_voucher", nullable = false)

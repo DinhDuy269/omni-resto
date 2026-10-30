@@ -19,28 +19,28 @@ export const KitchenDisplaySystem: React.FC = () => {
   const kitchenOrders = orders.filter((order) => {
     if (filterStatus === 'KITCHEN_ACTIVE') {
       return (
-        order.status === 'PENDING' ||
-        order.status === 'CONFIRMED' ||
-        order.status === 'PREPARING' ||
-        order.status === 'READY'
+        order.status === 'pending' ||
+        order.status === 'confirmed' ||
+        order.status === 'preparing' ||
+        order.status === 'ready'
       );
     }
     return order.status === filterStatus;
   });
 
-  const confirmedCount = orders.filter((o) => o.status === 'CONFIRMED' || o.status === 'PENDING').length;
-  const preparingCount = orders.filter((o) => o.status === 'PREPARING').length;
-  const readyCount = orders.filter((o) => o.status === 'READY').length;
+  const confirmedCount = orders.filter((o) => o.status === 'confirmed' || o.status === 'pending').length;
+  const preparingCount = orders.filter((o) => o.status === 'preparing').length;
+  const readyCount = orders.filter((o) => o.status === 'ready').length;
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
-      case 'PENDING':
+      case 'pending':
         return { label: 'Đơn Chờ Xác Nhận', bg: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', icon: AlertCircle };
-      case 'CONFIRMED':
+      case 'confirmed':
         return { label: 'Hàng Đợi Nấu', bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb', icon: Clock };
-      case 'PREPARING':
+      case 'preparing':
         return { label: 'Đang Nấu', bg: 'rgba(245, 158, 11, 0.12)', color: '#d97706', icon: Flame };
-      case 'READY':
+      case 'ready':
         return { label: 'Sẵn Sàng Trả', bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981', icon: CheckCircle2 };
       default:
         return { label: status, bg: 'rgba(148, 163, 184, 0.12)', color: '#64748b', icon: Clock };
@@ -112,9 +112,9 @@ export const KitchenDisplaySystem: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
             { id: 'KITCHEN_ACTIVE', label: `Tất cả đơn bếp (${kitchenOrders.length})` },
-            { id: 'CONFIRMED', label: `🔵 Chờ nấu (${confirmedCount})` },
-            { id: 'PREPARING', label: `🟡 Đang chế biến (${preparingCount})` },
-            { id: 'READY', label: `🟢 Sẵn sàng trả (${readyCount})` },
+            { id: 'confirmed', label: `🔵 Chờ nấu (${confirmedCount})` },
+            { id: 'preparing', label: `🟡 Đang chế biến (${preparingCount})` },
+            { id: 'ready', label: `🟢 Sẵn sàng trả (${readyCount})` },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -172,8 +172,8 @@ export const KitchenDisplaySystem: React.FC = () => {
           {kitchenOrders.map((order) => {
             const statusConfig = getStatusBadge(order.status);
             const StatusIcon = statusConfig.icon;
-            const isCooking = order.status === 'PREPARING';
-            const isPendingConfirm = order.status === 'PENDING' || order.status === 'CONFIRMED';
+            const isCooking = order.status === 'preparing';
+            const isPendingConfirm = order.status === 'pending' || order.status === 'confirmed';
 
             return (
               <div
@@ -216,9 +216,9 @@ export const KitchenDisplaySystem: React.FC = () => {
                         {order.order_number}
                       </span>
                       <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                        {order.order_type === 'DINE_IN'
+                        {order.order_type === 'dine_in'
                           ? `📍 ${order.table_no || 'Bàn Chưa Gán'}`
-                          : order.order_type === 'TAKEAWAY'
+                          : order.order_type === 'takeaway'
                           ? '🛍️ Mang Về'
                           : '🛵 Giao Hàng'}
                         {order.customer_name && ` • ${order.customer_name}`}
@@ -262,7 +262,7 @@ export const KitchenDisplaySystem: React.FC = () => {
                   {/* Items List - High Contrast */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {order.items.map((item, idx) => {
-                      const isCancelled = item.status === 'CANCELLED';
+                      const isCancelled = item.status === 'cancelled';
                       return (
                       <div
                         key={idx}
@@ -299,7 +299,7 @@ export const KitchenDisplaySystem: React.FC = () => {
                         {item.options && item.options.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                             {item.options.map((opt, optIdx) => {
-                              const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                              const isSize = opt.option_type?.toLowerCase() === 'size';
                               return (
                                 <span
                                   key={optIdx}
@@ -316,7 +316,7 @@ export const KitchenDisplaySystem: React.FC = () => {
                                     gap: '4px',
                                   }}
                                 >
-                                  {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                  {isSize ? '📏' : '➕'} {opt.option_name}
                                 </span>
                               );
                             })}
@@ -352,9 +352,9 @@ export const KitchenDisplaySystem: React.FC = () => {
 
                 {/* Footer Action Controls - Large touch buttons for kitchen */}
                 <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                  {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                  {(order.status === 'pending' || order.status === 'confirmed') && (
                     <button
-                      onClick={() => updateOrderStatus(order.id, 'PREPARING')}
+                      onClick={() => updateOrderStatus(order.id, 'preparing')}
                       style={{
                         flex: 1,
                         padding: '12px',
@@ -377,9 +377,9 @@ export const KitchenDisplaySystem: React.FC = () => {
                     </button>
                   )}
 
-                  {order.status === 'PREPARING' && (
+                  {order.status === 'preparing' && (
                     <button
-                      onClick={() => updateOrderStatus(order.id, 'READY')}
+                      onClick={() => updateOrderStatus(order.id, 'ready')}
                       style={{
                         flex: 1,
                         padding: '12px',
@@ -402,9 +402,9 @@ export const KitchenDisplaySystem: React.FC = () => {
                     </button>
                   )}
 
-                  {order.status === 'READY' && (
+                  {order.status === 'ready' && (
                     <button
-                      onClick={() => updateOrderStatus(order.id, 'COMPLETED', true)}
+                      onClick={() => updateOrderStatus(order.id, 'completed', true)}
                       style={{
                         flex: 1,
                         padding: '12px',

@@ -10,7 +10,7 @@ export const tableApi = {
         id: t.id,
         table_no: t.table_no || t.tableNo || '',
         capacity: t.capacity || 4,
-        status: (t.status?.toUpperCase() || 'AVAILABLE') as TableStatus,
+        status: (t.status?.toLowerCase() || 'available') as TableStatus,
         qr_secret_token: t.qr_secret_token || '',
         current_order_amount: t.current_order_amount,
         occupied_since: t.occupied_since,
@@ -39,7 +39,7 @@ export const tableApi = {
         id: t.id,
         table_no: t.table_no || '',
         capacity: t.capacity || 4,
-        status: (t.status?.toUpperCase() || 'AVAILABLE') as TableStatus,
+        status: (t.status?.toLowerCase() || 'available') as TableStatus,
         qr_secret_token: t.qr_secret_token || '',
         current_order_amount: t.current_order_amount,
         occupied_since: t.occupied_since,
@@ -60,7 +60,7 @@ export const tableApi = {
         id: t.id,
         table_no: t.table_no || t.tableNo || '',
         capacity: t.capacity || 4,
-        status: (t.status?.toUpperCase() || 'AVAILABLE') as TableStatus,
+        status: (t.status?.toLowerCase() || 'available') as TableStatus,
         qr_secret_token: t.qr_secret_token || t.qrSecretToken || '',
         current_order_amount: t.current_order_amount ?? t.currentOrderAmount ?? 0,
         occupied_since: t.occupied_since || t.occupiedSince || '',
@@ -97,16 +97,25 @@ export const tableApi = {
 
   confirmPayment: async (
     tableId: string,
-    options?: { staffId?: string; method?: string; amountReceived?: number }
+    options?: { staffId?: string; method?: string; amountReceived?: number; forceConfirm?: boolean }
   ): Promise<void> => {
     try {
       const params = new URLSearchParams();
       if (options?.staffId) params.append('staffId', options.staffId);
       if (options?.method) params.append('method', options.method);
       if (options?.amountReceived) params.append('amountReceived', String(options.amountReceived));
+      if (options?.forceConfirm) params.append('forceConfirm', 'true');
 
       const query = params.toString() ? `?${params.toString()}` : '';
       await apiClient.post(`/table-sessions/tables/${encodeURIComponent(tableId)}/confirm-payment${query}`);
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  resetSession: async (tableId: string): Promise<void> => {
+    try {
+      await apiClient.post(`/table-sessions/tables/${encodeURIComponent(tableId)}/reset`);
     } catch (error) {
       throw transformAxiosErrorResponse(error);
     }

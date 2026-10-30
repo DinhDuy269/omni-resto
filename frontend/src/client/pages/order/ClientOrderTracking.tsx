@@ -19,13 +19,14 @@ import { useClientStore } from '../../store/clientStore';
 import { ServiceRequestModal } from '../../components/ServiceRequestModal';
 import type { PlacedOrderStatus } from '../../../shared/types/client';
 import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
+import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 
 const STEPS: { key: PlacedOrderStatus; label: string; icon: React.FC<{ size?: number; color?: string }> }[] = [
-  { key: 'PENDING', label: 'Tiếp nhận', icon: Clock },
-  { key: 'CONFIRMED', label: 'Đã duyệt', icon: Clock },
-  { key: 'PREPARING', label: 'Bếp nấu', icon: ChefHat },
-  { key: 'READY', label: 'Sẵn sàng', icon: Bell },
-  { key: 'COMPLETED', label: 'Phục vụ', icon: Check },
+  { key: 'pending', label: 'Tiếp nhận', icon: Clock },
+  { key: 'confirmed', label: 'Đã duyệt', icon: Clock },
+  { key: 'preparing', label: 'Bếp nấu', icon: ChefHat },
+  { key: 'ready', label: 'Sẵn sàng', icon: Bell },
+  { key: 'completed', label: 'Phục vụ', icon: Check },
 ];
 
 export const ClientOrderTracking: React.FC = () => {
@@ -36,12 +37,38 @@ export const ClientOrderTracking: React.FC = () => {
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isQrAccordionOpen, setIsQrAccordionOpen] = useState(false);
 
+  // Lắng nghe cập nhật thời gian thực từ Server qua WebSockets
+  useWebSocket((event) => {
+    const eventType = event.eventType || event.event_type;
+    if (
+      eventType === 'ORDER_ITEM_STATUS_CHANGED' ||
+      eventType === 'ORDER_STATUS_CHANGED' ||
+      eventType === 'ORDER_ITEM_CANCELLED' ||
+      eventType === 'ORDER_ROUND_ADDED'
+    ) {
+      if (orderId) {
+        fetchOrderById(orderId);
+      }
+    } else if (eventType === 'TABLE_SESSION_CLOSED') {
+      const targetSessionToken = event.session_token;
+      const targetTableId = event.table_id;
+      if (
+        (targetSessionToken && targetSessionToken === table_session?.session_token) ||
+        (targetTableId && targetTableId === table_session?.table_id)
+      ) {
+        if (orderId) {
+          fetchOrderById(orderId);
+        }
+      }
+    }
+  });
+
   // Tìm đơn hàng theo ID hoặc order_number
   const matchedOrder = orders.find(
     (o) => o.id === orderId || o.order_number === orderId
   ) || (placed_order?.id === orderId || placed_order?.order_number === orderId ? placed_order : null);
 
-  const currentStatus: PlacedOrderStatus = ((matchedOrder?.status ?? 'PENDING').toUpperCase() as PlacedOrderStatus);
+  const currentStatus: PlacedOrderStatus = ((matchedOrder?.status ?? 'pending').toLowerCase() as PlacedOrderStatus);
 
   // Đồng bộ trạng thái đơn hàng từ Server theo thời gian thực (ngay khi mở trang & polling dự phòng)
   useEffect(() => {
@@ -50,10 +77,10 @@ export const ClientOrderTracking: React.FC = () => {
 
     const interval = setInterval(() => {
       const current = useClientStore.getState().orders.find((o) => o.id === orderId || o.order_number === orderId);
-      if (!current || (current.status !== 'COMPLETED' && current.status !== 'CANCELLED')) {
+      if (!current || (current.status !== 'completed' && current.status !== 'cancelled')) {
         fetchOrderById(orderId);
       }
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [orderId, fetchOrderById]);
@@ -83,10 +110,10 @@ export const ClientOrderTracking: React.FC = () => {
   }
 
   const currentOrder = matchedOrder;
-  const isCompleted = currentStatus === 'COMPLETED';
-  const isCancelled = currentStatus === 'CANCELLED';
+  const isCompleted = currentStatus === 'completed';
+  const isCancelled = currentStatus === 'cancelled';
 
-  const orderMode = currentOrder.order_mode || (currentOrder.table_no ? 'DINE_IN' : 'TAKEAWAY');
+  const orderMode = currentOrder.order_mode || (currentOrder.table_no ? 'dine_in' : 'takeaway');
   let orderModeBadge = {
     icon: '🍽️',
     label: currentOrder.table_no || table_session?.table_no ? `Bàn ${currentOrder.table_no || table_session?.table_no}` : 'Tại bàn',
@@ -95,7 +122,7 @@ export const ClientOrderTracking: React.FC = () => {
     border: '#a7f3d0'
   };
 
-  if (orderMode === 'TAKEAWAY') {
+  if (orderMode === 'takeaway') {
     orderModeBadge = {
       icon: '🛍️',
       label: currentOrder.table_no ? `Mang về (Bàn ${currentOrder.table_no})` : 'Mang về',
@@ -103,7 +130,7 @@ export const ClientOrderTracking: React.FC = () => {
       color: '#c2410c',
       border: '#fed7aa'
     };
-  } else if (orderMode === 'DELIVERY') {
+  } else if (orderMode === 'delivery') {
     orderModeBadge = {
       icon: '🛵',
       label: 'Giao hàng tận nơi',
@@ -122,17 +149,17 @@ export const ClientOrderTracking: React.FC = () => {
       return { text: 'Đã hủy', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '❌' };
     }
     switch (currentStatus) {
-      case 'COMPLETED':
+      case 'completed':
         return {
-          text: orderMode === 'TAKEAWAY' ? 'Đã nhận món' : orderMode === 'DELIVERY' ? 'Đã giao' : 'Đã lên bàn',
+          text: orderMode === 'takeaway' ? 'Đã nhận món' : orderMode === 'delivery' ? 'Đã giao' : 'Đã lên bàn',
           color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: '✅'
         };
-      case 'READY':
+      case 'ready':
         return {
-          text: orderMode === 'TAKEAWAY' ? 'Sẵn sàng lấy' : orderMode === 'DELIVERY' ? 'Đang ship' : 'Đang bưng ra',
+          text: orderMode === 'takeaway' ? 'Sẵn sàng lấy' : orderMode === 'delivery' ? 'Đang ship' : 'Đang bưng ra',
           color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: '🔔'
         };
-      case 'PREPARING':
+      case 'preparing':
         return { text: 'Bếp đang nấu', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa', icon: '🔥' };
       default:
         return { text: 'Chờ nấu', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', icon: '⏳' };
@@ -209,12 +236,12 @@ export const ClientOrderTracking: React.FC = () => {
                   {isCancelled
                     ? 'Đơn hàng đã bị hủy'
                     : isCompleted
-                    ? (orderMode === 'TAKEAWAY' ? 'Đơn mang về đã hoàn tất' : orderMode === 'DELIVERY' ? 'Giao hàng thành công' : 'Đơn hàng đã phục vụ xong')
-                    : currentStatus === 'READY'
-                    ? (orderMode === 'TAKEAWAY' ? 'Món đã sẵn sàng để mang về!' : orderMode === 'DELIVERY' ? 'Đơn hàng đang được giao!' : 'Món đã sẵn sàng phục vụ!')
-                    : currentStatus === 'PREPARING'
+                    ? (orderMode === 'takeaway' ? 'Đơn mang về đã hoàn tất' : orderMode === 'delivery' ? 'Giao hàng thành công' : 'Đơn hàng đã phục vụ xong')
+                    : currentStatus === 'ready'
+                    ? (orderMode === 'takeaway' ? 'Món đã sẵn sàng để mang về!' : orderMode === 'delivery' ? 'Đơn hàng đang được giao!' : 'Món đã sẵn sàng phục vụ!')
+                    : currentStatus === 'preparing'
                     ? 'Bếp đang chế biến món'
-                    : currentStatus === 'CONFIRMED'
+                    : currentStatus === 'confirmed'
                     ? 'Đơn đã duyệt (Chuyển bếp nấu)'
                     : 'Đã gửi vào bếp (Chờ nấu)'}
                 </h1>
@@ -374,7 +401,7 @@ export const ClientOrderTracking: React.FC = () => {
                     {item.options && item.options.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
                         {item.options.map((opt, optIdx) => {
-                          const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                          const isSize = opt.option_type?.toLowerCase() === 'size';
                           return (
                             <span
                               key={optIdx}
@@ -388,7 +415,7 @@ export const ClientOrderTracking: React.FC = () => {
                                 border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
                               }}
                             >
-                              {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                              {isSize ? '📏' : '➕'} {opt.option_name}
                             </span>
                           );
                         })}
@@ -429,7 +456,7 @@ export const ClientOrderTracking: React.FC = () => {
             marginTop: 14, paddingTop: 12, borderTop: '1.5px dashed #e2e8f0',
           }}>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              Hình thức: <strong>{currentOrder.payment_method === 'QR_CODE' ? 'Quét QR' : 'Tiền mặt/Tại quầy'}</strong>
+              Hình thức: <strong>{currentOrder.payment_method === 'qr_code' ? 'Quét QR' : 'Tiền mặt/Tại quầy'}</strong>
             </div>
             <div style={{ textAlign: 'right' }}>
               <span style={{ fontSize: '0.78rem', color: '#64748b', marginRight: 6 }}>Tổng cộng:</span>
@@ -447,7 +474,7 @@ export const ClientOrderTracking: React.FC = () => {
         </div>
 
         {/* ── 3. COLLAPSIBLE VIETQR PAYMENT (Tối giản: Mở khi cần) ── */}
-        {currentOrder.payment_method === 'QR_CODE' && !isCompleted && !isCancelled && (
+        {currentOrder.payment_method === 'qr_code' && !isCompleted && !isCancelled && (
           <div style={{
             background: '#ffffff',
             borderRadius: 16,

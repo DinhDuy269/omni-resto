@@ -5,7 +5,7 @@ export const transformTableInfo = (t: any): TableInfo => ({
   id: t.id,
   table_no: t.tableNo || t.table_no || '',
   capacity: Number(t.capacity || 4),
-  status: (t.status || 'AVAILABLE') as TableStatus,
+  status: (t.status?.toLowerCase() || 'available') as TableStatus,
   current_order_amount: t.currentOrderAmount ?? t.current_order_amount,
   occupied_since: t.occupiedSince ?? t.occupied_since,
   qr_secret_token: t.qrSecretToken || t.qr_secret_token || '',

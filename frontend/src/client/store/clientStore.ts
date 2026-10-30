@@ -56,18 +56,18 @@ const saveTableSessionToStorage = (session: TableSession | null) => {
 };
 
 export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?: PlacedOrder | null): PlacedOrder => {
-  const rawStatus = (serverOrderData.status || existingOrder?.status || 'PENDING').toUpperCase() as PlacedOrderStatus;
-  const isCancelled = rawStatus === 'CANCELLED';
+  const rawStatus = (serverOrderData.status || existingOrder?.status || 'pending').toLowerCase() as PlacedOrderStatus;
+  const isCancelled = rawStatus === 'cancelled';
 
   const mappedItems: CartItem[] = (serverOrderData.items || []).map((it: any) => {
     const existingItem = existingOrder?.items?.find((c) => (c.menu_item_id || c.id) === (it.menu_item_id || it.id));
-    const itemStatus = isCancelled ? 'CANCELLED' : ((it.status?.toUpperCase() as any) || 'CONFIRMED');
+    const itemStatus = isCancelled ? 'cancelled' : ((it.status?.toLowerCase() as any) || 'confirmed');
     const rawOptions = it.options || existingItem?.options || [];
     const mappedOptions: CartItemOption[] = rawOptions.map((opt: any) => ({
       id: opt.id,
-      option_id: opt.option_id || opt.optionId || opt.id,
-      option_name: opt.option_name || opt.optionName || opt.name,
-      option_type: opt.option_type || opt.optionType,
+      option_id: opt.option_id || opt.id,
+      option_name: opt.option_name || opt.name,
+      option_type: opt.option_type,
       price: Number(opt.price || 0),
     }));
 
@@ -88,26 +88,26 @@ export const mapServerOrderToPlacedOrder = (serverOrderData: any, existingOrder?
     };
   });
 
-  const rawMode = (serverOrderData.order_mode || serverOrderData.order_type || serverOrderData.orderType || existingOrder?.order_mode || 'dine_in').toLowerCase();
-  const orderMode: OrderMode = rawMode === 'takeaway' ? 'TAKEAWAY' : rawMode === 'delivery' ? 'DELIVERY' : 'DINE_IN';
+  const rawMode = (serverOrderData.order_mode || serverOrderData.order_type || existingOrder?.order_mode || 'dine_in').toLowerCase();
+  const orderMode: OrderMode = rawMode === 'takeaway' ? 'takeaway' : rawMode === 'delivery' ? 'delivery' : 'dine_in';
 
-  const serverAmount = Number(serverOrderData.total_amount ?? serverOrderData.totalAmount ?? existingOrder?.total_amount ?? 0);
+  const serverAmount = Number(serverOrderData.total_amount ?? existingOrder?.total_amount ?? 0);
   const totalAmount = isCancelled ? 0 : serverAmount;
 
   return {
     id: serverOrderData.id,
-    order_number: serverOrderData.order_number || serverOrderData.orderNumber || existingOrder?.order_number || '',
-    table_session_id: serverOrderData.table_session_id || serverOrderData.tableSessionId || existingOrder?.table_session_id,
+    order_number: serverOrderData.order_number || existingOrder?.order_number || '',
+    table_session_id: serverOrderData.table_session_id || existingOrder?.table_session_id,
     order_mode: orderMode,
-    table_no: serverOrderData.table_no || serverOrderData.tableNo || existingOrder?.table_no,
-    session_token: serverOrderData.session_token || serverOrderData.sessionToken || existingOrder?.session_token,
-    customer_name: serverOrderData.customer_name || serverOrderData.customerName || existingOrder?.customer_name,
+    table_no: serverOrderData.table_no || existingOrder?.table_no,
+    session_token: serverOrderData.session_token || existingOrder?.session_token,
+    customer_name: serverOrderData.customer_name || existingOrder?.customer_name,
     items: mappedItems,
     total_amount: totalAmount,
     status: rawStatus,
-    payment_status: isCancelled ? 'CANCELLED' : ((serverOrderData.payment_status || serverOrderData.paymentStatus)?.toUpperCase() as any || 'UNPAID'),
-    placed_at: existingOrder?.placed_at || new Date(serverOrderData.created_at || serverOrderData.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-    estimated_minutes: existingOrder?.estimated_minutes || (orderMode === 'DELIVERY' ? 35 : orderMode === 'TAKEAWAY' ? 20 : 15),
+    payment_status: isCancelled ? 'cancelled' : (serverOrderData.payment_status?.toLowerCase() as any || 'unpaid'),
+    placed_at: existingOrder?.placed_at || new Date(serverOrderData.created_at || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    estimated_minutes: existingOrder?.estimated_minutes || (orderMode === 'delivery' ? 35 : orderMode === 'takeaway' ? 20 : 15),
     payment_method: serverOrderData.payment_method || serverOrderData.paymentMethod || existingOrder?.payment_method,
   };
 };
@@ -180,15 +180,15 @@ export const selectTotalAmount = (s: ClientState) =>
 export const select_total_amount = selectTotalAmount;
 
 export const selectHasActiveOrders = (s: ClientState) =>
-  s.orders.some((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
+  s.orders.some((o) => o.status !== 'completed' && o.status !== 'cancelled');
 export const select_has_active_orders = selectHasActiveOrders;
 
 export const selectActiveOrders = (s: ClientState) =>
-  s.orders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
+  s.orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
 export const select_active_orders = selectActiveOrders;
 
 export const selectLatestActiveOrder = (s: ClientState) =>
-  s.orders.find((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED') || null;
+  s.orders.find((o) => o.status !== 'completed' && o.status !== 'cancelled') || null;
 export const select_latest_active_order = selectLatestActiveOrder;
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
   addToCart: (item, quantity = 1) =>
     set((state) => {
       // Cart Guard: Chặn không cho thêm vào giỏ nếu món đã hết giờ phục vụ
-      if (item.is_available_now === false || item.availableNow === false || !checkIsItemAvailableNow(item)) {
+      if (item.is_available_now === false || !checkIsItemAvailableNow(item)) {
         alert(`⚠️ Món "${item.name}" hiện đã quá giờ phục vụ. Quý khách vui lòng chọn các món ăn đang mở bán trong thực đơn hiện tại nhé!`);
         return state;
       }
@@ -288,7 +288,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
         saveTableSessionToStorage(sessionData);
         set({
           table_session: sessionData,
-          order_mode: 'DINE_IN',
+          order_mode: 'dine_in',
         });
         return sessionData;
       }
@@ -379,14 +379,14 @@ export const useClientStore = create<ClientState>((set, get) => ({
         session_token: `sess-sim-tbl-${tableNum}-${Math.random().toString(36).substring(2, 9)}`,
         device_token: deviceToken,
         is_device_master: true,
-        status: 'ACTIVE',
-        mode: 'PAY_AFTER',
+        status: 'active',
+        mode: 'pay_after',
         expires_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
       };
       saveTableSessionToStorage(simSession);
       set({
         table_session: simSession,
-        order_mode: 'DINE_IN',
+        order_mode: 'dine_in',
       });
       return simSession;
     }
@@ -436,7 +436,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
       console.warn('requestPayment via backend failed, using local simulation:', err);
       // Fallback local simulation
       const orders = get().orders;
-      const activeOrder = orders.find((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
+      const activeOrder = orders.find((o) => o.status !== 'completed' && o.status !== 'cancelled');
       const totalAmount = activeOrder ? activeOrder.total_amount : 0;
       const orderNumber = activeOrder ? activeOrder.order_number : 'ORD-LOCAL';
 
@@ -445,7 +445,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
       finalSession = {
         ...currentSession,
-        status: 'PAYMENT_REQUESTED',
+        status: 'payment_requested',
         active_order_id: activeOrder?.id,
         active_order_number: orderNumber,
         total_amount: totalAmount,
@@ -496,7 +496,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
       console.warn('cancelPaymentRequest failed on backend, simulating locally:', err);
       finalSession = {
         ...currentSession,
-        status: 'ACTIVE',
+        status: 'active',
         viet_qr: undefined,
       };
     }
@@ -538,11 +538,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
     }
 
     const updatedOrders = get().orders.map((o) => {
-      if (o.status === 'PENDING') {
+      if (o.status === 'pending') {
         return {
           ...o,
-          status: 'PREPARING' as const,
-          items: o.items.map((it) => ({ ...it, status: 'PREPARING' as const })),
+          status: 'preparing' as const,
+          items: o.items.map((it) => ({ ...it, status: 'preparing' as const })),
         };
       }
       return o;
@@ -562,7 +562,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
     return finalSession;
   },
 
-  confirmPaymentDemo: async (method: ClientPaymentMethod = 'QR_CODE') => {
+  confirmPaymentDemo: async (method: ClientPaymentMethod = 'qr_code') => {
     const currentSession = get().table_session;
     if (!currentSession?.session_token) return null;
     try {
@@ -580,8 +580,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
     const updatedOrders = get().orders.map((o) => ({
       ...o,
-      status: 'COMPLETED' as const,
-      payment_status: 'PAID' as const,
+      status: 'completed' as const,
+      payment_status: 'paid' as const,
     }));
 
     // Khi thanh toán xong -> Hủy phiên bàn, giải phóng bàn và chuyển về chế độ giao hàng
@@ -589,7 +589,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
     saveOrdersToStorage(updatedOrders);
     set({
       table_session: null,
-      order_mode: 'DELIVERY',
+      order_mode: 'delivery',
       orders: updatedOrders,
     });
 
@@ -604,7 +604,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   // Order
-  order_mode: initialSavedTableSession ? 'DINE_IN' : 'DELIVERY',
+  order_mode: initialSavedTableSession ? 'dine_in' : 'delivery',
   setOrderMode: (mode) => set({ order_mode: mode }),
   set_order_mode: (mode) => set({ order_mode: mode }),
   order_draft: {},
@@ -626,13 +626,13 @@ export const useClientStore = create<ClientState>((set, get) => ({
     orderCounter += 1;
     const state = get();
 
-    if (draft.order_mode === 'DINE_IN' && !state.table_session?.session_token) {
+    if (draft.order_mode === 'dine_in' && !state.table_session?.session_token) {
       alert('Chưa có phiên bàn hợp lệ! Quý khách vui lòng quét mã QR tại bàn để gọi món.');
       return null;
     }
 
     // Chặn đặt món nếu hóa đơn đang đóng băng để thanh toán (chỉ áp dụng khi gọi món ăn tại bàn)
-    if (draft.order_mode === 'DINE_IN' && state.table_session?.status?.toUpperCase() === 'PAYMENT_REQUESTED') {
+    if (draft.order_mode === 'dine_in' && state.table_session?.status === 'payment_requested') {
       alert('Hóa đơn của bàn đang được đóng băng để thanh toán. Quý khách vui lòng bấm "Hủy yêu cầu thanh toán" trên ứng dụng nếu muốn tiếp tục gọi thêm món tại bàn!');
       return null;
     }
@@ -657,7 +657,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
       const found = currentMenuItems.find((m) => m.id === itemId);
       if (found) {
         const s = (found.status || '').toUpperCase();
-        return s === 'OUT_OF_STOCK' || s === 'DISCONTINUED';
+        return s === 'out_of_stock' || s === 'discontinued';
       }
       return false;
     });
@@ -668,15 +668,15 @@ export const useClientStore = create<ClientState>((set, get) => ({
     }
 
     const session = state.table_session;
-    const effectiveTableNo = draft.order_mode === 'DINE_IN'
+    const effectiveTableNo = draft.order_mode === 'dine_in'
       ? session?.table_no
-      : (draft.order_mode === 'TAKEAWAY' && session ? session?.table_no : draft.table_no);
+      : (draft.order_mode === 'takeaway' && session ? session?.table_no : draft.table_no);
 
-    const effectiveSessionToken = draft.order_mode === 'DINE_IN'
+    const effectiveSessionToken = draft.order_mode === 'dine_in'
       ? session?.session_token
       : undefined;
 
-    if (draft.order_mode === 'DINE_IN' && !effectiveSessionToken) {
+    if (draft.order_mode === 'dine_in' && !effectiveSessionToken) {
       alert('Chưa có thông tin bàn ăn! Quý khách vui lòng quét mã QR tại bàn trước khi đặt món.');
       return null;
     }
@@ -702,11 +702,11 @@ export const useClientStore = create<ClientState>((set, get) => ({
         method: 'POST',
         headers,
         body: JSON.stringify({
-          order_type: draft.order_mode === 'DINE_IN' ? 'dine_in' : draft.order_mode === 'TAKEAWAY' ? 'takeaway' : 'delivery',
+          order_type: draft.order_mode === 'dine_in' ? 'dine_in' : draft.order_mode === 'takeaway' ? 'takeaway' : 'delivery',
           table_no: effectiveTableNo,
           customer_name: draft.customer_name,
           payment_method: normalizedPaymentMethod,
-          voucher_code: draft.voucher_code || draft.voucherCode || undefined,
+          voucher_code: draft.voucher_code || undefined,
           items: state.cart.map((it) => ({
             menu_item_id: it.menu_item_id || it.id || '',
             name: it.name,
@@ -759,7 +759,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
       order_number: finalOrder.order_number || finalOrder.id,
       order_type: finalOrder.order_mode,
       table_no: finalOrder.table_no,
-      status: (finalOrder.status as any) || 'CONFIRMED',
+      status: finalOrder.status || 'confirmed',
       items: finalOrder.items.map((it, i) => ({
         id: String(i + 1),
         name: `${it.name}${it.round_no && it.round_no > 1 ? ` (Đợt ${it.round_no})` : ''}`,
@@ -786,7 +786,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   syncOrderStatus: (id, status) =>
     set((state) => {
-      const normStatus = (status || 'PENDING').toUpperCase() as PlacedOrderStatus;
+      const normStatus = (status || 'pending').toLowerCase() as PlacedOrderStatus;
       let changed = false;
       const updatedOrders = state.orders.map((o) => {
         if (o.id === id || o.order_number === id) {
@@ -796,7 +796,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
             status: normStatus,
             items: o.items.map((it) => ({
               ...it,
-              status: (normStatus === 'COMPLETED' ? 'READY' : normStatus) as any,
+              status: (normStatus === 'completed' ? 'ready' : normStatus) as any,
             })),
           };
         }
@@ -812,7 +812,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
             status: normStatus,
             items: state.placed_order.items.map((it) => ({
               ...it,
-              status: (normStatus === 'COMPLETED' ? 'READY' : normStatus) as any,
+              status: (normStatus === 'completed' ? 'ready' : normStatus) as any,
             })),
           }
           : state.placed_order;
@@ -931,7 +931,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
     });
 
     // Nếu đơn hàng bị hủy hoặc hoàn tất, refresh lại phiên bàn từ backend để cập nhật tổng tiền
-    if (updated.status === 'CANCELLED' || updated.status === 'COMPLETED') {
+    if (updated.status === 'cancelled' || updated.status === 'completed') {
       if (currentSession?.session_token) {
         get().refreshTableSession();
       }
@@ -1058,7 +1058,7 @@ if (typeof window !== 'undefined') {
     const current = useClientStore.getState().table_session;
     if (current && (!e.detail?.tableId || current.table_id === e.detail.tableId)) {
       useClientStore.getState().clearTableSession();
-      useClientStore.setState({ order_mode: 'DELIVERY' });
+      useClientStore.setState({ order_mode: 'delivery' });
       alert('🔔 Bàn của quý khách đã hoàn tất thanh toán hoặc kết thúc phiên. Cảm ơn quý khách đã dùng bữa tại OmniResto!');
     }
   }) as EventListener);

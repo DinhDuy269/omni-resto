@@ -210,9 +210,18 @@ public class OrderService {
             resolvedTableId = lockedSession.getTableId();
             resolvedTableNo = lockedSession.getTableNo();
 
+            // Double-check Idempotency Key sau khi có khóa phiên bàn để chống race condition khi 2 request cùng gửi song song
+            if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                CachedIdempotencyEntry cached = idempotencyCache.get(idempotencyKey.trim());
+                if (cached != null) {
+                    log.info("⚡ Idempotency key '{}' matched after row lock, returning cached response", idempotencyKey);
+                    return cached.getResponse();
+                }
+            }
+
             // Chặn thêm món khi hóa đơn đang đóng băng để thanh toán
             if (lockedSession.getStatus() == TableSessionStatus.payment_requested) {
-                throw new BadRequestException(
+                throw new ConflictException(
                         "Hóa đơn của " + lockedSession.getTableNo() + " đang được đóng băng để thanh toán. Quý khách vui lòng bấm 'Hủy yêu cầu thanh toán' trên ứng dụng nếu muốn tiếp tục gọi thêm món!"
                 );
             }
@@ -345,8 +354,10 @@ public class OrderService {
                 item.addOption(optEntity);
             }
 
-            saved.addItem(item);
-            itemEntities.add(orderItemRepository.save(item));
+            OrderItemEntity savedItem = orderItemRepository.save(item);
+            saved.getItems().add(savedItem);
+            itemEntities.add(savedItem);
+
         }
 
         BigDecimal subtotal = calculatedTotal;
@@ -370,7 +381,7 @@ public class OrderService {
 
             // 3. Tính toán số lượt dùng của khách hàng và thứ tự sử dụng (usageSequence)
             long userUsedCount = voucherRedemptionRepository.countByVoucherIdAndCustomerIdAndStatus(
-                    voucher.getId(), customerId, RedemptionStatus.APPLIED
+                    voucher.getId(), customerId, RedemptionStatus.applied
             );
             int usageSequence = (int) userUsedCount + 1;
 
@@ -386,7 +397,7 @@ public class OrderService {
                     .usageSequence(usageSequence)
                     .discountAmount(discount)
                     .redeemedAt(LocalDateTime.now(DEFAULT_ZONE))
-                    .status(RedemptionStatus.APPLIED)
+                    .status(RedemptionStatus.applied)
                     .build();
 
             try {
@@ -651,9 +662,9 @@ public class OrderService {
             // Hoàn lại lượt dùng voucher nguyên tử và cập nhật trạng thái sổ cái (Idempotent compensation)
             if (entity.getVoucherId() != null) {
                 voucherRepository.decrementUsedQuantityAtomic(entity.getVoucherId());
-                voucherRedemptionRepository.findByOrderIdAndStatus(entity.getId(), RedemptionStatus.APPLIED)
+                voucherRedemptionRepository.findByOrderIdAndStatus(entity.getId(), RedemptionStatus.applied)
                         .ifPresent(redemption -> {
-                            redemption.setStatus(RedemptionStatus.REVERTED);
+                            redemption.setStatus(RedemptionStatus.reverted);
                             voucherRedemptionRepository.save(redemption);
                             log.info("Đã hoàn lại lượt dùng voucher {} cho khách hàng {} từ đơn hàng {}",
                                     entity.getVoucherCode(), entity.getCustomerId(), entity.getId());
@@ -703,17 +714,49 @@ public class OrderService {
             boolean autoComplete,
             String staffId
     ) {
+        return confirmOrderPayment(id, method, amountReceived, autoComplete, staffId, false);
+    }
+
+    @Transactional
+    public OrderResponse confirmOrderPayment(
+            String id,
+            PaymentMethod method,
+            BigDecimal amountReceived,
+            boolean autoComplete,
+            String staffId,
+            boolean forceConfirm
+    ) {
         OrderEntity entity = findOrderById(id);
         if (entity.getStatus() == OrderStatus.cancelled) {
             throw new BadRequestException("Không thể thu tiền cho đơn hàng đã bị hủy #" + entity.getOrderNumber());
+        }
+
+        List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
+        List<OrderItemEntity> unservedItems = items.stream()
+                .filter(it -> it.getStatus() != OrderItemStatus.served && it.getStatus() != OrderItemStatus.cancelled)
+                .toList();
+
+        if (!unservedItems.isEmpty()) {
+            String unservedSummary = unservedItems.stream()
+                    .map(it -> it.getItemName() + " (SL: " + it.getQuantity() + " - " + it.getStatus() + ")")
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+
+            if (!forceConfirm) {
+                throw new ConflictException(
+                        "Đơn #" + entity.getOrderNumber() + " còn " + unservedItems.size() + " món chưa hoàn tất phục vụ (chưa SERVED): ["
+                                + unservedSummary + "]. Thu ngân vui lòng kiểm tra hoặc bật cờ forceConfirm=true để ghi đè xác nhận!"
+                );
+            }
+
+            log.warn("⚠️ [AUDIT] Thu ngân/Nhân viên [{}] đã GHI ĐÈ XÁC NHẬN (FORCE CONFIRM) thanh toán đơn #{} khi còn {} món chưa SERVED: [{}]",
+                    (staffId != null ? staffId : "POS"), entity.getOrderNumber(), unservedItems.size(), unservedSummary);
         }
 
         entity.setPaymentStatus(PaymentStatus.paid);
         if (method != null) {
             entity.setPaymentMethod(method);
         }
-
-        List<OrderItemEntity> items = orderItemRepository.findByOrder_Id(entity.getId());
 
         if (autoComplete) {
             entity.setStatus(OrderStatus.completed);
@@ -782,6 +825,11 @@ public class OrderService {
 
     @Transactional
     public OrderResponse cancelOrderItem(String orderId, String itemId, String reason, String staffId) {
+        return cancelOrderItem(orderId, itemId, reason, staffId, null);
+    }
+
+    @Transactional
+    public OrderResponse cancelOrderItem(String orderId, String itemId, String reason, String staffId, String sessionToken) {
         OrderItemEntity item = orderItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dòng món với ID: " + itemId));
 
@@ -789,11 +837,47 @@ public class OrderService {
             throw new BadRequestException("Món này không thuộc về đơn hàng " + orderId);
         }
 
-        if (item.getStatus() == OrderItemStatus.served) {
-            throw new BadRequestException("Không thể hủy món đã được phục vụ ra bàn!");
+        if (item.getStatus() == OrderItemStatus.served || item.getStatus() == OrderItemStatus.ready) {
+            throw new BadRequestException("Không thể hủy món đã nấu xong hoặc đã phục vụ ra bàn!");
         }
         if (item.getStatus() == OrderItemStatus.cancelled) {
             throw new BadRequestException("Món này đã bị hủy trước đó!");
+        }
+
+        if ("GUEST".equals(staffId)) {
+            if (sessionToken == null || sessionToken.isBlank()) {
+                throw new org.springframework.security.access.AccessDeniedException("Truy cập bị từ chối: Thiếu phiên bàn để xác thực quyền hủy món!");
+            }
+            TableSessionEntity callerSession = tableSessionRepository.findBySessionToken(sessionToken.trim())
+                    .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Phiên bàn không tồn tại hoặc đã hết hiệu lực!"));
+
+            if (callerSession.getStatus() == TableSessionStatus.closed || callerSession.getStatus() == TableSessionStatus.expired) {
+                throw new org.springframework.security.access.AccessDeniedException("Phiên bàn đã kết thúc, không thể thực hiện thao tác hủy món!");
+            }
+
+            // IDOR Protection: Đảm bảo order này thuộc về phiên bàn của khách
+            if (item.getOrder().getTableSessionId() == null || !item.getOrder().getTableSessionId().equals(callerSession.getId())) {
+                log.warn("🚨 [IDOR DETECTED] Session {} attempted to cancel item {} belonging to session {}",
+                        callerSession.getId(), itemId, item.getOrder().getTableSessionId());
+                throw new org.springframework.security.access.AccessDeniedException("Truy cập bị từ chối: Món ăn này không thuộc về bàn của bạn!");
+            }
+
+            if (item.getStatus() != OrderItemStatus.pending) {
+                throw new BadRequestException("Quý khách chỉ có thể tự hủy món khi món đang ở trạng thái Chờ xác nhận (PENDING). Món đã vào bếp chế biến xin vui lòng liên hệ nhân viên phục vụ!");
+            }
+        }
+
+        if (item.getStatus() == OrderItemStatus.preparing) {
+            // Món đang nấu trong bếp: Chỉ Quản lý mới được hủy và bắt buộc có lý do
+            boolean isStaffExplicitWaiter = staffId != null && (staffId.toUpperCase().contains("WAITER") || staffId.toUpperCase().contains("STAFF") || staffId.toUpperCase().contains("CHEF"));
+            boolean isManager = !isStaffExplicitWaiter && (SecurityUtils.hasAnyRole("ADMIN", "STORE_MANAGER")
+                    || (staffId != null && (staffId.toUpperCase().contains("MANAGER") || staffId.toUpperCase().contains("MGR") || staffId.toUpperCase().contains("ADMIN"))));
+            if (!isManager) {
+                throw new BadRequestException("Món đang trong quá trình chế biến (PREPARING)! Chỉ Quản lý nhà hàng mới có quyền hủy món này.");
+            }
+            if (reason == null || reason.trim().isBlank()) {
+                throw new BadRequestException("Bắt buộc phải nhập lý do khi hủy món đang trong quá trình chế biến!");
+            }
         }
 
         item.setStatus(OrderItemStatus.cancelled);

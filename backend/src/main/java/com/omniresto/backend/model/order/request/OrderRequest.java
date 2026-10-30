@@ -16,15 +16,20 @@ import java.util.List;
 public class OrderRequest {
 
     @NotNull(message = "Loại đơn hàng (orderType) không được để trống")
+    @com.fasterxml.jackson.annotation.JsonAlias({"orderType", "order_type"})
     private OrderType orderType;
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"tableNo", "table_no"})
     private String tableNo;
 
     @Size(max = 100, message = "Tên khách hàng không được vượt quá 100 ký tự")
+    @com.fasterxml.jackson.annotation.JsonAlias({"customerName", "customer_name"})
     private String customerName;
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"paymentMethod", "payment_method"})
     private PaymentMethod paymentMethod;
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"voucherCode", "voucher_code"})
     private String voucherCode;
 
     @NotEmpty(message = "Danh sách món ăn không được để trống")

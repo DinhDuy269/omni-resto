@@ -20,6 +20,58 @@ const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/gesture_recog
 const ACTIVE_BOX_MARGIN_X = 0.14;
 const ACTIVE_BOX_MARGIN_Y = 0.14;
 
+// ── Web Audio Synthesizer cho phản hồi âm thanh & xúc giác (Zero Asset Overhead) ──
+let audioCtx: AudioContext | null = null;
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
+function playHapticSound(type: 'click' | 'hover') {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    if (type === 'click') {
+      // Âm thanh Click cơ học dứt khoát: 820Hz tụt xuống 200Hz trong 40ms
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(820, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.04);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.start(now);
+      osc.stop(now + 0.04);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(20);
+      }
+    } else if (type === 'hover') {
+      // Âm thanh "tick" siêu nhẹ khi nam châm hút mục tiêu
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1150, now);
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+      osc.start(now);
+      osc.stop(now + 0.02);
+    }
+  } catch {
+    // Không chặn luồng nếu audio bị hạn chế bởi trình duyệt
+  }
+}
+
 export interface UseHandGestureOptions {
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
@@ -39,11 +91,24 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
     cursor: { x: window.innerWidth / 2, y: window.innerHeight / 2, rawX: 0.5, rawY: 0.5 },
     isPinching: false,
     pinchStrength: 0,
+    dwellProgress: 0,
     detectedGesture: 'None',
     actionFeedback: null,
     mode: initialMode,
     isHoveringClickable: false,
   });
+
+  // Đồng bộ props vào Refs để tránh re-create processFrame loop liên tục
+  const modeRef = useRef<ActiveMode>(initialMode);
+  modeRef.current = state.mode;
+  const isMinimizedRef = useRef<boolean>(isMinimized);
+  isMinimizedRef.current = isMinimized;
+  const onSwipeLeftRef = useRef(onSwipeLeft);
+  onSwipeLeftRef.current = onSwipeLeft;
+  const onSwipeRightRef = useRef(onSwipeRight);
+  onSwipeRightRef.current = onSwipeRight;
+  const onPinchClickRef = useRef(onPinchClick);
+  onPinchClickRef.current = onPinchClick;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -52,8 +117,10 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
   const animFrameIdRef = useRef<number | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
-  // Bộ lọc 1-Euro Filter 2D
-  const euroFilterRef = useRef(new OneEuroFilter2D(1.0, 0.009, 1.0));
+  // Bộ lọc 1-Euro Filter 2D chuẩn quốc tế cho HCI:
+  // - minCutoff = 2.8: Tần số đủ cao để loại bỏ độ trễ phản hồi ngay cả khi chuyển động chậm
+  // - beta = 0.22: Mở rộng tần số cắt ngay tức thì khi vung tay, bù đắp hoàn toàn độ trễ của frame
+  const euroFilterRef = useRef(new OneEuroFilter2D(2.8, 0.22, 1.0));
 
   // Tọa độ tham chiếu
   const cursorCoordinatesRef = useRef<HandCursor>({
@@ -66,17 +133,22 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
   // Chống trôi khi pinch
   const pinchLockedPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Ngưỡng Hysteresis cho Pinch Click
+  // Ngưỡng Hysteresis cho Pinch Click siết chặt (tránh click nhầm khi di chuyển bàn tay)
   const isPinchingRef = useRef(false);
-  const PINCH_TRIGGER_THRESHOLD = 0.34;
-  const PINCH_RELEASE_THRESHOLD = 0.46;
+  const PINCH_TRIGGER_THRESHOLD = 0.26;
+  const PINCH_RELEASE_THRESHOLD = 0.40;
+
+  // Dwell-to-Click: Tự động bấm khi dừng yên trên nút bấm
+  const dwellStartTimeRef = useRef<number | null>(null);
+  const dwellProgressRef = useRef<number>(0);
+
+  // Hàng đợi biểu quyết cử chỉ (Temporal Voting Buffer) để triệt tiêu hiện tượng flickering
+  const gestureHistoryRef = useRef<GestureType[]>([]);
+  const stableGestureRef = useRef<GestureType>('None');
 
   // Quản lý debounce & thời gian MediaPipe
   const lastClickTimeRef = useRef(0);
-  const lastSwipeTimeRef = useRef(0);
   const lastFeedbackTimerRef = useRef<any>(null);
-  const positionHistoryRef = useRef<{ x: number; time: number }[]>([]);
-  const edgeDwellTimeRef = useRef<{ edge: 'top' | 'bottom' | null; startTime: number }>({ edge: null, startTime: 0 });
 
   // Theo dõi timestamp & video time để tránh lỗi MediaPipe
   const lastTimestampRef = useRef<number>(0);
@@ -101,7 +173,7 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
     }, 1200);
   }, []);
 
-  // Khởi tạo MediaPipe GestureRecognizer với độ nhạy cao (confidence = 0.35)
+  // Khởi tạo MediaPipe GestureRecognizer
   const initRecognizer = useCallback(async () => {
     if (recognizerRef.current) return recognizerRef.current;
 
@@ -156,7 +228,7 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
   const executeVirtualClick = useCallback(
     (screenX: number, screenY: number) => {
       const now = Date.now();
-      if (now - lastClickTimeRef.current < 400) return;
+      if (now - lastClickTimeRef.current < 450) return;
       lastClickTimeRef.current = now;
 
       const targetElement = document.elementFromPoint(screenX, screenY);
@@ -164,11 +236,10 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
       if (targetElement) {
         const clickable =
           targetElement.closest<HTMLElement>(
-            'button, a, input, select, textarea, [role="button"], [data-clickable="true"], .clickable, label, .client-menu-card, .client-cart-btn'
+            'button, a, input, select, textarea, [role="button"], [data-clickable="true"], .clickable, label, .client-menu-card, .client-cart-btn, .menu-card'
           ) || (targetElement as HTMLElement);
 
         clickable.focus?.();
-        clickable.click?.();
 
         const mouseClickEvent = new MouseEvent('click', {
           bubbles: true,
@@ -179,11 +250,12 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
         });
         clickable.dispatchEvent(mouseClickEvent);
 
+        playHapticSound('click');
         setFeedback('click', 'Đã nhấn (Click)');
-        onPinchClick?.(screenX, screenY, clickable);
+        onPinchClickRef.current?.(screenX, screenY, clickable);
       }
     },
-    [onPinchClick, setFeedback]
+    [setFeedback]
   );
 
   // Vẽ skeleton bàn tay lên canvas mini
@@ -201,9 +273,6 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
         const end = landmarks[endIdx];
         if (!start || !end) return;
 
-        // Lưu ý: canvas đã được lật ngang (mirror) bằng ctx.drawImage,
-        // nhưng tọa độ landmark từ MediaPipe là unmirrored (x = 0 bên trái webcam).
-        // Khi vẽ lật gương: x_canvas = (1 - x) * width
         const x1 = (1 - start.x) * width;
         const y1 = start.y * height;
         const x2 = (1 - end.x) * width;
@@ -255,7 +324,7 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
     []
   );
 
-  // Vòng lặp xử lý video frame (60 - 120 FPS)
+  // Vòng lặp xử lý video frame (60 - 120 FPS không nghẽn)
   const processFrame = useCallback(() => {
     const video = videoRef.current;
     const recognizer = recognizerRef.current;
@@ -281,49 +350,117 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
 
         if (hasHands) {
           const landmarks = results.landmarks[0];
-          const gestures = results.gestures && results.gestures[0];
-          const topGesture = ((gestures && gestures[0]?.categoryName) as GestureType) || 'None';
+          const rawTopGesture = ((results.gestures?.[0]?.[0]?.categoryName) as GestureType) || 'None';
+
+          // BƯỚC 0: Biểu quyết cử chỉ (Temporal Voting Buffer) để triệt tiêu hiện tượng flickering
+          gestureHistoryRef.current.push(rawTopGesture);
+          if (gestureHistoryRef.current.length > 5) {
+            gestureHistoryRef.current.shift();
+          }
+          const counts: Record<string, number> = {};
+          for (const g of gestureHistoryRef.current) {
+            counts[g] = (counts[g] || 0) + 1;
+          }
+          let stableGesture: GestureType = 'None';
+          let maxCount = 0;
+          for (const [g, count] of Object.entries(counts)) {
+            if (count > maxCount && count >= 3) {
+              maxCount = count;
+              stableGesture = g as GestureType;
+            }
+          }
+          if (maxCount < 3 && gestureHistoryRef.current.length >= 3) {
+            stableGesture = stableGestureRef.current;
+          } else {
+            stableGestureRef.current = stableGesture;
+          }
 
           const indexTip = landmarks[8];
           const thumbTip = landmarks[4];
           const wrist = landmarks[0];
           const indexMcp = landmarks[5];
+          const pinkyMcp = landmarks[17];
+          const middleMcp = landmarks[9];
 
           // Lật trục X (mirroring)
-          const rawMirroredX = 1 - indexTip.x;
-          const rawMirroredY = indexTip.y;
+          const rawIndexMirroredX = 1 - indexTip.x;
+          const rawIndexMirroredY = indexTip.y;
+          const rawThumbMirroredX = 1 - thumbTip.x;
+          const rawThumbMirroredY = thumbTip.y;
 
-          // BƯỚC 1: Hiệu chuẩn Active Box (FOV Calibration)
-          const mappedX = Math.max(0, Math.min(1, (rawMirroredX - ACTIVE_BOX_MARGIN_X) / (1 - 2 * ACTIVE_BOX_MARGIN_X)));
-          const mappedY = Math.max(0, Math.min(1, (rawMirroredY - ACTIVE_BOX_MARGIN_Y) / (1 - 2 * ACTIVE_BOX_MARGIN_Y)));
+          // Tính toán kích thước bàn tay chuẩn hóa 3D
+          const palmWidth = Math.hypot(
+            indexMcp.x - pinkyMcp.x,
+            indexMcp.y - pinkyMcp.y,
+            (indexMcp.z || 0) - (pinkyMcp.z || 0)
+          ) || 0.15;
+          const palmHeight = Math.hypot(
+            wrist.x - middleMcp.x,
+            wrist.y - middleMcp.y,
+            (wrist.z || 0) - (middleMcp.z || 0)
+          ) || 0.2;
+          const handScale = (palmWidth * 1.2 + palmHeight * 0.8) / 2;
+
+          // Tính toán khoảng cách chụm ngón (Pinch) 3D
+          const rawPinchDist = Math.hypot(
+            thumbTip.x - indexTip.x,
+            thumbTip.y - indexTip.y,
+            (thumbTip.z || 0) - (indexTip.z || 0)
+          );
+          const normalizedPinchDist = rawPinchDist / handScale;
+
+          // Độ mạnh lực chụm (0 -> 1)
+          const pinchStrength = Math.max(0, Math.min(1, (PINCH_RELEASE_THRESHOLD - normalizedPinchDist) / (PINCH_RELEASE_THRESHOLD - PINCH_TRIGGER_THRESHOLD)));
+
+          // BƯỚC 1: Pinch Midpoint Blending - Chống giật ngón khi chụm
+          // Khi chụm ngón, ngón trỏ sẽ tự nhiên co về phía ngón cái.
+          // Ta chuyển dần tọa độ trỏ về trọng tâm (midpoint) để con trỏ đứng yên tuyệt đối không bị giật lệch.
+          let rawTargetX = rawIndexMirroredX;
+          let rawTargetY = rawIndexMirroredY;
+          if (pinchStrength > 0.25) {
+            const blend = Math.min(1, (pinchStrength - 0.25) / 0.5);
+            const midX = (rawIndexMirroredX + rawThumbMirroredX) / 2;
+            const midY = (rawIndexMirroredY + rawThumbMirroredY) / 2;
+            rawTargetX = rawIndexMirroredX * (1 - blend) + midX * blend;
+            rawTargetY = rawIndexMirroredY * (1 - blend) + midY * blend;
+          }
+
+          // BƯỚC 2: Hiệu chuẩn Active Box (FOV Calibration)
+          const mappedX = Math.max(0, Math.min(1, (rawTargetX - ACTIVE_BOX_MARGIN_X) / (1 - 2 * ACTIVE_BOX_MARGIN_X)));
+          const mappedY = Math.max(0, Math.min(1, (rawTargetY - ACTIVE_BOX_MARGIN_Y) / (1 - 2 * ACTIVE_BOX_MARGIN_Y)));
 
           const targetScreenX = mappedX * window.innerWidth;
           const targetScreenY = mappedY * window.innerHeight;
 
-          // BƯỚC 2: 1-Euro Filter 2D
+          // BƯỚC 3: 1-Euro Filter 2D với phản hồi tốc độ tức thì (minCutoff=2.8, beta=0.22)
           const filteredPos = euroFilterRef.current.filter(targetScreenX, targetScreenY, nowInMs);
+          const vel = euroFilterRef.current.getVelocity();
+          const speed = Math.hypot(vel.vx, vel.vy); // Tốc độ di chuyển tính bằng px/giây
 
-          // BƯỚC 3: Tính toán khoảng cách chụm ngón (Pinch)
-          const handScale = Math.hypot(wrist.x - indexMcp.x, wrist.y - indexMcp.y) || 0.2;
-          const rawPinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
-          const normalizedPinchDist = rawPinchDist / handScale;
+          // BƯỚC 4: Bù trễ ngoại suy vận tốc (Dead Reckoning - 22ms)
+          // Bù trừ độ trễ phần cứng camera 30FPS, giúp con trỏ dính sát vào bàn tay
+          const PREDICT_TIME = 0.022;
+          const predictedX = Math.max(0, Math.min(window.innerWidth, filteredPos.x + vel.vx * PREDICT_TIME));
+          const predictedY = Math.max(0, Math.min(window.innerHeight, filteredPos.y + vel.vy * PREDICT_TIME));
 
+          // BƯỚC 5: Hysteresis Pinch Click với chốt an toàn vận tốc
           let isCurrentlyPinching = isPinchingRef.current;
           if (!isPinchingRef.current && normalizedPinchDist < PINCH_TRIGGER_THRESHOLD) {
-            isCurrentlyPinching = true;
+            // Chỉ cho phép kích hoạt pinch nếu bàn tay không vung quá nhanh (speed < 300px/s)
+            if (speed < 300) {
+              isCurrentlyPinching = true;
+            }
           } else if (isPinchingRef.current && normalizedPinchDist > PINCH_RELEASE_THRESHOLD) {
             isCurrentlyPinching = false;
           }
 
-          const pinchStrength = Math.max(0, Math.min(1, (PINCH_RELEASE_THRESHOLD - normalizedPinchDist) / (PINCH_RELEASE_THRESHOLD - PINCH_TRIGGER_THRESHOLD)));
+          // Chống trôi vị trí (Pinch Drift Anchor khi lực chụm > 60%)
+          let finalScreenX = predictedX;
+          let finalScreenY = predictedY;
 
-          // BƯỚC 4: Chống trôi vị trí (Pinch Drift Anchor)
-          let finalScreenX = filteredPos.x;
-          let finalScreenY = filteredPos.y;
-
-          if (pinchStrength > 0.7) {
+          if (pinchStrength > 0.6) {
             if (!pinchLockedPosRef.current) {
-              pinchLockedPosRef.current = { x: filteredPos.x, y: filteredPos.y };
+              pinchLockedPosRef.current = { x: predictedX, y: predictedY };
             }
             finalScreenX = pinchLockedPosRef.current.x;
             finalScreenY = pinchLockedPosRef.current.y;
@@ -331,29 +468,31 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
             pinchLockedPosRef.current = null;
           }
 
-          // BƯỚC 5: Nam châm hút mục tiêu (Magnetic Snapping)
+          // BƯỚC 6: Nam châm hút mục tiêu (Magnetic Snapping)
           let isHovering = false;
+          let hoveredClickable: HTMLElement | null = null;
           const hoveredEl = document.elementFromPoint(finalScreenX, finalScreenY);
           if (hoveredEl) {
-            const clickable = hoveredEl.closest<HTMLElement>(
-              'button, a, input, select, textarea, [role="button"], [data-clickable="true"], .clickable, label, .client-menu-card'
+            hoveredClickable = hoveredEl.closest<HTMLElement>(
+              'button, a, input, select, textarea, [role="button"], [data-clickable="true"], .clickable, label, .client-menu-card, .menu-card, .gesture-scroll-btn'
             );
-            if (clickable) {
+            if (hoveredClickable) {
               isHovering = true;
-              if (lastHoveredElementRef.current !== clickable) {
+              if (lastHoveredElementRef.current !== hoveredClickable) {
                 lastHoveredElementRef.current?.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-                clickable.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-                lastHoveredElementRef.current = clickable;
+                hoveredClickable.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                lastHoveredElementRef.current = hoveredClickable;
+                playHapticSound('hover');
               }
 
-              const rect = clickable.getBoundingClientRect();
-              if (rect.width < 140 && rect.height < 90) {
+              const rect = hoveredClickable.getBoundingClientRect();
+              if (rect.width < 200 && rect.height < 140) {
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
                 const distToCenter = Math.hypot(finalScreenX - centerX, finalScreenY - centerY);
-                if (distToCenter < 35 && pinchStrength < 0.7) {
-                  finalScreenX += (centerX - finalScreenX) * 0.22;
-                  finalScreenY += (centerY - finalScreenY) * 0.22;
+                if (distToCenter < 45 && pinchStrength < 0.6) {
+                  finalScreenX += (centerX - finalScreenX) * 0.30;
+                  finalScreenY += (centerY - finalScreenY) * 0.30;
                 }
               }
             } else {
@@ -364,6 +503,33 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
             }
           }
 
+          // BƯỚC 7: Dwell-to-Click (Giữ yên 0.6s để tự động Click)
+          // Loại bỏ 100% cảm giác mỏi tay và sai sót trượt ngón khi chụm
+          const currentMode = modeRef.current;
+          let currentDwellProgress = 0;
+
+          if (currentMode !== 'gesture_only' && isHovering && speed < 85 && !isCurrentlyPinching) {
+            if (dwellStartTimeRef.current === null) {
+              dwellStartTimeRef.current = nowInMs;
+            } else {
+              const elapsed = nowInMs - dwellStartTimeRef.current;
+              currentDwellProgress = Math.min(1, elapsed / 600); // 600ms = 0.6 giây
+              dwellProgressRef.current = currentDwellProgress;
+
+              if (currentDwellProgress >= 1.0) {
+                // Tự động kích hoạt Click!
+                executeVirtualClick(finalScreenX, finalScreenY);
+                dwellStartTimeRef.current = null;
+                dwellProgressRef.current = 0;
+                currentDwellProgress = 0;
+              }
+            }
+          } else {
+            dwellStartTimeRef.current = null;
+            dwellProgressRef.current = 0;
+            currentDwellProgress = 0;
+          }
+
           // Cập nhật tọa độ tham chiếu
           cursorCoordinatesRef.current = {
             x: finalScreenX,
@@ -372,85 +538,21 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
             rawY: mappedY,
           };
 
-          // BƯỚC 6: Trực tiếp điều khiển DOM (Direct DOM Manipulation 60-120fps)
+          // BƯỚC 8: Trực tiếp điều khiển DOM (Direct DOM Manipulation 60-120fps không lag)
           if (cursorEl) {
             cursorEl.style.transform = `translate3d(${finalScreenX}px, ${finalScreenY}px, 0)`;
           }
 
-          // Kích hoạt Click khi chụm ngón
-          if (state.mode !== 'gesture_only') {
+          // BƯỚC 9: Kích hoạt Click khi chụm ngón (Pinch Click)
+          if (currentMode !== 'gesture_only') {
             if (isCurrentlyPinching && !isPinchingRef.current) {
               executeVirtualClick(finalScreenX, finalScreenY);
             }
           }
           isPinchingRef.current = isCurrentlyPinching;
 
-          // BƯỚC 7: Phương án B - Cuộn trang thông minh & Vẫy tay chuyển trang
-          if (state.mode !== 'cursor_only') {
-            const isPointing = topGesture === 'Pointing_Up';
-            const scrollMarginTop = 0.16;
-            const scrollMarginBottom = 0.84;
-
-            const now = Date.now();
-
-            if (mappedY < scrollMarginTop && !isPointing) {
-              if (edgeDwellTimeRef.current.edge !== 'top') {
-                edgeDwellTimeRef.current = { edge: 'top', startTime: now };
-              } else if (now - edgeDwellTimeRef.current.startTime > 120) {
-                const speedFactor = (scrollMarginTop - mappedY) / scrollMarginTop;
-                const intensity = Math.min(32, Math.max(8, speedFactor * 40));
-                window.scrollBy({ top: -intensity, behavior: 'auto' });
-                setFeedback('scroll_up', 'Đang cuộn lên ↑');
-              }
-            } else if (mappedY > scrollMarginBottom) {
-              if (edgeDwellTimeRef.current.edge !== 'bottom') {
-                edgeDwellTimeRef.current = { edge: 'bottom', startTime: now };
-              } else if (now - edgeDwellTimeRef.current.startTime > 120) {
-                const speedFactor = (mappedY - scrollMarginBottom) / (1 - scrollMarginBottom);
-                const intensity = Math.min(32, Math.max(8, speedFactor * 40));
-                window.scrollBy({ top: intensity, behavior: 'auto' });
-                setFeedback('scroll_down', 'Đang cuộn xuống ↓');
-              }
-            } else {
-              edgeDwellTimeRef.current = { edge: null, startTime: 0 };
-            }
-
-            // Vẫy tay trái / phải
-            const palmX = 1 - wrist.x;
-            const history = positionHistoryRef.current;
-            history.push({ x: palmX, time: now });
-
-            const recentHistory = history.filter((pt) => now - pt.time <= 280);
-            positionHistoryRef.current = recentHistory;
-
-            if (recentHistory.length >= 4 && now - lastSwipeTimeRef.current > 850) {
-              const oldest = recentHistory[0];
-              const deltaX = palmX - oldest.x;
-              const deltaTime = now - oldest.time;
-              const velocity = deltaX / Math.max(1, deltaTime);
-
-              if (deltaX > 0.16 && velocity > 0.0008) {
-                lastSwipeTimeRef.current = now;
-                setFeedback('swipe_right', 'Vẫy sang phải → (Next)');
-                if (onSwipeRight) {
-                  onSwipeRight();
-                } else {
-                  window.history.forward();
-                }
-              } else if (deltaX < -0.16 && velocity < -0.0008) {
-                lastSwipeTimeRef.current = now;
-                setFeedback('swipe_left', 'Vẫy sang trái ← (Back)');
-                if (onSwipeLeft) {
-                  onSwipeLeft();
-                } else {
-                  window.history.back();
-                }
-              }
-            }
-          }
-
-          // BƯỚC 8: Vẽ trực tiếp cả video camera và skeleton lên Canvas
-          if (!isMinimized && canvas) {
+          // BƯỚC 10: Vẽ trực tiếp cả video camera và skeleton lên Canvas
+          if (!isMinimizedRef.current && canvas) {
             const ctx = canvas.getContext('2d');
             if (ctx) {
               if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
@@ -473,13 +575,14 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
             }
           }
 
-          // BƯỚC 9: Cập nhật React State có kiểm soát (Throttle ~15 FPS)
+          // BƯỚC 11: Cập nhật React State có kiểm soát (Throttle ~15 FPS cho UI badges)
           const shouldUpdateState =
             nowInMs - lastStateThrottleTimeRef.current > 65 ||
-            state.handDetected !== true ||
+            !state.handDetected ||
             state.isPinching !== isCurrentlyPinching ||
             state.isHoveringClickable !== isHovering ||
-            state.detectedGesture !== topGesture;
+            Math.abs(state.dwellProgress - currentDwellProgress) > 0.08 ||
+            state.detectedGesture !== stableGesture;
 
           if (shouldUpdateState) {
             lastStateThrottleTimeRef.current = nowInMs;
@@ -489,7 +592,8 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
               cursor: { ...cursorCoordinatesRef.current },
               isPinching: isCurrentlyPinching,
               pinchStrength,
-              detectedGesture: topGesture,
+              dwellProgress: currentDwellProgress,
+              detectedGesture: stableGesture,
               isHoveringClickable: isHovering,
             }));
           }
@@ -497,9 +601,12 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
           // Không có tay trong frame
           euroFilterRef.current.reset();
           pinchLockedPosRef.current = null;
+          gestureHistoryRef.current = [];
+          stableGestureRef.current = 'None';
+          dwellStartTimeRef.current = null;
+          dwellProgressRef.current = 0;
 
-          // Vẫn vẽ video camera lên canvas để người dùng thấy camera đang chạy
-          if (!isMinimized && canvas) {
+          if (!isMinimizedRef.current && canvas) {
             const ctx = canvas.getContext('2d');
             if (ctx && video.videoWidth > 0) {
               if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
@@ -519,6 +626,7 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
               handDetected: false,
               isPinching: false,
               pinchStrength: 0,
+              dwellProgress: 0,
               detectedGesture: 'None',
               isHoveringClickable: false,
             }));
@@ -533,15 +641,11 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
   }, [
     drawHandSkeleton,
     executeVirtualClick,
-    isMinimized,
-    onSwipeLeft,
-    onSwipeRight,
-    setFeedback,
     state.detectedGesture,
+    state.dwellProgress,
     state.handDetected,
     state.isHoveringClickable,
     state.isPinching,
-    state.mode,
   ]);
 
   // Bật camera
@@ -578,8 +682,16 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
 
       euroFilterRef.current.reset();
       pinchLockedPosRef.current = null;
+      gestureHistoryRef.current = [];
+      stableGestureRef.current = 'None';
+      dwellStartTimeRef.current = null;
+      dwellProgressRef.current = 0;
       lastTimestampRef.current = 0;
       lastVideoTimeRef.current = -1;
+
+      if (cursorRef.current) {
+        cursorRef.current.style.transform = `translate3d(${window.innerWidth / 2}px, ${window.innerHeight / 2}px, 0)`;
+      }
 
       // Khởi động vòng lặp xử lý nếu chưa chạy
       if (animFrameIdRef.current) {
@@ -625,6 +737,10 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
 
     euroFilterRef.current.reset();
     pinchLockedPosRef.current = null;
+    gestureHistoryRef.current = [];
+    stableGestureRef.current = 'None';
+    dwellStartTimeRef.current = null;
+    dwellProgressRef.current = 0;
 
     setState((prev) => ({
       ...prev,
@@ -632,6 +748,7 @@ export function useHandGestureEngine(options: UseHandGestureOptions = {}) {
       isLoading: false,
       handDetected: false,
       isPinching: false,
+      dwellProgress: 0,
       detectedGesture: 'None',
       actionFeedback: null,
       isHoveringClickable: false,

@@ -106,9 +106,9 @@ export const MasterMenuManagement: React.FC = () => {
   const [optionFormData, setOptionFormData] = useState({
     category_id: 'cat-01',
     name: '',
-    option_type: 'TOPPING' as 'SIZE' | 'TOPPING',
+    option_type: 'topping' as 'size' | 'topping',
     price: 10000,
-    status: 'AVAILABLE',
+    status: 'available',
   });
 
   // Helper format ca phục vụ
@@ -144,8 +144,8 @@ export const MasterMenuManagement: React.FC = () => {
       (item.meal_periods && item.meal_periods.toUpperCase().includes(dishMealPeriodFilter));
     const matchesStatus =
       dishStatusFilter === 'ALL' ||
-      (dishStatusFilter === 'AVAILABLE' && (item.status === 'AVAILABLE' || item.status === 'available')) ||
-      (dishStatusFilter === 'OUT_OF_STOCK' && (item.status === 'OUT_OF_STOCK' || item.status === 'out_of_stock'));
+      (dishStatusFilter === 'available' && item.status === 'available') ||
+      (dishStatusFilter === 'out_of_stock' && item.status === 'out_of_stock');
     return matchesSearch && matchesCategory && matchesPeriod && matchesStatus;
   });
 
@@ -260,7 +260,7 @@ export const MasterMenuManagement: React.FC = () => {
       meal_periods: dishFormData.meal_periods,
       description: dishFormData.description,
       ingredients: dishFormData.ingredients.trim() || undefined,
-      status: 'AVAILABLE',
+      status: 'available',
       is_best_seller: dishFormData.is_best_seller,
       image: dishFormData.image || '/images/food-placeholder.svg',
     });
@@ -299,9 +299,9 @@ export const MasterMenuManagement: React.FC = () => {
     setOptionFormData({
       category_id: optionCategoryFilter !== 'ALL' ? optionCategoryFilter : 'cat-pho',
       name: '',
-      option_type: 'TOPPING',
+      option_type: 'topping',
       price: 10000,
-      status: 'AVAILABLE',
+      status: 'available',
     });
     setIsAddOptionModalOpen(true);
   };
@@ -311,7 +311,7 @@ export const MasterMenuManagement: React.FC = () => {
     setOptionFormData({
       category_id: option.category_id || 'cat-pho',
       name: option.name,
-      option_type: option.option_type || 'TOPPING',
+      option_type: (option.option_type?.toLowerCase() || 'topping') as 'size' | 'topping',
       price: option.price,
       status: option.status,
     });
@@ -509,7 +509,7 @@ export const MasterMenuManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Đang mở bán</span>
                 <strong style={{ fontSize: '1.35rem', color: '#16a34a', lineHeight: 1.2 }}>
-                  {menu_items.filter((m) => m.status === 'AVAILABLE' || m.status === 'available').length} món
+                  {menu_items.filter((m) => m.status === 'available').length} món
                 </strong>
               </div>
             </div>
@@ -532,7 +532,7 @@ export const MasterMenuManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block' }}>Tạm hết món</span>
                 <strong style={{ fontSize: '1.35rem', color: '#dc2626', lineHeight: 1.2 }}>
-                  {menu_items.filter((m) => m.status === 'OUT_OF_STOCK' || m.status === 'out_of_stock').length} món
+                  {menu_items.filter((m) => m.status === 'out_of_stock').length} món
                 </strong>
               </div>
             </div>
@@ -629,8 +629,8 @@ export const MasterMenuManagement: React.FC = () => {
                   title="Lọc theo trạng thái món"
                 >
                   <option value="ALL">⚡ Tất Cả Trạng Thái</option>
-                  <option value="AVAILABLE">🟢 Đang Mở Bán</option>
-                  <option value="OUT_OF_STOCK">🔴 Tạm Hết Món</option>
+                  <option value="available">🟢 Đang Mở Bán</option>
+                  <option value="out_of_stock">🔴 Tạm Hết Món</option>
                 </select>
 
                 {(dishSearch || dishMealPeriodFilter !== 'ALL' || dishStatusFilter !== 'ALL' || activeCategory !== 'ALL') && (
@@ -730,7 +730,7 @@ export const MasterMenuManagement: React.FC = () => {
               Tìm thấy <strong style={{ color: 'var(--text-main)' }}>{filteredDishes.length}</strong> / {menu_items.length} món ăn
               {activeCategory !== 'ALL' && ` · Thuộc "${activeCategory}"`}
               {dishMealPeriodFilter !== 'ALL' && ` · Lọc theo ca`}
-              {dishStatusFilter !== 'ALL' && ` · ${dishStatusFilter === 'AVAILABLE' ? 'Đang mở bán' : 'Tạm hết món'}`}
+              {dishStatusFilter !== 'ALL' && ` · ${dishStatusFilter === 'available' ? 'Đang mở bán' : 'Tạm hết món'}`}
             </span>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-light)' }}>
               * Mẹo: Click trực tiếp vào nút trạng thái để Đổi nhanh Sẵn sàng / Hết món
@@ -775,7 +775,7 @@ export const MasterMenuManagement: React.FC = () => {
                       </tr>
                     ) : (
                       filteredDishes.map((dish) => {
-                        const isAvailable = dish.status === 'AVAILABLE' || dish.status === 'available';
+                        const isAvailable = dish.status === 'available';
                         const periodBadge = formatMealPeriodBadge(dish.meal_periods);
                         return (
                           <tr
@@ -926,7 +926,7 @@ export const MasterMenuManagement: React.FC = () => {
                             <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                               <button
                                 onClick={() => {
-                                  const nextStatus: MenuStatus = isAvailable ? 'OUT_OF_STOCK' : 'AVAILABLE';
+                                  const nextStatus: MenuStatus = isAvailable ? 'out_of_stock' : 'available';
                                   toggleMenuItemStatus(dish.id, nextStatus);
                                 }}
                                 style={{
@@ -1001,7 +1001,7 @@ export const MasterMenuManagement: React.FC = () => {
                 </div>
               ) : (
                 filteredDishes.map((dish) => {
-                  const isAvailable = dish.status === 'AVAILABLE' || dish.status === 'available';
+                  const isAvailable = dish.status === 'available';
                   const periodBadge = formatMealPeriodBadge(dish.meal_periods);
                   return (
                     <div
@@ -1108,7 +1108,7 @@ export const MasterMenuManagement: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
                           <button
                             onClick={() => {
-                              const nextStatus: MenuStatus = isAvailable ? 'OUT_OF_STOCK' : 'AVAILABLE';
+                              const nextStatus: MenuStatus = isAvailable ? 'out_of_stock' : 'available';
                               toggleMenuItemStatus(dish.id, nextStatus);
                             }}
                             style={{
@@ -1185,14 +1185,14 @@ export const MasterMenuManagement: React.FC = () => {
                   Tất Cả Loại
                 </button>
                 <button
-                  className={`btn btn-sm ${optionTypeFilter === 'SIZE' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setOptionTypeFilter('SIZE')}
+                  className={`btn btn-sm ${optionTypeFilter === 'size' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setOptionTypeFilter('size')}
                 >
                   Kích Cỡ (Chọn 1)
                 </button>
                 <button
-                  className={`btn btn-sm ${optionTypeFilter === 'TOPPING' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setOptionTypeFilter('TOPPING')}
+                  className={`btn btn-sm ${optionTypeFilter === 'topping' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setOptionTypeFilter('topping')}
                 >
                   Topping / Món Thêm (Chọn Nhiều)
                 </button>
@@ -1257,7 +1257,7 @@ export const MasterMenuManagement: React.FC = () => {
                 ) : (
                   filteredOptions.map((opt) => {
                     const catObj = DISH_CATEGORIES.find((c) => c.id === opt.category_id);
-                    const isAvailable = opt.status === 'AVAILABLE';
+                    const isAvailable = opt.status?.toLowerCase() === 'available';
                     return (
                       <tr key={opt.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                         <td style={{ padding: '16px 20px' }}>
@@ -1272,11 +1272,11 @@ export const MasterMenuManagement: React.FC = () => {
                               borderRadius: '12px',
                               fontSize: '0.78rem',
                               fontWeight: 700,
-                              backgroundColor: opt.option_type === 'SIZE' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(232, 93, 38, 0.12)',
-                              color: opt.option_type === 'SIZE' ? '#2563eb' : 'var(--primary)',
+                              backgroundColor: opt.option_type === 'size' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(232, 93, 38, 0.12)',
+                              color: opt.option_type === 'size' ? '#2563eb' : 'var(--primary)',
                             }}
                           >
-                            {opt.option_type === 'SIZE' ? 'Kích Cỡ (Size)' : 'Topping Thêm'}
+                            {opt.option_type === 'size' ? 'Kích Cỡ (Size)' : 'Topping Thêm'}
                           </span>
                         </td>
                         <td style={{ padding: '16px 20px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
@@ -1307,7 +1307,7 @@ export const MasterMenuManagement: React.FC = () => {
                             <button
                               className="btn btn-secondary btn-sm"
                               onClick={() => {
-                                const nextStatus = isAvailable ? 'UNAVAILABLE' : 'AVAILABLE';
+                                const nextStatus = isAvailable ? 'unavailable' : 'available';
                                 toggleCategoryOptionStatus(opt.id, nextStatus);
                               }}
                             >
@@ -1716,10 +1716,10 @@ export const MasterMenuManagement: React.FC = () => {
               <select
                 className="form-select"
                 value={optionFormData.option_type}
-                onChange={(e) => setOptionFormData({ ...optionFormData, option_type: e.target.value as 'SIZE' | 'TOPPING' })}
+                onChange={(e) => setOptionFormData({ ...optionFormData, option_type: e.target.value as 'size' | 'topping' })}
               >
-                <option value="SIZE">Kích Cỡ / Size (Khách chọn 1)</option>
-                <option value="TOPPING">Topping / Món Thêm (Khách chọn nhiều)</option>
+                <option value="size">Kích Cỡ / Size (Khách chọn 1)</option>
+                <option value="topping">Topping / Món Thêm (Khách chọn nhiều)</option>
               </select>
             </div>
             <div className="form-group">
@@ -1785,10 +1785,10 @@ export const MasterMenuManagement: React.FC = () => {
               <select
                 className="form-select"
                 value={optionFormData.option_type}
-                onChange={(e) => setOptionFormData({ ...optionFormData, option_type: e.target.value as 'SIZE' | 'TOPPING' })}
+                onChange={(e) => setOptionFormData({ ...optionFormData, option_type: e.target.value as 'size' | 'topping' })}
               >
-                <option value="SIZE">Kích Cỡ / Size (Khách chọn 1)</option>
-                <option value="TOPPING">Topping / Món Thêm (Khách chọn nhiều)</option>
+                <option value="size">Kích Cỡ / Size (Khách chọn 1)</option>
+                <option value="topping">Topping / Món Thêm (Khách chọn nhiều)</option>
               </select>
             </div>
             <div className="form-group">

@@ -2,23 +2,19 @@ import type { MenuCategory } from './menu';
 
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 
-export type OrderItemLineStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED';
+export type OrderItemLineStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'cancelled';
 
 export interface CartItemOption {
   id?: string;
   option_id?: string;
   option_name?: string;
-  optionId?: string;
-  optionName?: string;
   option_type?: string;
-  optionType?: string;
   price?: number;
 }
 
 export interface CartItem {
   id?: string;
   menu_item_id?: string;
-  menuItemId?: string;
   name: string;
   category: MenuCategory | string;
   price: number;
@@ -31,11 +27,8 @@ export interface CartItem {
   option_ids?: string[];
   options?: CartItemOption[];
   is_available_now?: boolean;
-  availableNow?: boolean;
   meal_periods?: string;
-  mealPeriods?: string;
 }
-
 
 export interface VietQRInfo {
   qr_image_url?: string;
@@ -50,17 +43,13 @@ export interface TableSession {
   id: string;
   table_id?: string;
   table_no?: string;
-  tableNo?: string;
   session_token?: string;
-  sessionToken?: string;
   device_token?: string;
   is_device_master?: boolean;
-  status: 'ACTIVE' | 'PAYMENT_REQUESTED' | 'PAYMENT_PENDING' | 'PAID' | 'CLOSED' | 'EXPIRED'
-  | 'active' | 'payment_requested' | 'payment_pending' | 'paid' | 'closed' | 'expired';
-  mode: 'PAY_AFTER' | 'PAY_FIRST' | 'pay_after' | 'pay_first';
+  status: 'active' | 'payment_requested' | 'payment_pending' | 'paid' | 'closed' | 'expired';
+  mode: 'pay_after' | 'pay_first';
   expires_at?: string;
   is_verified?: boolean;
-  isVerified?: boolean;
   verified_at?: string;
   verified_by_staff_id?: string;
   message?: string;
@@ -73,8 +62,8 @@ export interface TableSession {
 
 // ─── Order ────────────────────────────────────────────────────────────────────
 
-export type OrderMode = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
-export type ClientPaymentMethod = 'CASH' | 'CARD' | 'QR_CODE' | 'VNPAY_QR' | 'vnpay_qr' | 'cash' | 'card' | 'qr_code';
+export type OrderMode = 'dine_in' | 'takeaway' | 'delivery';
+export type ClientPaymentMethod = 'cash' | 'card' | 'qr_code' | 'vnpay' | 'vnpay_qr';
 
 export interface VnPayPaymentInfo {
   order_id: string;
@@ -116,26 +105,18 @@ export const VNPAY_SANDBOX_CONFIG = {
 
 export interface ClientOrderDraft {
   order_mode?: OrderMode;
-  orderMode?: OrderMode;
   table_no?: string;
-  tableNo?: string;
   session_token?: string;
-  sessionToken?: string;
   customer_name?: string;
-  customerName?: string;
   customer_phone?: string;
-  customerPhone?: string;
   delivery_address?: string;
-  deliveryAddress?: string;
   notes?: string;
   payment_method?: ClientPaymentMethod;
-  paymentMethod?: ClientPaymentMethod;
   voucher_code?: string;
-  voucherCode?: string;
 }
 
-export type PlacedOrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
-export type PaymentStatusType = 'UNPAID' | 'PARTIAL' | 'PAID' | 'REFUNDED';
+export type PlacedOrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+export type PaymentStatusType = 'unpaid' | 'partial' | 'paid' | 'refunded' | 'cancelled';
 
 export interface PlacedOrder {
   id: string;

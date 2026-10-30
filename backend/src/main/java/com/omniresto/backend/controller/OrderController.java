@@ -139,12 +139,13 @@ public class OrderController {
             @RequestParam(required = false) String method,
             @RequestParam(required = false) BigDecimal amountReceived,
             @RequestParam(required = false, defaultValue = "false") boolean autoComplete,
+            @RequestParam(required = false, defaultValue = "false") boolean forceConfirm,
             @RequestHeader(value = "X-Staff-Key", required = false) String staffKey,
             @RequestHeader(value = "X-Staff-Id", required = false) String staffId
     ) {
         checkStaffAccess(staffKey);
         PaymentMethod paymentMethod = method != null && !method.isBlank() ? PaymentMethod.fromString(method) : null;
-        return orderService.confirmOrderPayment(id, paymentMethod, amountReceived, autoComplete, staffId);
+        return orderService.confirmOrderPayment(id, paymentMethod, amountReceived, autoComplete, staffId, forceConfirm);
     }
 
     @PatchMapping("/{orderId}/items/{itemId}/status")
@@ -162,11 +163,23 @@ public class OrderController {
     public OrderResponse cancelOrderItem(
             @PathVariable String orderId,
             @PathVariable String itemId,
-            @RequestParam(required = false, defaultValue = "Khách yêu cầu hủy món") String reason,
+            @RequestParam(required = false) String reason,
+            @RequestHeader(value = "X-Table-Session", required = false) String sessionToken,
             @RequestHeader(value = "X-Staff-Key", required = false) String staffKey,
             @RequestHeader(value = "X-Staff-Id", required = false) String staffId
     ) {
-        checkStaffAccess(staffKey);
-        return orderService.cancelOrderItem(orderId, itemId, reason, staffId);
+        boolean isStaff = (staffKey != null && !staffKey.isBlank() && staffKey.trim().equals(configuredStaffKey.trim()))
+                || SecurityUtils.hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF");
+        if (!isStaff) {
+            // Khách tại bàn hủy món thuộc phiên của mình
+            if (sessionToken == null || sessionToken.isBlank()) {
+                throw new AccessDeniedException("Truy cập bị từ chối: Cần quyền nhân viên hoặc phiên bàn hợp lệ để hủy món!");
+            }
+            staffId = "GUEST";
+            if (reason == null || reason.isBlank()) {
+                reason = "Khách yêu cầu hủy món";
+            }
+        }
+        return orderService.cancelOrderItem(orderId, itemId, reason, staffId, sessionToken);
     }
 }

@@ -186,7 +186,7 @@ export const ClientMenu: React.FC = () => {
     });
   }, [menu_items, activePeriod, activeCategory, debouncedSearchQuery, currentPeriod]);
 
-  const availableCount = filteredItems.filter((m) => (m.status === 'AVAILABLE' || m.status === 'available') && m.is_available_now).length;
+  const availableCount = filteredItems.filter((m) => m.status === 'available' && m.is_available_now).length;
 
   // Banner status message
   const getPeriodBanner = () => {

@@ -53,7 +53,7 @@ public class CustomerAuthController {
     @PostMapping("/verify-register-otp")
     public ResponseEntity<Map<String, Object>> verifyRegisterOtp(@Valid @RequestBody VerifyOtpRequest request) {
         boolean valid = customerAuthService.verifyOtp(request,
-                com.omniresto.backend.domain.enums.OtpPurpose.REGISTER_VERIFICATION);
+                com.omniresto.backend.domain.enums.OtpPurpose.register_verification);
         return ResponseEntity.ok(Map.of("valid", valid, "message", "Xác thực OTP thành công!"));
     }
 
@@ -61,7 +61,7 @@ public class CustomerAuthController {
     @PostMapping("/verify-reset-otp")
     public ResponseEntity<Map<String, Object>> verifyResetOtp(@Valid @RequestBody VerifyOtpRequest request) {
         boolean valid = customerAuthService.verifyOtp(request,
-                com.omniresto.backend.domain.enums.OtpPurpose.PASSWORD_RESET);
+                com.omniresto.backend.domain.enums.OtpPurpose.password_reset);
         return ResponseEntity.ok(Map.of("valid", valid, "message", "Xác thực OTP thành công!"));
     }
 
@@ -77,7 +77,7 @@ public class CustomerAuthController {
     public ResponseEntity<Map<String, String>> resendOtp(
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String phone,
-            @RequestParam(defaultValue = "PASSWORD_RESET") com.omniresto.backend.domain.enums.OtpPurpose purpose) {
+            @RequestParam(defaultValue = "password_reset") com.omniresto.backend.domain.enums.OtpPurpose purpose) {
         String target = email != null && !email.isBlank() ? email : phone;
         customerAuthService.resendOtp(target, purpose);
         return ResponseEntity.ok(Map.of("message", "Mã OTP đã được gửi lại thành công!"));

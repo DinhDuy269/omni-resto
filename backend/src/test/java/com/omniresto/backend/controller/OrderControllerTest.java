@@ -169,7 +169,8 @@ class OrderControllerTest {
                 eq(com.omniresto.backend.domain.enums.PaymentMethod.cash),
                 eq(BigDecimal.valueOf(150000)),
                 eq(true),
-                eq("STAFF-01")
+                eq("STAFF-01"),
+                eq(false)
         )).thenReturn(mockOrder);
 
         OrderResponse result = orderController.confirmOrderPayment(
@@ -177,6 +178,7 @@ class OrderControllerTest {
                 "cash",
                 BigDecimal.valueOf(150000),
                 true,
+                false,
                 CONFIGURED_STAFF_KEY,
                 "STAFF-01"
         );
@@ -184,6 +186,6 @@ class OrderControllerTest {
         assertNotNull(result);
         assertEquals(PaymentStatus.paid, result.getPaymentStatus());
         assertEquals(OrderStatus.completed, result.getStatus());
-        verify(orderService).confirmOrderPayment("ord-123", com.omniresto.backend.domain.enums.PaymentMethod.cash, BigDecimal.valueOf(150000), true, "STAFF-01");
+        verify(orderService).confirmOrderPayment("ord-123", com.omniresto.backend.domain.enums.PaymentMethod.cash, BigDecimal.valueOf(150000), true, "STAFF-01", false);
     }
 }

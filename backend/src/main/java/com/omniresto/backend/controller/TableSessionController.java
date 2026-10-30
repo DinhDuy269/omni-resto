@@ -25,7 +25,9 @@ public class TableSessionController {
     private String configuredStaffKey;
 
     private void checkStaffAccess(String staffKey) {
-        if (staffKey == null || staffKey.isBlank() || !staffKey.trim().equals(configuredStaffKey.trim())) {
+        boolean hasKey = staffKey != null && !staffKey.isBlank() && staffKey.trim().equals(configuredStaffKey.trim());
+        boolean hasRole = com.omniresto.backend.util.SecurityUtils.hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF");
+        if (!hasKey && !hasRole) {
             throw new AccessDeniedException("Truy cập bị từ chối: Thao tác này chỉ dành cho nhân viên có thẩm quyền!");
         }
     }
@@ -77,11 +79,12 @@ public class TableSessionController {
             @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId,
             @RequestParam(required = false) String method,
             @RequestParam(required = false) BigDecimal amountReceived,
+            @RequestParam(required = false, defaultValue = "false") boolean forceConfirm,
             @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
         // Bảo vệ nghiêm ngặt: Tuyệt đối không cho phép khách hàng tự xác nhận thanh toán
         checkStaffAccess(staffKey);
-        return tableSessionService.confirmPayment(sessionToken, staffId, PaymentMethod.fromString(method), amountReceived);
+        return tableSessionService.confirmPayment(sessionToken, staffId, PaymentMethod.fromString(method), amountReceived, forceConfirm);
     }
 
     @PostMapping("/tables/{tableId}/confirm-payment")
@@ -90,10 +93,11 @@ public class TableSessionController {
             @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId,
             @RequestParam(required = false) String method,
             @RequestParam(required = false) BigDecimal amountReceived,
+            @RequestParam(required = false, defaultValue = "false") boolean forceConfirm,
             @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
     ) {
         checkStaffAccess(staffKey);
-        return tableSessionService.confirmPaymentByTable(tableId, staffId, PaymentMethod.fromString(method), amountReceived);
+        return tableSessionService.confirmPaymentByTable(tableId, staffId, PaymentMethod.fromString(method), amountReceived, forceConfirm);
     }
 
     @PostMapping("/close")
@@ -105,5 +109,17 @@ public class TableSessionController {
         checkStaffAccess(staffKey);
         tableSessionService.closeSessionsForTable(tableId, reason);
         return Map.of("message", "Đã đóng toàn bộ phiên cho bàn " + tableId);
+    }
+
+    @PostMapping("/tables/{tableId}/reset")
+    public Map<String, String> resetTableSession(
+            @PathVariable String tableId,
+            @RequestParam(required = false, defaultValue = "STAFF-POS") String staffId,
+            @RequestParam(required = false, defaultValue = "MANUAL_RESET") String reason,
+            @RequestHeader(value = "X-Staff-Key", required = false) String staffKey
+    ) {
+        checkStaffAccess(staffKey);
+        tableSessionService.resetSessionForTable(tableId, staffId, reason);
+        return Map.of("message", "Đã reset phiên thành công cho bàn " + tableId);
     }
 }

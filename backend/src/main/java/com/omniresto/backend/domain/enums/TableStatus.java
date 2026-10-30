@@ -1,14 +1,21 @@
 package com.omniresto.backend.domain.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public enum TableStatus {
     available,
     occupied,
     reserved,
-    cleaning,
+    cleaning;
 
-    // Bổ sung thêm chữ hoa để khớp với dữ liệu sẵn có trong database MySQL
-    AVAILABLE,
-    OCCUPIED,
-    RESERVED,
-    CLEANING
+    @JsonCreator
+    public static TableStatus fromString(String value) {
+        if (value == null) return available;
+        for (TableStatus s : values()) {
+            if (s.name().equalsIgnoreCase(value.trim())) {
+                return s;
+            }
+        }
+        return available;
+    }
 }

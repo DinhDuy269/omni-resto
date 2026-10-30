@@ -1,9 +1,9 @@
 import api from './axiosClient';
 
 // Enums / Types
-export type RoleType = 'ADMIN' | 'STORE_MANAGER' | 'CASHIER' | 'CHEF' | 'WAITER' | 'CUSTOMER';
-export type UserStatus = 'PENDING_VERIFICATION' | 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
-export type OtpPurpose = 'REGISTER_VERIFICATION' | 'PASSWORD_RESET';
+export type RoleType = 'admin' | 'store_manager' | 'cashier' | 'chef' | 'waiter' | 'customer';
+export type UserStatus = 'pending_verification' | 'active' | 'inactive' | 'blocked';
+export type OtpPurpose = 'register_verification' | 'password_reset';
 
 export interface RegisterRequest {
   full_name: string;

@@ -16,16 +16,29 @@ import {
 import { useAdminStore } from '../../store/adminStore';
 import { StatusBadge } from '../../components/StatusBadge';
 import { StatCard } from '../../components/StatCard';
+import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 
 export const ChainOrdersManagement: React.FC = () => {
-  const { orders, updateOrderStatus, confirmOrderPayment, cancelOrderItem } = useAdminStore();
+  const { orders, updateOrderStatus, confirmOrderPayment, cancelOrderItem, handleWebSocketOrderEvent } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusTab, setStatusTab] = useState<string>('ALL');
-  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('ALL');
+  const [statusTab, setStatusTab] = useState<string>('all');
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'CARDS' | 'TABLE'>('TABLE');
   const [selectedOrderIdForDetails, setSelectedOrderIdForDetails] = useState<string | null>(null);
 
+  // Lắng nghe sự kiện WebSocket thời gian thực (đơn mới, thay đổi trạng thái món, yêu cầu thanh toán)
+  useWebSocket((event) => {
+    handleWebSocketOrderEvent(event);
+  });
+
   const selectedOrder = orders.find((o) => o.id === selectedOrderIdForDetails) || null;
+
+  const getUnservedItemsCount = (ord: any): number => {
+    return (ord.items || []).filter((it: any) => {
+      const s = (it.status || '').toLowerCase();
+      return s !== 'served' && s !== 'cancelled';
+    }).length;
+  };
 
   const handleCancelItem = async (ord: any, item: any) => {
     const reason = window.prompt(
@@ -41,22 +54,35 @@ export const ChainOrdersManagement: React.FC = () => {
   };
 
   const handleTraMon = async (ord: any) => {
-    const isPaid = ord.payment_status === 'PAID' || ord.payment_status === 'paid';
+    const unservedCount = getUnservedItemsCount(ord);
+    const unservedWarning = unservedCount > 0
+      ? `⚠️ LƯU Ý: Đơn hàng hiện còn ${unservedCount} món chưa phục vụ xong (Bếp đang nấu / chưa ra bàn).\n\n`
+      : '';
+
+    const isPaid = ord.payment_status === 'paid' || ord.payment_status?.toLowerCase() === 'paid';
     if (!isPaid) {
-      const typeLabel = ord.order_type === 'TAKEAWAY' ? 'Mang Về' : ord.order_type === 'DELIVERY' ? 'Giao Hàng' : 'Tại Bàn';
+      const typeLabel = ord.order_type === 'takeaway' ? 'Mang Về' : ord.order_type === 'delivery' ? 'Giao Hàng' : 'Tại Bàn';
       const isConfirmed = window.confirm(
+        unservedWarning +
         `Đơn hàng #${ord.order_number} (${typeLabel}) hiện CHƯA THANH TOÁN.\n\n` +
         `Bạn có xác nhận đã thu đủ ${ord.total_amount.toLocaleString('vi-VN')} đ (${ord.payment_method || 'Tiền mặt'}) và hoàn tất trả món cho khách không?`
       );
       if (!isConfirmed) return;
       try {
-        await updateOrderStatus(ord.id, 'COMPLETED', true);
+        await updateOrderStatus(ord.id, 'completed', true);
       } catch (err: any) {
         alert('Lỗi cập nhật đơn hàng: ' + (err.message || 'Không thể trả món'));
       }
     } else {
+      if (unservedCount > 0) {
+        const isConfirmed = window.confirm(
+          unservedWarning +
+          `Bạn có xác nhận hoàn tất trả toàn bộ món cho đơn #${ord.order_number} không?`
+        );
+        if (!isConfirmed) return;
+      }
       try {
-        await updateOrderStatus(ord.id, 'COMPLETED', false);
+        await updateOrderStatus(ord.id, 'completed', false);
       } catch (err: any) {
         alert('Lỗi cập nhật đơn hàng: ' + (err.message || 'Không thể trả món'));
       }
@@ -64,7 +90,13 @@ export const ChainOrdersManagement: React.FC = () => {
   };
 
   const handleThuTien = async (ord: any) => {
+    const unservedCount = getUnservedItemsCount(ord);
+    const unservedWarning = unservedCount > 0
+      ? `⚠️ CẢNH BÁO: Đơn hàng hiện còn ${unservedCount} món chưa phục vụ (SERVED).\n\n`
+      : '';
+
     const isConfirmed = window.confirm(
+      unservedWarning +
       `Xác nhận thu tiền cho đơn #${ord.order_number}:\n` +
       `- Khách: ${ord.customer_name || 'Khách vãng lai'}\n` +
       `- Số tiền: ${ord.total_amount.toLocaleString('vi-VN')} đ\n` +
@@ -72,16 +104,23 @@ export const ChainOrdersManagement: React.FC = () => {
       `Bấm OK để ghi nhận ĐÃ THANH TOÁN.`
     );
     if (!isConfirmed) return;
+    const force = unservedCount > 0;
     try {
-      await confirmOrderPayment(ord.id, ord.payment_method, ord.total_amount, false);
+      await confirmOrderPayment(ord.id, ord.payment_method, ord.total_amount, false, force);
     } catch (err: any) {
-      alert('Lỗi xác nhận thanh toán: ' + (err.message || 'Không thể thu tiền'));
+      if (err?.message?.includes('chưa SERVED') || err?.status === 409) {
+        if (window.confirm(`${err.message}\n\nBạn có muốn GHI ĐÈ XÁC NHẬN (FORCE CONFIRM) thanh toán không?`)) {
+          await confirmOrderPayment(ord.id, ord.payment_method, ord.total_amount, false, true);
+        }
+      } else {
+        alert('Lỗi xác nhận thanh toán: ' + (err.message || 'Không thể thu tiền'));
+      }
     }
   };
 
   const filteredOrders = orders.filter((ord) => {
-    const matchesStatus = statusTab === 'ALL' || ord.status === statusTab;
-    const matchesType = orderTypeFilter === 'ALL' || ord.order_type === orderTypeFilter;
+    const matchesStatus = statusTab === 'all' || ord.status === statusTab;
+    const matchesType = orderTypeFilter === 'all' || ord.order_type === orderTypeFilter;
     const matchesSearch =
       ord.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (ord.customer_name && ord.customer_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -91,15 +130,15 @@ export const ChainOrdersManagement: React.FC = () => {
   });
 
   const getStatusCount = (status: string) => {
-    if (status === 'ALL') return orders.length;
+    if (status === 'all') return orders.length;
     return orders.filter((o) => o.status === status).length;
   };
 
-  const pendingCount = getStatusCount('PENDING');
-  const preparingCount = getStatusCount('PREPARING');
-  const readyCount = getStatusCount('READY');
+  const pendingCount = getStatusCount('pending');
+  const preparingCount = getStatusCount('preparing');
+  const readyCount = getStatusCount('ready');
   const completedRevenue = orders
-    .filter((o) => o.status === 'COMPLETED')
+    .filter((o) => o.status === 'completed')
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
   return (
@@ -245,10 +284,10 @@ export const ChainOrdersManagement: React.FC = () => {
               className="form-select"
               style={{ padding: '6px 12px', fontSize: '0.85rem', borderRadius: 'var(--radius-md)' }}
             >
-              <option value="ALL">Tất Cả Hình Thức</option>
-              <option value="DINE_IN">Ăn Tại Bàn (Dine-in)</option>
-              <option value="DELIVERY">Giao Hàng (Online)</option>
-              <option value="TAKEAWAY">Mang Về (Takeaway)</option>
+              <option value="all">Tất Cả Hình Thức</option>
+              <option value="dine_in">Ăn Tại Bàn (Dine-in)</option>
+              <option value="delivery">Giao Hàng (Online)</option>
+              <option value="takeaway">Mang Về (Takeaway)</option>
             </select>
           </div>
         </div>
@@ -256,12 +295,12 @@ export const ChainOrdersManagement: React.FC = () => {
         {/* Status Tabs */}
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
           {[
-            { id: 'ALL', label: 'Tất Cả Đơn' },
-            { id: 'PENDING', label: 'Chờ Duyệt' },
-            { id: 'PREPARING', label: 'Đang Nấu Bếp' },
-            { id: 'READY', label: 'Sẵn Sàng Giao' },
-            { id: 'COMPLETED', label: 'Hoàn Tất' },
-            { id: 'CANCELLED', label: 'Đã Hủy' },
+            { id: 'all', label: 'Tất Cả Đơn' },
+            { id: 'pending', label: 'Chờ Duyệt' },
+            { id: 'preparing', label: 'Đang Nấu Bếp' },
+            { id: 'ready', label: 'Sẵn Sàng Giao' },
+            { id: 'completed', label: 'Hoàn Tất' },
+            { id: 'cancelled', label: 'Đã Hủy' },
           ].map((tab) => {
             const count = getStatusCount(tab.id);
             return (
@@ -333,7 +372,7 @@ export const ChainOrdersManagement: React.FC = () => {
                   </tr>
                 ) : (
                   filteredOrders.map((ord) => {
-                    const isPending = ord.status === 'PENDING';
+                    const isPending = ord.status === 'pending';
                     return (
                       <tr
                         key={ord.id}
@@ -378,22 +417,22 @@ export const ChainOrdersManagement: React.FC = () => {
                               padding: '3px 8px',
                               borderRadius: 'var(--radius-sm)',
                               backgroundColor:
-                                ord.order_type === 'DINE_IN'
+                                ord.order_type === 'dine_in'
                                   ? 'var(--info-bg)'
-                                  : ord.order_type === 'DELIVERY'
+                                  : ord.order_type === 'delivery'
                                   ? 'var(--purple-bg)'
                                   : 'var(--warning-bg)',
                               color:
-                                ord.order_type === 'DINE_IN'
+                                ord.order_type === 'dine_in'
                                   ? 'var(--info)'
-                                  : ord.order_type === 'DELIVERY'
+                                  : ord.order_type === 'delivery'
                                   ? 'var(--purple)'
                                   : 'var(--warning)',
                             }}
                           >
-                            {ord.order_type === 'DINE_IN'
+                            {ord.order_type === 'dine_in'
                               ? `📍 ${ord.table_no || 'Tại Bàn'}`
-                              : ord.order_type === 'DELIVERY'
+                              : ord.order_type === 'delivery'
                               ? '🛵 Giao Hàng'
                               : '🛍️ Mang Về'}
                           </span>
@@ -405,7 +444,7 @@ export const ChainOrdersManagement: React.FC = () => {
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>TT: {ord.payment_method || 'Tiền mặt'}</span>
-                            {ord.payment_status === 'PAID' ? (
+                            {ord.payment_status === 'paid' || ord.payment_status?.toLowerCase() === 'paid' ? (
                               <span style={{ color: 'var(--success)', fontWeight: 700, fontSize: '0.68rem', backgroundColor: 'var(--success-bg)', padding: '1px 5px', borderRadius: '3px', border: '1px solid var(--success-border)' }}>✓ ĐÃ TT</span>
                             ) : (
                               <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: '0.68rem', backgroundColor: 'var(--danger-bg)', padding: '1px 5px', borderRadius: '3px', border: '1px solid var(--danger-border)' }}>⏳ CHƯA TT</span>
@@ -416,10 +455,10 @@ export const ChainOrdersManagement: React.FC = () => {
                         <td style={{ padding: '14px 18px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                             <div style={{ fontSize: '0.85rem', color: 'var(--text-body)', fontWeight: 600 }}>
-                              {ord.items.filter((i: any) => i.status !== 'CANCELLED').length} món hợp lệ
-                              {ord.items.some((i: any) => i.status === 'CANCELLED') && (
+                              {ord.items.filter((i: any) => i.status !== 'cancelled').length} món hợp lệ
+                              {ord.items.some((i: any) => i.status === 'cancelled') && (
                                 <span style={{ marginLeft: '6px', fontSize: '0.7rem', color: 'var(--danger)', fontWeight: 700 }}>
-                                  ({ord.items.filter((i: any) => i.status === 'CANCELLED').length} đã hủy)
+                                  ({ord.items.filter((i: any) => i.status === 'cancelled').length} đã hủy)
                                 </span>
                               )}
                             </div>
@@ -455,13 +494,13 @@ export const ChainOrdersManagement: React.FC = () => {
                               whiteSpace: 'nowrap',
                             }}
                             title={ord.items.map((i: any) => {
-                              const optStr = i.options && i.options.length > 0 ? ` (${i.options.map((o: any) => o.option_name || o.optionName).join(', ')})` : '';
-                              const cancelStr = i.status === 'CANCELLED' ? ' [ĐÃ HỦY]' : '';
+                              const optStr = i.options && i.options.length > 0 ? ` (${i.options.map((o: any) => o.option_name).join(', ')})` : '';
+                              const cancelStr = i.status === 'cancelled' ? ' [ĐÃ HỦY]' : '';
                               return `${i.quantity}x ${i.name}${optStr}${cancelStr}`;
                             }).join(', ')}
                           >
                             {ord.items.map((i: any, iIdx: number) => {
-                              const isC = i.status === 'CANCELLED';
+                              const isC = i.status === 'cancelled';
                               return (
                                 <span key={i.id || iIdx} style={{ textDecoration: isC ? 'line-through' : 'none', color: isC ? 'var(--danger)' : 'inherit', marginRight: '6px' }}>
                                   {i.quantity}x {i.name}{isC ? ' (hủy)' : ''}{iIdx < ord.items.length - 1 ? ',' : ''}
@@ -483,7 +522,7 @@ export const ChainOrdersManagement: React.FC = () => {
 
                         <td style={{ padding: '14px 18px', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
-                            {ord.payment_status !== 'PAID' && ord.status !== 'CANCELLED' && ord.status !== 'COMPLETED' && (
+                            {ord.payment_status?.toLowerCase() !== 'paid' && ord.status !== 'cancelled' && ord.status !== 'completed' && (
                               <button
                                 className="btn btn-sm"
                                 style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-border)', fontWeight: 700 }}
@@ -493,24 +532,24 @@ export const ChainOrdersManagement: React.FC = () => {
                                 💵 Thu Tiền
                               </button>
                             )}
-                            {ord.status === 'PENDING' && (
+                            {ord.status === 'pending' && (
                               <button
                                 className="btn btn-primary btn-sm"
-                                onClick={() => updateOrderStatus(ord.id, 'PREPARING')}
+                                onClick={() => updateOrderStatus(ord.id, 'preparing')}
                               >
                                 Duyệt Bếp
                               </button>
                             )}
-                            {ord.status === 'PREPARING' && (
+                            {ord.status === 'preparing' && (
                               <button
                                 className="btn btn-sm"
                                 style={{ backgroundColor: 'var(--purple)', color: '#ffffff', border: 'none' }}
-                                onClick={() => updateOrderStatus(ord.id, 'READY')}
+                                onClick={() => updateOrderStatus(ord.id, 'ready')}
                               >
                                 Báo Xong
                               </button>
                             )}
-                            {ord.status === 'READY' && (
+                            {ord.status === 'ready' && (
                               <button
                                 className="btn btn-sm"
                                 style={{ backgroundColor: 'var(--success)', color: '#ffffff', border: 'none', fontWeight: 700 }}
@@ -519,12 +558,12 @@ export const ChainOrdersManagement: React.FC = () => {
                                 Trả Món
                               </button>
                             )}
-                            {ord.status !== 'COMPLETED' && ord.status !== 'CANCELLED' && (
+                            {ord.status !== 'completed' && ord.status !== 'cancelled' && (
                               <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => {
                                   if (window.confirm(`Bạn có chắc muốn hủy đơn ${ord.order_number}?`)) {
-                                    updateOrderStatus(ord.id, 'CANCELLED');
+                                    updateOrderStatus(ord.id, 'cancelled');
                                   }
                                 }}
                               >
@@ -552,7 +591,7 @@ export const ChainOrdersManagement: React.FC = () => {
             </div>
           ) : (
             filteredOrders.map((ord) => {
-              const isPending = ord.status === 'PENDING';
+              const isPending = ord.status === 'pending';
               return (
                 <div
                   key={ord.id}
@@ -562,13 +601,13 @@ export const ChainOrdersManagement: React.FC = () => {
                     flexDirection: 'column',
                     gap: '14px',
                     borderLeft: `4px solid ${
-                      ord.status === 'PENDING'
+                      ord.status === 'pending'
                         ? 'var(--danger)'
-                        : ord.status === 'PREPARING'
+                        : ord.status === 'preparing'
                         ? 'var(--warning)'
-                        : ord.status === 'READY'
+                        : ord.status === 'ready'
                         ? 'var(--purple)'
-                        : ord.status === 'COMPLETED'
+                        : ord.status === 'completed'
                         ? 'var(--success)'
                         : '#94a3b8'
                     }`,
@@ -605,22 +644,22 @@ export const ChainOrdersManagement: React.FC = () => {
                               padding: '2px 8px',
                               borderRadius: 'var(--radius-full)',
                               backgroundColor:
-                                ord.order_type === 'DINE_IN'
+                                ord.order_type === 'dine_in'
                                   ? 'var(--info-bg)'
-                                  : ord.order_type === 'DELIVERY'
+                                  : ord.order_type === 'delivery'
                                   ? 'var(--purple-bg)'
                                   : 'var(--warning-bg)',
                               color:
-                                ord.order_type === 'DINE_IN'
+                                ord.order_type === 'dine_in'
                                   ? 'var(--info)'
-                                  : ord.order_type === 'DELIVERY'
+                                  : ord.order_type === 'delivery'
                                   ? 'var(--purple)'
                                   : 'var(--warning)',
                             }}
                           >
-                            {ord.order_type === 'DINE_IN'
+                            {ord.order_type === 'dine_in'
                               ? `📍 ${ord.table_no || 'Chưa xếp bàn'}`
-                              : ord.order_type === 'DELIVERY'
+                              : ord.order_type === 'delivery'
                               ? '🛵 Giao Hàng'
                               : '🛍️ Mang Về'}
                           </span>
@@ -672,9 +711,9 @@ export const ChainOrdersManagement: React.FC = () => {
                     }}
                   >
                     {ord.items.map((item: any) => {
-                      const isCancelled = item.status === 'CANCELLED';
-                      const isServed = item.status === 'SERVED';
-                      const canCancel = !isCancelled && !isServed && ord.status !== 'COMPLETED' && ord.status !== 'CANCELLED';
+                      const isCancelled = item.status === 'cancelled';
+                      const isServed = item.status === 'served';
+                      const canCancel = !isCancelled && !isServed && ord.status !== 'completed' && ord.status !== 'cancelled';
 
                       return (
                         <div
@@ -713,7 +752,7 @@ export const ChainOrdersManagement: React.FC = () => {
                             {item.options && item.options.length > 0 && (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                                 {item.options.map((opt: any, optIdx: number) => {
-                                  const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                                  const isSize = opt.option_type?.toLowerCase() === 'size';
                                   return (
                                     <span
                                       key={optIdx}
@@ -728,7 +767,7 @@ export const ChainOrdersManagement: React.FC = () => {
                                         textDecoration: isCancelled ? 'line-through' : 'none',
                                       }}
                                     >
-                                      {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                      {isSize ? '📏' : '➕'} {opt.option_name}
                                     </span>
                                   );
                                 })}
@@ -775,7 +814,7 @@ export const ChainOrdersManagement: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                       <CreditCard size={15} />
                       <span>Thanh toán: <strong>{ord.payment_method}</strong></span>
-                      {ord.payment_status === 'PAID' ? (
+                      {ord.payment_status === 'paid' || ord.payment_status?.toLowerCase() === 'paid' ? (
                         <span style={{ color: 'var(--success)', fontWeight: 700, fontSize: '0.72rem', backgroundColor: 'var(--success-bg)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--success-border)' }}>✓ ĐÃ THANH TOÁN</span>
                       ) : (
                         <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: '0.72rem', backgroundColor: 'var(--danger-bg)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--danger-border)' }}>⏳ CHƯA THU TIỀN</span>
@@ -783,7 +822,7 @@ export const ChainOrdersManagement: React.FC = () => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      {ord.payment_status !== 'PAID' && ord.status !== 'CANCELLED' && ord.status !== 'COMPLETED' && (
+                      {ord.payment_status?.toLowerCase() !== 'paid' && ord.status !== 'cancelled' && ord.status !== 'completed' && (
                         <button
                           className="btn btn-sm"
                           style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-border)', fontWeight: 700 }}
@@ -792,24 +831,24 @@ export const ChainOrdersManagement: React.FC = () => {
                           💵 Thu Tiền
                         </button>
                       )}
-                      {ord.status === 'PENDING' && (
+                      {ord.status === 'pending' && (
                         <button
                           className="btn btn-primary btn-sm"
-                          onClick={() => updateOrderStatus(ord.id, 'PREPARING')}
+                          onClick={() => updateOrderStatus(ord.id, 'preparing')}
                         >
                           Duyệt & Gửi Bếp Nấu
                         </button>
                       )}
-                      {ord.status === 'PREPARING' && (
+                      {ord.status === 'preparing' && (
                         <button
                           className="btn btn-sm"
                           style={{ backgroundColor: 'var(--purple)', color: '#ffffff', border: 'none' }}
-                          onClick={() => updateOrderStatus(ord.id, 'READY')}
+                          onClick={() => updateOrderStatus(ord.id, 'ready')}
                         >
                           Báo Đã Xong Món
                         </button>
                       )}
-                      {ord.status === 'READY' && (
+                      {ord.status === 'ready' && (
                         <button
                           className="btn btn-sm"
                           style={{ backgroundColor: 'var(--success)', color: '#ffffff', border: 'none', fontWeight: 700 }}
@@ -818,12 +857,12 @@ export const ChainOrdersManagement: React.FC = () => {
                           Xác Nhận Trả Món
                         </button>
                       )}
-                      {ord.status !== 'COMPLETED' && ord.status !== 'CANCELLED' && (
+                      {ord.status !== 'completed' && ord.status !== 'cancelled' && (
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => {
                             if (window.confirm(`Hủy đơn ${ord.order_number}?`)) {
-                              updateOrderStatus(ord.id, 'CANCELLED');
+                              updateOrderStatus(ord.id, 'cancelled');
                             }
                           }}
                         >
@@ -890,11 +929,11 @@ export const ChainOrdersManagement: React.FC = () => {
                       fontWeight: 700,
                       padding: '2px 8px',
                       borderRadius: 'var(--radius-sm)',
-                      backgroundColor: selectedOrder.order_type === 'DINE_IN' ? 'var(--info-bg)' : selectedOrder.order_type === 'DELIVERY' ? 'var(--purple-bg)' : 'var(--warning-bg)',
-                      color: selectedOrder.order_type === 'DINE_IN' ? 'var(--info)' : selectedOrder.order_type === 'DELIVERY' ? 'var(--purple)' : 'var(--warning)',
+                      backgroundColor: selectedOrder.order_type === 'dine_in' ? 'var(--info-bg)' : selectedOrder.order_type === 'delivery' ? 'var(--purple-bg)' : 'var(--warning-bg)',
+                      color: selectedOrder.order_type === 'dine_in' ? 'var(--info)' : selectedOrder.order_type === 'delivery' ? 'var(--purple)' : 'var(--warning)',
                     }}
                   >
-                    {selectedOrder.order_type === 'DINE_IN' ? `📍 ${selectedOrder.table_no || 'Tại Bàn'}` : selectedOrder.order_type === 'DELIVERY' ? '🛵 Giao Hàng' : '🛍️ Mang Về'}
+                    {selectedOrder.order_type === 'dine_in' ? `📍 ${selectedOrder.table_no || 'Tại Bàn'}` : selectedOrder.order_type === 'delivery' ? '🛵 Giao Hàng' : '🛍️ Mang Về'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -921,7 +960,7 @@ export const ChainOrdersManagement: React.FC = () => {
                   Danh Sách Món Ăn ({selectedOrder.items.length})
                 </h4>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Đã hủy: {selectedOrder.items.filter((i: any) => i.status === 'CANCELLED').length} món
+                  Đã hủy: {selectedOrder.items.filter((i: any) => i.status === 'cancelled').length} món
                 </span>
               </div>
 
@@ -939,9 +978,9 @@ export const ChainOrdersManagement: React.FC = () => {
                   </thead>
                   <tbody>
                     {selectedOrder.items.map((it: any) => {
-                      const isCancelled = it.status === 'CANCELLED';
-                      const isServed = it.status === 'SERVED';
-                      const canCancel = !isCancelled && !isServed && selectedOrder.status !== 'COMPLETED' && selectedOrder.status !== 'CANCELLED';
+                      const isCancelled = it.status === 'cancelled';
+                      const isServed = it.status === 'served';
+                      const canCancel = !isCancelled && !isServed && selectedOrder.status !== 'completed' && selectedOrder.status !== 'cancelled';
 
                       return (
                         <tr
@@ -957,7 +996,7 @@ export const ChainOrdersManagement: React.FC = () => {
                             </div>
                             {it.options && it.options.length > 0 && (
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                {it.options.map((o: any) => o.option_name || o.optionName).join(', ')}
+                                {it.options.map((o: any) => o.option_name).join(', ')}
                               </div>
                             )}
                             {it.notes && (

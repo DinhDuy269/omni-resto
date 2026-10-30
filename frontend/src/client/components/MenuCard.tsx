@@ -28,7 +28,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, animationDelay = 0 }) 
 
   const cartItem = cart.find((c) => (c.menu_item_id || c.id) === item.id);
   const qty = cartItem?.quantity ?? 0;
-  const isStatusAvailable = item.status === 'AVAILABLE' || item.status === 'available';
+  const isStatusAvailable = item.status === 'available';
   const isTimeAvailable = item.is_available_now !== false;
   const isAvailable = isStatusAvailable && isTimeAvailable;
 

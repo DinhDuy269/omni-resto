@@ -16,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const openRequests = service_requests.filter((r) => r.status === 'OPEN');
+  const openRequests = service_requests.filter((r) => r.status === 'open');
   const recentOrders = orders.slice(0, 3);
 
   const todayStr = new Date().toLocaleDateString('vi-VN', {

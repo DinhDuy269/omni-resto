@@ -49,13 +49,15 @@ export const orderApi = {
     id: string,
     paymentMethod?: string,
     amountReceived?: number,
-    autoComplete: boolean = false
+    autoComplete: boolean = false,
+    forceConfirm: boolean = false
   ): Promise<Order> => {
     try {
       const params = new URLSearchParams();
       if (paymentMethod) params.append('method', paymentMethod.toLowerCase());
       if (amountReceived !== undefined) params.append('amountReceived', amountReceived.toString());
       params.append('autoComplete', autoComplete.toString());
+      if (forceConfirm) params.append('forceConfirm', 'true');
 
       const res = await apiClient.post<Order | OrderResponse>(`/orders/${id}/confirm-payment?${params.toString()}`);
       if ('order' in res.data && res.data.order) return res.data.order;

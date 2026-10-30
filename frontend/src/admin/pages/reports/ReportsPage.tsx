@@ -46,16 +46,16 @@ export const ReportsPage: React.FC = () => {
   });
 
   const totalRevenue = filteredOrdersByTime
-    .filter((o) => o.status === 'COMPLETED' || o.payment_status === 'PAID')
+    .filter((o) => o.status === 'completed' || o.payment_status === 'paid')
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
-  const completedOrders = filteredOrdersByTime.filter((o) => o.status === 'COMPLETED' || o.payment_status === 'PAID');
+  const completedOrders = filteredOrdersByTime.filter((o) => o.status === 'completed' || o.payment_status === 'paid');
   const aov = completedOrders.length > 0 ? Math.round(totalRevenue / completedOrders.length) : 0;
 
   // Kênh bán hàng
-  const dineInOrders = filteredOrdersByTime.filter((o) => o.order_type === 'DINE_IN').length;
-  const deliveryOrders = filteredOrdersByTime.filter((o) => o.order_type === 'DELIVERY').length;
-  const takeawayOrders = filteredOrdersByTime.filter((o) => o.order_type === 'TAKEAWAY').length;
+  const dineInOrders = filteredOrdersByTime.filter((o) => o.order_type === 'dine_in').length;
+  const deliveryOrders = filteredOrdersByTime.filter((o) => o.order_type === 'delivery').length;
+  const takeawayOrders = filteredOrdersByTime.filter((o) => o.order_type === 'takeaway').length;
   const totalChannels = (dineInOrders + deliveryOrders + takeawayOrders) || 1;
 
   const dineInPct = Math.round((dineInOrders / totalChannels) * 100);
@@ -104,7 +104,7 @@ export const ReportsPage: React.FC = () => {
       ['Mã Đơn', 'Bàn / Kênh', 'Khách Hàng', 'Tổng Tiền (VNĐ)', 'Trạng Thái', 'Thanh Toán', 'Thời Gian'],
       ...filteredOrdersByTime.map((o) => [
         o.order_number,
-        o.order_type === 'DINE_IN' ? (o.table_no || 'Tại bàn') : o.order_type,
+        o.order_type === 'dine_in' ? (o.table_no || 'Tại bàn') : o.order_type,
         o.customer_name || 'Khách vãng lai',
         o.total_amount || 0,
         o.status,

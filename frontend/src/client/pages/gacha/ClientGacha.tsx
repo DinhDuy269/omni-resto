@@ -21,7 +21,7 @@ const ClientGacha: React.FC = () => {
 
     const availableItems = useMemo(() => {
         return menuItems.filter(m => 
-            (m.status === 'AVAILABLE' || m.status === 'available') &&
+            m.status === 'available' &&
             checkIsItemAvailableNow(m, currentPeriod)
         );
     }, [menuItems, currentPeriod]);
@@ -127,7 +127,7 @@ const ClientGacha: React.FC = () => {
                 return;
             }
             addToCart({
-                menuItemId: winner.id,
+                menu_item_id: winner.id,
                 name: winner.name,
                 price: Number(winner.base_price) || 0,
                 image: winner.image || '',

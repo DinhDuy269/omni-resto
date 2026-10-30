@@ -41,11 +41,11 @@ export class OneEuroFilter {
   private lastTime: number | null = null;
 
   /**
-   * @param minCutoff Tần số cắt tối thiểu (Hz). Giá trị càng nhỏ thì khi tay đứng yên càng êm ái, chống rung càng mạnh (khuyên dùng: 0.8 - 1.5).
-   * @param beta Hệ số đáp ứng tốc độ. Giá trị càng lớn thì khi vung tay nhanh càng bám sát không bị trễ (khuyên dùng: 0.005 - 0.02).
+   * @param minCutoff Tần số cắt tối thiểu (Hz). Giá trị 2.5 - 3.0 giúp con trỏ nhạy tức thì mà vẫn khử rung tốt.
+   * @param beta Hệ số đáp ứng tốc độ. Giá trị 0.2 - 0.3 giúp mở rộng tần số ngay khi vung tay, bù trừ độ trễ.
    * @param dCutoff Tần số cắt của đạo hàm vận tốc (Hz) (khuyên dùng: 1.0).
    */
-  constructor(minCutoff = 1.0, beta = 0.008, dCutoff = 1.0) {
+  constructor(minCutoff = 2.8, beta = 0.22, dCutoff = 1.0) {
     this.minCutoff = minCutoff;
     this.beta = beta;
     this.dCutoff = dCutoff;
@@ -78,6 +78,10 @@ export class OneEuroFilter {
     return this.xFilter.filter(value, this.alpha(cutoff, dt));
   }
 
+  getVelocity(): number {
+    return this.dxFilter.lastRawValue();
+  }
+
   reset(): void {
     this.xFilter.reset();
     this.dxFilter.reset();
@@ -92,7 +96,7 @@ export class OneEuroFilter2D {
   private filterX: OneEuroFilter;
   private filterY: OneEuroFilter;
 
-  constructor(minCutoff = 1.0, beta = 0.008, dCutoff = 1.0) {
+  constructor(minCutoff = 2.8, beta = 0.22, dCutoff = 1.0) {
     this.filterX = new OneEuroFilter(minCutoff, beta, dCutoff);
     this.filterY = new OneEuroFilter(minCutoff, beta, dCutoff);
   }
@@ -101,6 +105,13 @@ export class OneEuroFilter2D {
     return {
       x: this.filterX.filter(x, timestamp),
       y: this.filterY.filter(y, timestamp),
+    };
+  }
+
+  getVelocity(): { vx: number; vy: number } {
+    return {
+      vx: this.filterX.getVelocity(),
+      vy: this.filterY.getVelocity(),
     };
   }
 

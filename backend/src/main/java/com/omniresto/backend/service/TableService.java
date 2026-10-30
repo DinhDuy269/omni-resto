@@ -29,6 +29,8 @@ public class TableService {
     private final TableRepository tableRepository;
     private final TableSessionService tableSessionService;
     private final OrderRepository orderRepository;
+    private final com.omniresto.backend.config.OrderWebSocketHandler orderWebSocketHandler;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Transactional
     public List<TableResponse> getAllTables(TableStatus status) {
@@ -70,6 +72,20 @@ public class TableService {
         }
 
         TableEntity updated = tableRepository.save(entity);
+
+        // Broadcast real-time WebSocket event
+        try {
+            java.util.Map<String, Object> event = java.util.Map.of(
+                    "type", "TABLE_STATUS_CHANGED",
+                    "tableId", updated.getId(),
+                    "tableNo", updated.getTableNo(),
+                    "status", updated.getStatus().name()
+            );
+            orderWebSocketHandler.broadcast(objectMapper.writeValueAsString(event));
+        } catch (Exception e) {
+            log.error("Failed to broadcast table status update for table {}", id, e);
+        }
+
         return mapToResponse(updated);
     }
 
@@ -114,7 +130,7 @@ public class TableService {
     @Transactional
     public void deleteTable(String id) {
         TableEntity entity = findTableById(id);
-        if (entity.getStatus() == TableStatus.occupied || entity.getStatus() == TableStatus.OCCUPIED) {
+        if (entity.getStatus() == TableStatus.occupied) {
             throw new BadRequestException("Không thể xóa bàn đang có khách dùng bữa (OCCUPIED)! Vui lòng trả bàn trước khi xóa.");
         }
 
@@ -142,7 +158,7 @@ public class TableService {
         res.setStatus(entity.getStatus());
         res.setQrSecretToken(entity.getQrSecretToken());
 
-        boolean isOccupied = entity.getStatus() == TableStatus.occupied || entity.getStatus() == TableStatus.OCCUPIED;
+        boolean isOccupied = entity.getStatus() == TableStatus.occupied;
         if (!isOccupied) {
             res.setCurrentOrderAmount(BigDecimal.ZERO);
             res.setOccupiedSince(null);

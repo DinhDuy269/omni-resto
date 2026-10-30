@@ -18,6 +18,10 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
 
     Optional<OrderEntity> findByOrderNumber(String orderNumber);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM OrderEntity o WHERE o.orderNumber = :orderNumber")
+    Optional<OrderEntity> findByOrderNumberWithLock(@Param("orderNumber") String orderNumber);
+
     List<OrderEntity> findByStatus(OrderStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

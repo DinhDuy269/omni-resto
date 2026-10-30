@@ -104,7 +104,7 @@ public class ReservationController {
         OperatingShift operatingShift = null;
         if (shift != null && !shift.isBlank() && !"ALL".equalsIgnoreCase(shift)) {
             try {
-                operatingShift = OperatingShift.valueOf(shift.toUpperCase());
+                operatingShift = OperatingShift.fromString(shift);
             } catch (IllegalArgumentException ignored) {
             }
         }

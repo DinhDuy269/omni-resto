@@ -53,7 +53,7 @@ public class VoucherService {
         List<VoucherEntity> entities;
         if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status.trim())) {
             try {
-                VoucherStatus targetStatus = VoucherStatus.valueOf(status.trim().toUpperCase());
+                VoucherStatus targetStatus = VoucherStatus.fromString(status.trim());
                 entities = voucherRepository.findAll().stream()
                         .filter(v -> v.getStatus() == targetStatus)
                         .collect(Collectors.toList());
@@ -95,7 +95,7 @@ public class VoucherService {
             throw new BadRequestException("Ngày kết thúc phải diễn ra sau ngày bắt đầu khuyến mãi.");
         }
 
-        if (request.getDiscountType() == DiscountType.PERCENTAGE) {
+        if (request.getDiscountType() == DiscountType.percentage) {
             if (request.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
                 throw new BadRequestException("Phần trăm giảm giá không thể vượt quá 100%.");
             }
@@ -115,8 +115,8 @@ public class VoucherService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .isWelcomeVoucher(Boolean.TRUE.equals(request.getIsWelcomeVoucher()))
-                .voucherType(Boolean.TRUE.equals(request.getIsWelcomeVoucher()) ? VoucherType.WELCOME : VoucherType.GENERAL)
-                .status(VoucherStatus.ACTIVE)
+                .voucherType(Boolean.TRUE.equals(request.getIsWelcomeVoucher()) ? VoucherType.welcome : VoucherType.general)
+                .status(VoucherStatus.active)
                 .build();
 
         entity.setId("vch-" + UUID.randomUUID().toString().substring(0, 8));
@@ -143,7 +143,7 @@ public class VoucherService {
             throw new BadRequestException("Ngày kết thúc phải diễn ra sau ngày bắt đầu khuyến mãi.");
         }
 
-        if (request.getDiscountType() == DiscountType.PERCENTAGE) {
+        if (request.getDiscountType() == DiscountType.percentage) {
             if (request.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
                 throw new BadRequestException("Phần trăm giảm giá không thể vượt quá 100%.");
             }
@@ -164,7 +164,7 @@ public class VoucherService {
         if (request.getIsWelcomeVoucher() != null) {
             entity.setIsWelcomeVoucher(request.getIsWelcomeVoucher());
             if (Boolean.TRUE.equals(request.getIsWelcomeVoucher())) {
-                entity.setVoucherType(VoucherType.WELCOME);
+                entity.setVoucherType(VoucherType.welcome);
             }
         }
 
@@ -179,7 +179,7 @@ public class VoucherService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy voucher với id: " + id));
 
         try {
-            VoucherStatus newStatus = VoucherStatus.valueOf(status.trim().toUpperCase());
+            VoucherStatus newStatus = VoucherStatus.fromString(status.trim());
             voucher.setStatus(newStatus);
             voucherRepository.save(voucher);
             log.info("Đã đổi trạng thái voucher [ID: {}] sang {}", id, newStatus);
@@ -194,7 +194,7 @@ public class VoucherService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy voucher với id: " + id));
 
         if (voucher.getUsedQuantity() != null && voucher.getUsedQuantity() > 0) {
-            voucher.setStatus(VoucherStatus.INACTIVE);
+            voucher.setStatus(VoucherStatus.inactive);
             voucherRepository.save(voucher);
             log.info("Voucher [ID: {}] đã có {} lượt dùng -> chuyển sang trạng thái INACTIVE", id, voucher.getUsedQuantity());
         } else {
@@ -264,7 +264,7 @@ public class VoucherService {
                 .orElseThrow(() -> new ResourceNotFoundException("Mã khuyến mãi không tồn tại: " + cleanCode));
 
         // 1. Kiểm tra trạng thái hoạt động
-        if (voucher.getStatus() != VoucherStatus.ACTIVE) {
+        if (voucher.getStatus() != VoucherStatus.active) {
             throw new BadRequestException("Mã khuyến mãi đã bị khóa hoặc tạm dừng áp dụng.");
         }
 
@@ -293,7 +293,7 @@ public class VoucherService {
         long userUsedCount = voucherRedemptionRepository.countByVoucherIdAndCustomerIdAndStatus(
                 voucher.getId(),
                 customerId,
-                RedemptionStatus.APPLIED
+                RedemptionStatus.applied
         );
         int limitPerUser = voucher.getUsageLimitPerUser() != null ? voucher.getUsageLimitPerUser() : 1;
         if (userUsedCount >= limitPerUser) {
@@ -301,12 +301,12 @@ public class VoucherService {
         }
 
         // 6. Kiểm tra các điều kiện đặc thù theo loại voucher
-        if (voucher.getVoucherType() == VoucherType.WELCOME || Boolean.TRUE.equals(voucher.getIsWelcomeVoucher())) {
+        if (voucher.getVoucherType() == VoucherType.welcome || Boolean.TRUE.equals(voucher.getIsWelcomeVoucher())) {
             long existingOrders = orderRepository.countByCustomerIdAndStatusNot(customerId, OrderStatus.cancelled);
             if (existingOrders > 0) {
                 throw new BadRequestException("Voucher chào mừng chỉ áp dụng cho đơn hàng đầu tiên của thành viên mới.");
             }
-        } else if (voucher.getVoucherType() == VoucherType.BIRTHDAY) {
+        } else if (voucher.getVoucherType() == VoucherType.birthday) {
             CustomerEntity customer = customerRepository.findById(customerId)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin tài khoản thành viên!"));
             if (customer.getDateOfBirth() == null) {
@@ -330,7 +330,7 @@ public class VoucherService {
         }
 
         BigDecimal discount;
-        if (voucher.getDiscountType() == DiscountType.PERCENTAGE) {
+        if (voucher.getDiscountType() == DiscountType.percentage) {
             discount = subtotal.multiply(voucher.getDiscountValue())
                     .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
             if (voucher.getMaxDiscountAmount() != null && discount.compareTo(voucher.getMaxDiscountAmount()) > 0) {

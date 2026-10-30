@@ -13,7 +13,7 @@ export const ClientActiveOrderBar: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
 
   // Lọc tất cả đơn hàng đang hoạt động (chưa hoàn thành và chưa bị hủy)
-  const activeOrders = orders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
+  const activeOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
 
   // Không hiển thị nếu không có đơn nào đang hoạt động, người dùng đã tắt hoặc đang ở trang danh sách đơn
   if (activeOrders.length === 0 || isDismissed) return null;
@@ -21,14 +21,14 @@ export const ClientActiveOrderBar: React.FC = () => {
 
   // Tính toán tổng số lượng món ăn (không tính món đã hủy)
   const totalDishesCount = activeOrders.reduce(
-    (sum, o) => sum + o.items.filter((it) => it.status !== 'CANCELLED').reduce((s, it) => s + (it.quantity || 1), 0),
+    (sum, o) => sum + o.items.filter((it) => it.status !== 'cancelled').reduce((s, it) => s + (it.quantity || 1), 0),
     0
   );
   const currentTable = table_session?.table_no || activeOrders[0]?.table_no;
 
   // Xác định trạng thái tổng thể của các món
-  const hasReady = activeOrders.some((o) => o.status === 'READY');
-  const hasPreparing = activeOrders.some((o) => o.status === 'PREPARING');
+  const hasReady = activeOrders.some((o) => o.status === 'ready');
+  const hasPreparing = activeOrders.some((o) => o.status === 'preparing');
 
   const getStatusConfig = () => {
     if (hasReady) {

@@ -16,7 +16,7 @@ export const serviceRequestApi = {
         request_type: item.request_type,
         note: item.note,
         request_text: item.note || item.request_type || 'Yêu cầu phục vụ',
-        status: (item.status || 'pending').toUpperCase() === 'PENDING' ? 'OPEN' : 'RESOLVED',
+        status: (item.status || 'pending').toLowerCase() === 'pending' ? 'open' : 'resolved',
         created_at: item.created_at,
         timestamp: item.created_at ? new Date(item.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong',
       }));

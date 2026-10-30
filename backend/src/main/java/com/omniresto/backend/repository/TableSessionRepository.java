@@ -18,6 +18,10 @@ public interface TableSessionRepository extends JpaRepository<TableSessionEntity
     Optional<TableSessionEntity> findBySessionToken(String sessionToken);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM TableSessionEntity s WHERE s.id = :id")
+    Optional<TableSessionEntity> findByIdWithLock(@Param("id") String id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM TableSessionEntity s WHERE s.sessionToken = :sessionToken")
     Optional<TableSessionEntity> findBySessionTokenWithLock(@Param("sessionToken") String sessionToken);
 
@@ -26,6 +30,10 @@ public interface TableSessionRepository extends JpaRepository<TableSessionEntity
     List<TableSessionEntity> findByTableIdAndStatus(String tableId, TableSessionStatus status);
 
     List<TableSessionEntity> findByTableIdAndStatusIn(String tableId, java.util.Collection<TableSessionStatus> statuses);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM TableSessionEntity s WHERE s.tableId = :tableId AND s.status IN :statuses")
+    List<TableSessionEntity> findByTableIdAndStatusInWithLock(@Param("tableId") String tableId, @Param("statuses") java.util.Collection<TableSessionStatus> statuses);
 
     List<TableSessionEntity> findByStatusAndExpiresAtBefore(TableSessionStatus status, LocalDateTime now);
 }

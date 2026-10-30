@@ -36,7 +36,7 @@ export const ClientCart: React.FC = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddr, setDeliveryAddr] = useState('');
   const [notes, setNotes] = useState('');
-  const [payMethod, setPayMethod] = useState<ClientPaymentMethod>('VNPAY_QR');
+  const [payMethod, setPayMethod] = useState<ClientPaymentMethod>('vnpay_qr');
   const [takeawayAtTable, setTakeawayAtTable] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -72,7 +72,7 @@ export const ClientCart: React.FC = () => {
       return 0;
     }
     let discount = 0;
-    const isPercentage = appliedVoucher.discount_type === 'PERCENTAGE' || appliedVoucher.discount_type === 'percentage';
+    const isPercentage = appliedVoucher.discount_type === 'percentage';
     if (isPercentage) {
       discount = totalAmount * (Number(appliedVoucher.discount_value) / 100);
       if (appliedVoucher.max_discount_amount) {
@@ -148,11 +148,11 @@ export const ClientCart: React.FC = () => {
 
   // Auto-sync session state
   useEffect(() => {
-    if (tableSession?.sessionToken) {
+    if (tableSession?.session_token) {
       refreshTableSession();
-      if (!orderMode) setOrderMode('DINE_IN');
-    } else if (orderMode === 'DINE_IN') {
-      setOrderMode('TAKEAWAY');
+      if (!orderMode) setOrderMode('dine_in');
+    } else if (orderMode === 'dine_in') {
+      setOrderMode('takeaway');
     }
   }, [tableSession]);
 
@@ -166,7 +166,7 @@ export const ClientCart: React.FC = () => {
     }
 
     // Validation
-    if (orderMode === 'DELIVERY') {
+    if (orderMode === 'delivery') {
       if (!deliveryAddr.trim()) {
         alert('Vui lòng nhập địa chỉ nhận hàng!');
         return;
@@ -177,7 +177,7 @@ export const ClientCart: React.FC = () => {
       }
     }
 
-    if (orderMode === 'DINE_IN' && !tableSession) {
+    if (orderMode === 'dine_in' && !tableSession) {
       navigate('/client/scan');
       return;
     }
@@ -185,37 +185,37 @@ export const ClientCart: React.FC = () => {
     setIsSubmitting(true);
     try {
       let finalCustomerName = customerName.trim();
-      if (orderMode === 'DELIVERY') {
+      if (orderMode === 'delivery') {
         finalCustomerName = customerName.trim()
           ? `${customerName.trim()} (SĐT: ${customerPhone.trim()}, Đ/c: ${deliveryAddr.trim()})`
           : `SĐT: ${customerPhone.trim()} - Đ/c: ${deliveryAddr.trim()}`;
-      } else if (orderMode === 'TAKEAWAY') {
-        const atTableNote = tableSession && takeawayAtTable ? ` - Nhận tại ${tableSession.tableNo}` : '';
+      } else if (orderMode === 'takeaway') {
+        const atTableNote = tableSession && takeawayAtTable ? ` - Nhận tại ${tableSession.table_no}` : '';
         finalCustomerName = customerName.trim()
           ? `${customerName.trim()} (${customerPhone.trim() || 'Mang về'}${atTableNote})`
           : `Khách mang về (${customerPhone.trim() || 'Tại quầy'}${atTableNote})`;
       }
 
       const placed = await placeOrder({
-        orderMode,
-        tableNo: orderMode === 'DINE_IN'
-          ? (tableSession?.tableNo || undefined)
-          : (orderMode === 'TAKEAWAY' && tableSession ? tableSession.tableNo : undefined),
-        sessionToken: orderMode === 'DINE_IN' ? tableSession?.sessionToken : undefined,
-        customerName: finalCustomerName || undefined,
-        customerPhone: customerPhone.trim() || undefined,
-        deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddr.trim() : undefined,
+        order_mode: orderMode,
+        table_no: orderMode === 'dine_in'
+          ? (tableSession?.table_no || undefined)
+          : (orderMode === 'takeaway' && tableSession ? tableSession.table_no : undefined),
+        session_token: orderMode === 'dine_in' ? tableSession?.session_token : undefined,
+        customer_name: finalCustomerName || undefined,
+        customer_phone: customerPhone.trim() || undefined,
+        delivery_address: orderMode === 'delivery' ? deliveryAddr.trim() : undefined,
         notes: (appliedVoucherPreview ? `[Voucher ${appliedVoucherPreview.code} - Giảm ${discountAmount.toLocaleString('vi-VN')}đ] ${notes.trim()}`.trim() : notes.trim()) || undefined,
-        paymentMethod: orderMode === 'DINE_IN' && tableSession?.mode !== 'PAY_FIRST' ? 'CASH' : payMethod,
-        voucherCode: appliedVoucherPreview ? appliedVoucherPreview.code : (appliedVoucher ? appliedVoucher.code : undefined),
+        payment_method: orderMode === 'dine_in' && tableSession?.mode !== 'pay_first' ? 'cash' : payMethod,
+        voucher_code: appliedVoucherPreview ? appliedVoucherPreview.code : (appliedVoucher ? appliedVoucher.code : undefined),
       });
 
       if (!placed) return;
 
       // Dine-in pay after -> go straight to orders page
-      if (orderMode === 'DINE_IN' && tableSession?.mode !== 'PAY_FIRST') {
+      if (orderMode === 'dine_in' && tableSession?.mode !== 'pay_first') {
         navigate('/client/orders');
-      } else if (payMethod === 'VNPAY_QR') {
+      } else if (payMethod === 'vnpay_qr') {
         setCurrentOrder(placed);
         setShowPaymentModal(true);
         setTimeLeft(900);
@@ -225,7 +225,7 @@ export const ClientCart: React.FC = () => {
         } catch (err: any) {
           console.warn('Lỗi tạo URL VNPAY:', err);
         }
-      } else if (payMethod === 'QR_CODE' || (orderMode === 'DINE_IN' && tableSession?.mode === 'PAY_FIRST')) {
+      } else if (payMethod === 'qr_code' || (orderMode === 'dine_in' && tableSession?.mode === 'pay_first')) {
         setCurrentOrder(placed);
         setShowPaymentModal(true);
         setTimeLeft(600);
@@ -332,9 +332,9 @@ export const ClientCart: React.FC = () => {
     );
   }
 
-  const isDineIn = orderMode === 'DINE_IN';
-  const isTakeaway = orderMode === 'TAKEAWAY';
-  const isDelivery = orderMode === 'DELIVERY';
+  const isDineIn = orderMode === 'dine_in';
+  const isTakeaway = orderMode === 'takeaway';
+  const isDelivery = orderMode === 'delivery';
 
   return (
     <div style={{
@@ -399,7 +399,7 @@ export const ClientCart: React.FC = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {cart.map((item, idx) => {
-                  const itemKey = item.id || item.menuItemId || (item as any).menu_item_id || '';
+                  const itemKey = item.id || item.menu_item_id || '';
                   const isAvailable = checkIsItemAvailableNow(item);
                   return (
                     <div
@@ -435,7 +435,7 @@ export const ClientCart: React.FC = () => {
                         {item.options && item.options.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '2px 0 4px' }}>
                             {item.options.map((opt, optIdx) => {
-                              const isSize = (opt.option_type || opt.optionType)?.toUpperCase() === 'SIZE';
+                              const isSize = opt.option_type?.toLowerCase() === 'size';
                               return (
                                 <span
                                   key={optIdx}
@@ -449,7 +449,7 @@ export const ClientCart: React.FC = () => {
                                     border: isSize ? '1px solid #c7d2fe' : '1px solid #a7f3d0',
                                   }}
                                 >
-                                  {isSize ? '📏' : '➕'} {opt.option_name || opt.optionName}
+                                  {isSize ? '📏' : '➕'} {opt.option_name}
                                 </span>
                               );
                             })}
@@ -586,12 +586,12 @@ export const ClientCart: React.FC = () => {
               }}>
                 {[
                   {
-                    key: 'DINE_IN' as OrderMode,
-                    label: tableSession ? `Tại bàn (${tableSession.tableNo})` : 'Tại bàn',
+                    key: 'dine_in' as OrderMode,
+                    label: tableSession ? `Tại bàn (${tableSession.table_no})` : 'Tại bàn',
                     icon: '🍽️',
                   },
-                  { key: 'TAKEAWAY' as OrderMode, label: 'Mang về', icon: '📦' },
-                  { key: 'DELIVERY' as OrderMode, label: 'Giao hàng', icon: '🛵' },
+                  { key: 'takeaway' as OrderMode, label: 'Mang về', icon: '📦' },
+                  { key: 'delivery' as OrderMode, label: 'Giao hàng', icon: '🛵' },
                 ].map((tab) => {
                   const active = orderMode === tab.key;
                   return (
@@ -635,10 +635,10 @@ export const ClientCart: React.FC = () => {
                       <span style={{ fontSize: '1.2rem' }}>📍</span>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: '0.875rem', color: '#166534' }}>
-                          Phục vụ tại Bàn {tableSession.tableNo}
+                          Phục vụ tại Bàn {tableSession.table_no}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#15803d' }}>
-                          {tableSession.isVerified
+                          {tableSession.is_verified
                             ? 'Món sẽ được gửi thẳng vào quầy bếp để chế biến'
                             : 'Đợt 1 · Nhân viên sẽ xác nhận tại bàn khi gửi đơn'}
                         </div>
@@ -721,7 +721,7 @@ export const ClientCart: React.FC = () => {
                         onChange={(e) => setTakeawayAtTable(e.target.checked)}
                         style={{ accentColor: '#ea580c' }}
                       />
-                      <span>Đóng gói xong mang ra Bàn <strong>{tableSession.tableNo}</strong> giúp tôi</span>
+                      <span>Đóng gói xong mang ra Bàn <strong>{tableSession.table_no}</strong> giúp tôi</span>
                     </label>
                   )}
                 </div>
@@ -935,7 +935,7 @@ export const ClientCart: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
                 {[
                   {
-                    key: 'VNPAY_QR' as ClientPaymentMethod,
+                    key: 'vnpay_qr' as ClientPaymentMethod,
                     label: 'VNPAY-QR (Sandbox)',
                     sublabel: 'Quét mã QR qua app Ngân hàng / VNPAY Sandbox',
                     badge: '⚡ Khuyên dùng',
@@ -944,7 +944,7 @@ export const ClientCart: React.FC = () => {
                     icon: QrCode,
                   },
                   {
-                    key: 'QR_CODE' as ClientPaymentMethod,
+                    key: 'qr_code' as ClientPaymentMethod,
                     label: 'Chuyển khoản VietQR',
                     sublabel: 'Chuyển khoản qua số tài khoản nhà hàng',
                     badge: null,
@@ -953,7 +953,7 @@ export const ClientCart: React.FC = () => {
                     icon: QrCode,
                   },
                   {
-                    key: 'CASH' as ClientPaymentMethod,
+                    key: 'cash' as ClientPaymentMethod,
                     label: isDineIn ? 'Thanh toán tại bàn / Quầy' : 'Tiền mặt khi nhận',
                     sublabel: isDineIn ? 'Nhân viên thu tiền sau' : 'Thanh toán trực tiếp cho shipper',
                     badge: null,
@@ -1173,7 +1173,7 @@ export const ClientCart: React.FC = () => {
                   <ShieldCheck size={16} /> Đang tự động chuyển trang...
                 </div>
               </div>
-            ) : payMethod === 'VNPAY_QR' ? (
+            ) : payMethod === 'vnpay_qr' ? (
               <div>
                 {/* VNPAY-QR Modal Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
