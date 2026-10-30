@@ -47,6 +47,41 @@ export const staffApi = {
     }
   },
 
+  update: async (id: string, data: any): Promise<StaffUser> => {
+    try {
+      const res = await apiClient.put<any>(`/users/${id}`, {
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        status: data.status,
+        avatar: data.avatar,
+        password: data.password || undefined,
+      });
+      const u = res.data;
+      return {
+        id: u.id,
+        full_name: u.full_name || u.fullName || '',
+        email: u.email,
+        phone: u.phone,
+        role: u.role,
+        status: u.status || 'active',
+        avatar: u.avatar || undefined,
+        created_at: u.created_at || u.createdAt || new Date().toISOString(),
+      };
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
+  delete: async (id: string): Promise<void> => {
+    try {
+      await apiClient.delete(`/users/${id}`);
+    } catch (error) {
+      throw transformAxiosErrorResponse(error);
+    }
+  },
+
   updateStatus: async (id: string, status: string): Promise<void> => {
     try {
       await apiClient.patch(`/users/${id}/status?status=${status.toLowerCase()}`);

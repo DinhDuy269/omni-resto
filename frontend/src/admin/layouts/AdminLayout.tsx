@@ -47,7 +47,7 @@ export const AdminLayout: React.FC = () => {
         onClose={() => setIsQuickActionModalOpen(false)}
         title="Thao Tác Nhanh Hệ Thống HQ"
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px' }}>
           <button
             className="card"
             style={{
@@ -112,6 +112,29 @@ export const AdminLayout: React.FC = () => {
             </strong>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
               Sơ đồ bàn & tiếp nhận đơn
+            </span>
+          </button>
+
+          {/* ── Nút Thao Tác Nhanh: Cấp Tài Khoản Nhân Viên ── */}
+          <button
+            className="card"
+            style={{
+              padding: '20px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              borderColor: '#7c3aed',
+              backgroundColor: '#f5f3ff',
+            }}
+            onClick={() => {
+              setIsQuickActionModalOpen(false);
+              navigate('/admin/staff?create=true');
+            }}
+          >
+            <strong style={{ fontSize: '1rem', color: '#7c3aed', display: 'block', marginBottom: '4px' }}>
+              👤 Cấp Tài Khoản Nhân Sự
+            </strong>
+            <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              Phân quyền vị trí & tạo tài khoản mới
             </span>
           </button>
         </div>

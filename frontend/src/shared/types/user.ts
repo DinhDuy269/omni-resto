@@ -17,6 +17,9 @@ export interface UserRequest {
   email: string;
   phone: string;
   role: RoleType;
+  password?: string;
+  status?: UserStatus;
+  avatar?: string;
 }
 
 export interface UserResponse {

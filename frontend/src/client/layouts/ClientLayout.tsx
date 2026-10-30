@@ -75,6 +75,7 @@ export const ClientLayout: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('customer');
+    localStorage.removeItem('user');
     setCustomer(null);
     window.location.reload();
   };

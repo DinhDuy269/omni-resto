@@ -82,7 +82,9 @@ interface AdminState {
   handleWebSocketMenuEvent: (event: any) => void;
 
   // Staff
-  addStaff: (staff: Omit<StaffUser, 'id' | 'created_at'>) => Promise<StaffUser>;
+  addStaff: (staff: Omit<StaffUser, 'id' | 'created_at'> & { password?: string }) => Promise<StaffUser>;
+  updateStaff: (id: string, staff: Partial<StaffUser> & { password?: string }) => Promise<StaffUser>;
+  deleteStaff: (id: string) => Promise<void>;
   toggleStaffStatus: (id: string, status: StaffUser['status']) => Promise<void>;
 
   // Service requests (gọi phục vụ tại bàn)
@@ -471,6 +473,19 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const created = await staffApi.create(staffData);
     set((state) => ({ staff_list: [created, ...state.staff_list] }));
     return created;
+  },
+  updateStaff: async (id, staffData) => {
+    const updated = await staffApi.update(id, staffData);
+    set((state) => ({
+      staff_list: state.staff_list.map((s) => (s.id === id ? updated : s)),
+    }));
+    return updated;
+  },
+  deleteStaff: async (id) => {
+    await staffApi.delete(id);
+    set((state) => ({
+      staff_list: state.staff_list.filter((s) => s.id !== id),
+    }));
   },
   toggleStaffStatus: async (id, status) => {
     const prev = get().staff_list;
