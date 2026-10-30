@@ -284,39 +284,6 @@ export const ClientCheckIn: React.FC = () => {
               </button>
             </form>
 
-            {/* Quick Test Chips để thử nghiệm ngay */}
-            <div style={{
-              background: '#f8fafc', borderRadius: 12, padding: '12px',
-              marginBottom: 20, textAlign: 'left', border: '1px solid #e2e8f0',
-            }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>
-                Thử nhanh mã bàn demo:
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {[
-                  { name: 'Bàn 02', token: 'qr-token-tbl-02-b2c3d4e5f6g7' },
-                  { name: 'Bàn 03', token: 'qr-token-tbl-03-c3d4e5f6g7h8' },
-                  { name: 'Bàn 05', token: 'qr-token-tbl-05-e5f6g7h8i9j0' },
-                ].map((demo) => (
-                  <button
-                    key={demo.token}
-                    type="button"
-                    onClick={() => {
-                      setManualToken(demo.token);
-                      executeCheckIn(demo.token, existingSession?.table_no);
-                    }}
-                    style={{
-                      background: '#fff', border: '1px solid #cbd5e1',
-                      borderRadius: 6, padding: '5px 10px', fontSize: '0.78rem',
-                      fontWeight: 600, color: '#334155', cursor: 'pointer',
-                    }}
-                  >
-                    Chuyển sang {demo.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Nút hủy đổi bàn */}
             <button
               type="button"
@@ -419,39 +386,7 @@ export const ClientCheckIn: React.FC = () => {
                         </button>
                       </form>
 
-                      {/* Quick Test Chips for Desktop/Testing */}
-                      <div style={{
-                        marginTop: 16, background: '#f8fafc', borderRadius: 12, padding: '12px',
-                        textAlign: 'left', border: '1px solid #e2e8f0',
-                      }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>
-                          ⚡ Test nhanh (Bấm để vào bàn ngay):
-                        </span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {[
-                            { name: 'Bàn 01', token: 'qr-sec-tbl01-a1b2c3d4e5f6' },
-                            { name: 'Bàn 03', token: 'qr-sec-tbl03-c3d4e5f6g7h8' },
-                            { name: 'Bàn 04', token: 'qr-sec-tbl04-d4e5f6g7h8i9' },
-                            { name: 'Bàn 07', token: 'qr-sec-tbl07-g7h8i9j0k1l2' },
-                          ].map((demo) => (
-                            <button
-                              key={demo.token}
-                              type="button"
-                              onClick={() => {
-                                setManualToken(demo.token);
-                                executeCheckIn(demo.token);
-                              }}
-                              style={{
-                                background: '#fff', border: '1px solid #cbd5e1',
-                                borderRadius: 6, padding: '5px 10px', fontSize: '0.8rem',
-                                fontWeight: 700, color: '#ea580c', cursor: 'pointer',
-                              }}
-                            >
-                              Vào {demo.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      
 
                       <button
                         onClick={() => navigate('/client/menu')}

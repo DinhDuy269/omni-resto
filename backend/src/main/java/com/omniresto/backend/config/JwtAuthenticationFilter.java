@@ -1,6 +1,7 @@
 package com.omniresto.backend.config;
 
 import com.omniresto.backend.service.JwtService;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,9 +16,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Filter xác thực JWT Bearer token thống nhất.
+ *
+ * Phân quyền dựa trên claim "type" và "role":
+ *   - ADMIN: được cấp ROLE_ADMIN, ROLE_STORE_MANAGER, ROLE_STAFF (toàn quyền)
+ *   - STORE_MANAGER: được cấp ROLE_STORE_MANAGER, ROLE_STAFF
+ *   - CASHIER / WAITER / CHEF: được cấp ROLE_STAFF và ROLE_{ROLE}
+ *   - CUSTOMER: được cấp ROLE_CUSTOMER
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -41,24 +51,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String jwt = authHeader.substring(7);
 
-        // Nếu SecurityContext chưa được gán xác thực và token hợp lệ
-        if (SecurityContextHolder.getContext().getAuthentication() == null && jwtService.validateToken(jwt)) {
-            String customerId = jwtService.extractCustomerId(jwt);
+        // Chỉ xử lý nếu SecurityContext chưa có xác thực và token hợp lệ
+        if (SecurityContextHolder.getContext().getAuthentication() == null
+                && jwtService.validateToken(jwt)) {
 
-            if (customerId != null) {
-                List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_CUSTOMER")
-                );
+            String subjectId = jwtService.extractCustomerId(jwt);
+            if (subjectId != null) {
 
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        customerId,
-                        null,
-                        authorities
-                );
+                // Đọc claims để xác định loại tài khoản và role
+                Claims claims = jwtService.extractAllClaims(jwt);
+                String type = (String) claims.getOrDefault("type", "CUSTOMER");
+                String roleStr = (String) claims.get("role");
+
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+
+                if ("STAFF".equalsIgnoreCase(type) && roleStr != null && !roleStr.isBlank()) {
+                    String normRole = roleStr.toUpperCase();
+                    if ("ADMIN".equals(normRole)) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+                        authorities.add(new SimpleGrantedAuthority("ROLE_STORE_MANAGER"));
+                        authorities.add(new SimpleGrantedAuthority("ROLE_STAFF"));
+                    } else if ("STORE_MANAGER".equals(normRole)) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_STORE_MANAGER"));
+                        authorities.add(new SimpleGrantedAuthority("ROLE_STAFF"));
+                    } else {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + normRole));
+                        authorities.add(new SimpleGrantedAuthority("ROLE_STAFF"));
+                    }
+                    log.debug("Xác thực Staff [{}] qua JWT — authorities: {}", subjectId, authorities);
+                } else {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_CUSTOMER"));
+                    log.debug("Xác thực Customer [{}] qua JWT", subjectId);
+                }
+
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(subjectId, null, authorities);
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-                log.debug("Đã xác thực thành công Customer ID [{}] qua JWT Bearer Token", customerId);
             }
         }
 

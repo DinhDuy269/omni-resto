@@ -10,10 +10,9 @@ import {
   PhoneCall,
 } from 'lucide-react';
 import { authApi } from '../../../shared/api/authService';
-import { OtpModal } from '../../../shared/components/OtpModal';
 import './AuthPage.css';
 
-type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD' | 'RESET_PASSWORD';
+type AuthMode = 'LOGIN' | 'REGISTER';
 
 interface ApiErrorResponse {
   response?: {
@@ -36,7 +35,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
     if (defaultMode) return defaultMode;
     const qMode = searchParams.get('mode')?.toUpperCase();
     if (qMode === 'REGISTER') return 'REGISTER';
-    if (qMode === 'FORGOT' || qMode === 'FORGOT_PASSWORD') return 'FORGOT_PASSWORD';
     return 'LOGIN';
   };
 
@@ -49,21 +47,18 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
   // UI States
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const qMode = searchParams.get('mode')?.toUpperCase();
     if (qMode === 'REGISTER') setMode('REGISTER');
-    else if (qMode === 'FORGOT' || qMode === 'FORGOT_PASSWORD') setMode('FORGOT_PASSWORD');
+    else if (qMode === 'LOGIN') setMode('LOGIN');
   }, [searchParams]);
 
   const resetForm = () => {
@@ -73,8 +68,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
     setFullName('');
     setPhone('');
     setDateOfBirth('');
-    setNewPassword('');
-    setConfirmNewPassword('');
     setMessage(null);
   };
 
@@ -83,28 +76,45 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
     setMode(newMode);
   };
 
-  // 1. Đăng nhập
+  // 1. Đăng nhập thống nhất (Tự động nhận diện Khách hàng hoặc Quản trị / Nhân sự)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
       setMessage(null);
-      const res = await authApi.login({ username: email.trim(), username_or_email: email.trim(), password });
+      const res = await authApi.login({ username: email.trim(), password });
 
       const token = (res as any)?.token || (res as any)?.data?.token;
       const userData = (res as any)?.data || res;
+      const userRole = (userData?.role || 'customer').toLowerCase();
 
       if (token) {
         localStorage.setItem('token', token);
       }
-      localStorage.setItem('customer', JSON.stringify(userData));
       localStorage.setItem('user', JSON.stringify(userData));
 
-      setMessage({ type: 'success', text: 'Đăng nhập thành công. Đang chuyển hướng...' });
+      if (['admin', 'store_manager', 'cashier', 'waiter', 'chef', 'staff'].includes(userRole)) {
+        localStorage.setItem('staff_user', JSON.stringify(userData));
+      } else {
+        localStorage.setItem('customer', JSON.stringify(userData));
+        localStorage.removeItem('staff_user');
+      }
 
-      const redirectUrl = searchParams.get('redirect') || '/client';
+      setMessage({ type: 'success', text: `Đăng nhập thành công (${userData.fullName || userData.full_name})! Đang chuyển hướng...` });
+
+      // Định tuyến thông minh:
+      const redirectUrl = searchParams.get('redirect');
+      let targetPath = redirectUrl;
+      if (!targetPath) {
+        if (['admin', 'store_manager', 'cashier', 'waiter', 'chef'].includes(userRole)) {
+          targetPath = '/admin';
+        } else {
+          targetPath = '/client';
+        }
+      }
+
       setTimeout(() => {
-        window.location.href = redirectUrl;
+        window.location.href = targetPath;
       }, 500);
     } catch (err: unknown) {
       const apiErr = err as ApiErrorResponse;
@@ -118,7 +128,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
     }
   };
 
-  // 2. Đăng ký
+  // 2. Đăng ký tài khoản trực tiếp (không qua bước OTP rườm rà)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
@@ -129,107 +139,24 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
       return;
     }
 
-    if (!dateOfBirth) {
-      setMessage({ type: 'error', text: 'Vui lòng chọn ngày sinh' });
-      return;
-    }
-
-    if (new Date(dateOfBirth) >= new Date()) {
-      setMessage({ type: 'error', text: 'Ngày sinh phải ở trong quá khứ' });
-      return;
-    }
-
     if (password.length < 6) {
       setMessage({ type: 'error', text: 'Mật khẩu cần tối thiểu 6 ký tự' });
       return;
     }
 
-    if (confirmPassword && confirmPassword !== password) {
+    if (confirmPassword !== password) {
       setMessage({ type: 'error', text: 'Mật khẩu xác nhận không khớp' });
       return;
     }
 
     try {
       setLoading(true);
-      await authApi.sendOtp({ phone: cleanPhone, email: email.trim() });
-      setIsOtpModalOpen(true);
-    } catch (err: unknown) {
-      const apiErr = err as ApiErrorResponse;
-      const errorMsg =
-        apiErr.response?.data?.message ||
-        (apiErr.response?.data?.details ? Object.values(apiErr.response.data.details)[0] : '') ||
-        'Không thể gửi mã xác thực. Vui lòng thử lại.';
-      setMessage({ type: 'error', text: errorMsg });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 3. Quên mật khẩu
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const target = email.trim();
-    if (!target) {
-      setMessage({ type: 'error', text: 'Vui lòng nhập email hoặc số điện thoại' });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setMessage(null);
-      await authApi.sendOtp(target.includes('@') ? { email: target } : { phone: target });
-      setIsOtpModalOpen(true);
-    } catch (err: unknown) {
-      const apiErr = err as ApiErrorResponse;
-      setMessage({ type: 'error', text: apiErr.response?.data?.message || 'Không thể gửi yêu cầu xác thực' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 4. Đặt lại mật khẩu mới
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Mật khẩu mới cần tối thiểu 6 ký tự' });
-      return;
-    }
-    if (confirmNewPassword && confirmNewPassword !== newPassword) {
-      setMessage({ type: 'error', text: 'Mật khẩu xác nhận không khớp' });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setMessage(null);
-      const target = email.trim();
-      await authApi.resetPassword({
-        email: target.includes('@') ? target : undefined,
-        phone: !target.includes('@') ? target : undefined,
-        new_password: newPassword,
-      });
-      setMessage({ type: 'success', text: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập.' });
-      setTimeout(() => {
-        switchMode('LOGIN');
-      }, 1200);
-    } catch (err: unknown) {
-      const apiErr = err as ApiErrorResponse;
-      setMessage({ type: 'error', text: apiErr.response?.data?.message || 'Không thể đặt lại mật khẩu' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 5. Xác thực OTP thành công
-  const handleOtpSuccess = async (otpCode: string) => {
-    if (mode === 'REGISTER') {
       const res = await authApi.register({
         full_name: fullName.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        date_of_birth: dateOfBirth,
+        email: email.trim() || undefined,
+        phone: cleanPhone,
+        date_of_birth: dateOfBirth || undefined,
         password,
-        otp: otpCode,
       });
 
       const token = (res as any)?.token || (res as any)?.data?.token;
@@ -240,22 +167,27 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
       localStorage.setItem('customer', JSON.stringify(userData));
       localStorage.setItem('user', JSON.stringify(userData));
 
-      setIsOtpModalOpen(false);
-      setMessage({ type: 'success', text: 'Tạo tài khoản thành công. Đang chuyển hướng...' });
+      setMessage({ type: 'success', text: 'Đăng ký tài khoản thành công! Đang chuyển hướng...' });
 
       const redirectUrl = searchParams.get('redirect') || '/client';
       setTimeout(() => {
         window.location.href = redirectUrl;
       }, 600);
-    } else if (mode === 'FORGOT_PASSWORD') {
-      setIsOtpModalOpen(false);
-      setMode('RESET_PASSWORD');
+    } catch (err: unknown) {
+      const apiErr = err as ApiErrorResponse;
+      const errorMsg =
+        apiErr.response?.data?.message ||
+        (apiErr.response?.data?.details ? Object.values(apiErr.response.data.details)[0] : '') ||
+        'Đăng ký không thành công. Vui lòng thử lại.';
+      setMessage({ type: 'error', text: errorMsg });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-split-wrapper">
-      {/* ── LEFT HALF: RESTAURANT BANNER & INFORMATION (50%) ── */}
+      {/* ── LEFT HALF: BANNER & THÔNG TIN NHÀ HÀNG (50%) ── */}
       <div className="auth-split-banner">
         <div className="auth-split-banner-overlay" />
 
@@ -282,7 +214,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
             Trải nghiệm ẩm thực tinh tế & gọi món thông minh
           </h2>
           <p className="auth-banner-desc">
-            Không gian fine dining sang trọng kết hợp hương vị Á - Âu chọn lọc, hỗ trợ thực khách gọi món tại bàn, đặt chỗ trước và tích lũy điểm thưởng thành viên.
+            Không gian ẩm thực sang trọng kết hợp hương vị Á - Âu chọn lọc, hỗ trợ thực khách gọi món tại bàn, đặt chỗ trước và tích điểm thành viên.
           </p>
 
           <div className="auth-restaurant-details">
@@ -304,54 +236,48 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
               <span className="auth-detail-icon">
                 <PhoneCall size={15} />
               </span>
-              <span>Hotline đặt bàn & Chăm sóc khách hàng: 1900 6868</span>
+              <span>Hotline: 1900 6868</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── RIGHT HALF: INPUT FORM (50%) ── */}
+      {/* ── RIGHT HALF: KHUNG NHẬP LIỆU (50%) ── */}
       <div className="auth-split-form-panel">
         <div className="auth-form-container">
-          {/* Tab selection */}
-          {(mode === 'LOGIN' || mode === 'REGISTER') && (
-            <div className="auth-nav-tabs">
-              <button
-                type="button"
-                className={`auth-tab-btn ${mode === 'LOGIN' ? 'active' : ''}`}
-                onClick={() => switchMode('LOGIN')}
-              >
-                Đăng nhập
-              </button>
-              <button
-                type="button"
-                className={`auth-tab-btn ${mode === 'REGISTER' ? 'active' : ''}`}
-                onClick={() => switchMode('REGISTER')}
-              >
-                Đăng ký
-              </button>
-            </div>
-          )}
+          {/* Tab chọn Đăng nhập / Đăng ký */}
+          <div className="auth-nav-tabs">
+            <button
+              type="button"
+              className={`auth-tab-btn ${mode === 'LOGIN' ? 'active' : ''}`}
+              onClick={() => switchMode('LOGIN')}
+            >
+              Đăng nhập
+            </button>
+            <button
+              type="button"
+              className={`auth-tab-btn ${mode === 'REGISTER' ? 'active' : ''}`}
+              onClick={() => switchMode('REGISTER')}
+            >
+              Đăng ký
+            </button>
+          </div>
 
-          {/* Heading & Subtitle */}
+          {/* Tiêu đề & Mô tả */}
           <h1 className="auth-title">
-            {mode === 'LOGIN' && 'Đăng nhập'}
-            {mode === 'REGISTER' && 'Tạo tài khoản'}
-            {mode === 'FORGOT_PASSWORD' && 'Khôi phục mật khẩu'}
-            {mode === 'RESET_PASSWORD' && 'Đặt lại mật khẩu'}
+            {mode === 'LOGIN' ? 'Đăng nhập' : 'Tạo tài khoản thành viên'}
           </h1>
           <p className="auth-description">
-            {mode === 'LOGIN' && 'Nhập thông tin tài khoản của bạn để tiếp tục'}
-            {mode === 'REGISTER' && 'Đăng ký thành viên để lưu lịch sử đặt bàn và nhận ưu đãi'}
-            {mode === 'FORGOT_PASSWORD' && 'Nhập email hoặc số điện thoại đã đăng ký để nhận mã OTP'}
-            {mode === 'RESET_PASSWORD' && 'Nhập mật khẩu mới cho tài khoản của bạn'}
+            {mode === 'LOGIN'
+              ? 'Hỗ trợ đăng nhập cho cả Thực khách và Quản trị viên / Nhân sự'
+              : 'Đăng ký nhanh chóng để đặt bàn, tích điểm và nhận ưu đãi'}
           </p>
 
-          {/* Feedback alert */}
+          {/* Thông báo Alert */}
           {message && (
             <div className={`auth-alert-box ${message.type}`}>
               <span className="auth-alert-strong">
-                {message.type === 'error' ? 'Lỗi:' : 'Thành công:'}
+                {message.type === 'error' ? 'Lỗi: ' : 'Thành công: '}
               </span>
               {message.text}
             </div>
@@ -365,10 +291,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
                 <input
                   type="text"
                   required
-                  placeholder="name@example.com hoặc 0912..."
+                  placeholder="Nhập email hoặc số điện thoại"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="auth-input-control"
+                  autoFocus
                 />
               </div>
 
@@ -403,13 +330,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
                   />
                   Ghi nhớ đăng nhập
                 </label>
-                <button
-                  type="button"
-                  onClick={() => switchMode('FORGOT_PASSWORD')}
-                  className="auth-text-link"
-                >
-                  Quên mật khẩu?
-                </button>
               </div>
 
               <button type="submit" disabled={loading} className="auth-submit-btn">
@@ -429,11 +349,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
             </form>
           )}
 
-          {/* 2. FORM ĐĂNG KÝ */}
+          {/* 2. FORM ĐĂNG KÝ (Trực tiếp) */}
           {mode === 'REGISTER' && (
             <form onSubmit={handleRegister} className="auth-form-stack">
               <div className="auth-field-group">
-                <label className="auth-label">Họ và tên</label>
+                <label className="auth-label">Họ và tên*</label>
                 <input
                   type="text"
                   required
@@ -441,24 +361,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="auth-input-control"
+                  autoFocus
                 />
               </div>
 
               <div className="auth-field-row">
                 <div className="auth-field-group">
-                  <label className="auth-label">Email</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="auth-input-control"
-                  />
-                </div>
-
-                <div className="auth-field-group">
-                  <label className="auth-label">Số điện thoại</label>
+                  <label className="auth-label">Số điện thoại*</label>
                   <input
                     type="tel"
                     required
@@ -468,13 +377,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
                     className="auth-input-control"
                   />
                 </div>
+
+                <div className="auth-field-group">
+                  <label className="auth-label">Email (tùy chọn)</label>
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="auth-input-control"
+                  />
+                </div>
               </div>
 
               <div className="auth-field-group">
-                <label className="auth-label">Ngày sinh</label>
+                <label className="auth-label">Ngày sinh (tùy chọn)</label>
                 <input
                   type="date"
-                  required
                   max={new Date().toISOString().split('T')[0]}
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
@@ -483,7 +402,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
               </div>
 
               <div className="auth-field-group">
-                <label className="auth-label">Mật khẩu</label>
+                <label className="auth-label">Mật khẩu*</label>
                 <div className="auth-input-container">
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -506,7 +425,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
               </div>
 
               <div className="auth-field-group">
-                <label className="auth-label">Xác nhận mật khẩu</label>
+                <label className="auth-label">Xác nhận mật khẩu*</label>
                 <div className="auth-input-container">
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -529,7 +448,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
               </div>
 
               <button type="submit" disabled={loading} className="auth-submit-btn">
-                {loading ? <span className="auth-spinner" /> : 'Nhận mã OTP và đăng ký'}
+                {loading ? <span className="auth-spinner" /> : 'Đăng ký tài khoản'}
               </button>
 
               <div className="auth-footer-help">
@@ -544,114 +463,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ defaultMode }) => {
               </div>
             </form>
           )}
-
-          {/* 3. FORM QUÊN MẬT KHẨU */}
-          {mode === 'FORGOT_PASSWORD' && (
-            <form onSubmit={handleForgotPassword} className="auth-form-stack">
-              <div className="auth-field-group">
-                <label className="auth-label">Email hoặc số điện thoại</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="name@example.com hoặc 0912..."
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="auth-input-control"
-                />
-              </div>
-
-              <button type="submit" disabled={loading} className="auth-submit-btn">
-                {loading ? <span className="auth-spinner" /> : 'Gửi mã xác thực'}
-              </button>
-
-              <div style={{ textAlign: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => switchMode('LOGIN')}
-                  className="auth-back-link-btn"
-                >
-                  <ArrowLeft size={14} />
-                  Quay lại đăng nhập
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* 4. FORM ĐẶT LẠI MẬT KHẨU */}
-          {mode === 'RESET_PASSWORD' && (
-            <form onSubmit={handleResetPassword} className="auth-form-stack">
-              <div className="auth-field-group">
-                <label className="auth-label">Mật khẩu mới</label>
-                <div className="auth-input-container">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="Tối thiểu 6 ký tự"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="auth-input-control"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="auth-toggle-visibility"
-                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="auth-field-group">
-                <label className="auth-label">Xác nhận mật khẩu mới</label>
-                <div className="auth-input-container">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="Nhập lại mật khẩu mới"
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="auth-input-control"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="auth-toggle-visibility"
-                    aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <button type="submit" disabled={loading} className="auth-submit-btn">
-                {loading ? <span className="auth-spinner" /> : 'Lưu mật khẩu mới'}
-              </button>
-
-              <div style={{ textAlign: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => switchMode('LOGIN')}
-                  className="auth-back-link-btn"
-                >
-                  <ArrowLeft size={14} />
-                  Quay lại đăng nhập
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* OTP Modal */}
-          <OtpModal
-            isOpen={isOtpModalOpen}
-            email={email}
-            phone={phone}
-            purpose={mode === 'REGISTER' ? 'REGISTER_VERIFICATION' : 'PASSWORD_RESET'}
-            onClose={() => setIsOtpModalOpen(false)}
-            onSuccess={handleOtpSuccess}
-          />
         </div>
       </div>
     </div>

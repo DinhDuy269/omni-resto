@@ -18,8 +18,6 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.List;
@@ -40,15 +38,12 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
-    @Bean // nghĩa là Spring gọi hàm này một lần khi khởi động, giữ kết quả để dùng chung.
+    @Bean
     public PasswordEncoder passwordEncoder() {
-        // Hàm băm pass thành chuỗi băm 1 chiều và chứa salt(không thể đảo ngược lại)
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    // CORS dùng để cho phép các domain khác truy cập vào server.
-    // Chỉ chặn truy cập trình duyệt không chặn truy cập Api vì CORS do trình duyệt thực thi không do máy chủ
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("*"));
@@ -62,12 +57,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    // Chuỗi lọc bảo mật
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))// Gọi hàm cho phép truy cập từ domain khác(Cors)
-                .csrf(AbstractHttpConfigurer::disable)// Tắt bảo vệ CSRF(Cross-Site Request Forgery)
-                .authorizeHttpRequests(this::configureAuthorizeHttpRequests)// Cấu hình quyền truy cập vào các API
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(this::configureAuthorizeHttpRequests)
                 .addFilterBefore(staffKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
@@ -102,7 +96,7 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/users", "/api/users/**").hasRole("ADMIN")
 
-                // 3. Customer Admin Management (CustomerAuthController - Admin only)
+                // 3. Customer Admin Management (Admin only)
                 .requestMatchers(customerAdminApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER")
 
                 // 4. Menu Items: GET public, POST/PUT/PATCH/DELETE yêu cầu quyền Admin/Staff
@@ -118,12 +112,12 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 6. Reservations: Khách đặt bàn online & tra cứu là public; toàn bộ quản trị (danh sách PII, xếp bàn, check-in, hủy) yêu cầu Admin/Staff
+                // 6. Reservations: Khách đặt bàn online & tra cứu là public; quản trị yêu cầu Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/tables/reservations/online", "/api/reservations/online").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tables/reservations/track/**", "/api/reservations/track/**", "/api/tables/reservations/check-phone", "/api/reservations/check-phone").permitAll()
                 .requestMatchers(reservationApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 7. Table Sessions: Các thao tác thu ngân / nhân viên (verify, confirm-payment, close) yêu cầu Admin/Staff
+                // 7. Table Sessions: Các thao tác thu ngân / nhân viên yêu cầu Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.POST,
                         "/api/table-sessions/verify",
                         "/api/table-sessions/confirm-payment",
@@ -138,25 +132,25 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 9. Vouchers: GET /available & /validate public, mọi thao tác danh sách quản trị yêu cầu quyền Admin/Staff
+                // 9. Vouchers: GET /available & /validate public, quản trị yêu cầu quyền Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/vouchers/available", "/api/vouchers/validate").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/vouchers/validate").permitAll()
                 .requestMatchers(voucherApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 10. Service Requests: Khách tại bàn gửi yêu cầu là public; xem danh sách active và resolve yêu cầu Admin/Staff
+                // 10. Service Requests: Khách tại bàn gửi yêu cầu là public; xem & resolve yêu cầu Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/service-requests").permitAll()
                 .requestMatchers(serviceRequestApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 11. Order Management: Khách có thể hủy món PENDING của chính mình qua X-Table-Session; các cập nhật KDS khác yêu cầu Staff
+                // 11. Order Management: Khách hủy món PENDING; cập nhật khác yêu cầu Staff
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/orders/*/items/*/cancel").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/orders/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/orders/*/confirm-payment").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(orderApiPatterns()).permitAll()
 
-                // 12. Public & Customer Endpoints
+                // 12. Public Endpoints & Unified Auth (login, register, otp)
                 .requestMatchers(paymentApiPatterns()).permitAll()
                 .requestMatchers(aiApiPatterns()).permitAll()
-                .requestMatchers(customerAuthApiPatterns()).permitAll()
+                .requestMatchers(authApiPatterns()).permitAll()
 
                 // Infrastructure / Static / Docs
                 .requestMatchers(websocketPatterns()).permitAll()
@@ -165,7 +159,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated();
     }
 
-    // region upload (FileUploadController)
+    // region upload
     private static RequestMatcher[] uploadApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/upload"),
@@ -174,7 +168,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region menu (MenuItemController)
+    // region menu
     private static RequestMatcher[] menuApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/menu-items"),
@@ -183,7 +177,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region category (CategoryController)
+    // region category
     private static RequestMatcher[] categoryApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/categories"),
@@ -192,7 +186,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region order (OrderController)
+    // region order
     private static RequestMatcher[] orderApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/orders"),
@@ -201,7 +195,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region user (UserController)
+    // region user
     private static RequestMatcher[] userApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/users"),
@@ -210,7 +204,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region table (TableController)
+    // region table
     private static RequestMatcher[] tableApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/tables"),
@@ -219,7 +213,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region table-session (TableSessionController)
+    // region table-session
     private static RequestMatcher[] tableSessionApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/table-sessions"),
@@ -228,7 +222,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region reservation (ReservationController)
+    // region reservation
     private static RequestMatcher[] reservationApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/tables/reservations"),
@@ -239,7 +233,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region voucher (VoucherController)
+    // region voucher
     private static RequestMatcher[] voucherApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/vouchers"),
@@ -248,7 +242,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region service-request (ServiceRequestController)
+    // region service-request
     private static RequestMatcher[] serviceRequestApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/service-requests"),
@@ -257,7 +251,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region payment (PaymentController)
+    // region payment
     private static RequestMatcher[] paymentApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/payments"),
@@ -266,7 +260,7 @@ public class SecurityConfig {
     }
     // endregion
 
-    // region ai (AiChatbotController)
+    // region ai
     private static RequestMatcher[] aiApiPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/api/ai"),
@@ -275,12 +269,11 @@ public class SecurityConfig {
     }
     // endregion
 
-
     // region websocket
     private static RequestMatcher[] websocketPatterns() {
         return new RequestMatcher[] {
                 new AntPathRequestMatcher("/ws/**"),
-                        new AntPathRequestMatcher("/ws-raw/**")
+                new AntPathRequestMatcher("/ws-raw/**")
         };
     }
     // endregion
@@ -302,30 +295,22 @@ public class SecurityConfig {
                 new AntPathRequestMatcher("/error")
         };
     }
-    // region customer-admin (CustomerAuthController - Admin only)
+    // endregion
+
+    // region customer-admin (Admin only)
     private static RequestMatcher[] customerAdminApiPatterns() {
         return new RequestMatcher[] {
-                new AntPathRequestMatcher("/api/customers/admin/**"),
-                new AntPathRequestMatcher("/api/v1/auth/customer/admin/**"),
-                new AntPathRequestMatcher("/api/v1/customer/auth/admin/**"),
                 new AntPathRequestMatcher("/api/auth/admin/**")
         };
     }
     // endregion
 
-    // region customer-auth (CustomerAuthController)
-    private static RequestMatcher[] customerAuthApiPatterns() {
+    // region auth (Unified AuthController — /api/auth)
+    private static RequestMatcher[] authApiPatterns() {
         return new RequestMatcher[] {
-                new AntPathRequestMatcher("/api/v1/auth/customer"),
-                new AntPathRequestMatcher("/api/v1/auth/customer/**"),
-                new AntPathRequestMatcher("/api/v1/customer/auth"),
-                new AntPathRequestMatcher("/api/v1/customer/auth/**"),
-                new AntPathRequestMatcher("/api/customers"),
-                new AntPathRequestMatcher("/api/customers/**"),
                 new AntPathRequestMatcher("/api/auth"),
                 new AntPathRequestMatcher("/api/auth/**")
         };
     }
     // endregion
 }
-

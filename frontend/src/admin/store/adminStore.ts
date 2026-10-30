@@ -105,61 +105,6 @@ function upsertById<T extends { id: string }>(list: T[], item: T): T[] {
   return exists ? list.map((x) => (x.id === item.id ? item : x)) : [item, ...list];
 }
 
-export const INITIAL_VOUCHERS: VoucherInfo[] = [
-  {
-    id: 'vch-01',
-    code: 'WELCOME100',
-    name: 'Quà Tặng Thành Viên Mới',
-    description: 'Giảm ngay 100.000đ cho đơn hàng đầu tiên. Tự động tặng khi khách hàng mới đăng ký tài khoản thành công.',
-    discount_type: 'fixed_amount',
-    discount_value: 100000,
-    min_order_amount: 0,
-    total_quantity: 99999,
-    used_quantity: 1250,
-    usage_limit_per_user: 1,
-    start_date: '2026-01-01T00:00:00',
-    end_date: '2027-12-31T23:59:59',
-    status: 'active',
-    is_welcome_voucher: true,
-    created_at: '2026-01-01T00:00:00',
-  },
-  {
-    id: 'vch-02',
-    code: 'FREELUNCH20',
-    name: 'Trưa Vui Vẻ Giảm 20%',
-    description: 'Giảm 20% tổng hóa đơn, tối đa 50.000đ. Áp dụng cho các bữa trưa tại nhà hàng.',
-    discount_type: 'percentage',
-    discount_value: 20,
-    max_discount_amount: 50000,
-    min_order_amount: 150000,
-    total_quantity: 500,
-    used_quantity: 498,
-    usage_limit_per_user: 2,
-    start_date: '2026-09-01T00:00:00',
-    end_date: '2026-11-30T23:59:59',
-    status: 'active',
-    is_welcome_voucher: false,
-    created_at: '2026-08-25T00:00:00',
-  },
-  {
-    id: 'vch-03',
-    code: 'SUMMER2026',
-    name: 'Chào Hè Rực Rỡ',
-    description: 'Giảm 50.000đ phí giao hàng cho các đơn Takeaway / Delivery.',
-    discount_type: 'fixed_amount',
-    discount_value: 50000,
-    min_order_amount: 200000,
-    total_quantity: 1000,
-    used_quantity: 1000,
-    usage_limit_per_user: 1,
-    start_date: '2026-05-01T00:00:00',
-    end_date: '2026-08-31T23:59:59',
-    status: 'expired',
-    is_welcome_voucher: false,
-    created_at: '2026-04-15T00:00:00',
-  }
-];
-
 export const useAdminStore = create<AdminState>((set, get) => ({
   // ---------- State ----------
   menu_items: [],
@@ -168,7 +113,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   staff_list: [],
   tables: [],
   service_requests: [],
-  vouchers: INITIAL_VOUCHERS,
+  vouchers: [],
   isLoading: false,
   loadError: null,
 
