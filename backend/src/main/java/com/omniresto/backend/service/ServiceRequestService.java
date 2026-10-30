@@ -25,6 +25,7 @@ public class ServiceRequestService {
 
     private final ServiceRequestRepository serviceRequestRepository;
     private final TableSessionService tableSessionService;
+    private final ActionLogService actionLogService;
 
     // Giới hạn tần suất gọi phục vụ: Tối thiểu cách nhau 15 giây để chống spam
     public static final int RATE_LIMIT_SECONDS = 15;
@@ -74,6 +75,7 @@ public class ServiceRequestService {
 
         ServiceRequestEntity saved = serviceRequestRepository.save(entity);
         log.info("✅ Service request {} resolved by {}", saved.getId(), entity.getResolvedByStaffId());
+        actionLogService.record("Sơ Đồ Bàn", "Xử lý gọi nhân viên", "Đã xử lý xong yêu cầu hỗ trợ của bàn " + saved.getTableNo());
 
         return mapToResponse(saved);
     }
@@ -91,6 +93,7 @@ public class ServiceRequestService {
             });
             serviceRequestRepository.saveAll(activeList);
             log.info("✅ Resolved {} service requests for table {} by {}", activeList.size(), tableNo, resolvedBy);
+            actionLogService.record("Sơ Đồ Bàn", "Xử lý gọi nhân viên", "Đã xử lý toàn bộ " + activeList.size() + " yêu cầu hỗ trợ của bàn " + tableNo);
         }
     }
 

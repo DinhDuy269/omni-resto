@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '../../store/adminStore';
 import { StatusBadge } from '../../components/StatusBadge';
-import { StatCard } from '../../components/StatCard';
 import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 
 export const ChainOrdersManagement: React.FC = () => {
@@ -143,131 +142,155 @@ export const ChainOrdersManagement: React.FC = () => {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* ── HEADER ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      {/* ── TOP HEADER ── */}
+      <div className="adm-page-header">
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            Quản Lý Đơn Hàng Live ({orders.length})
-          </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <ShoppingBag size={13} /> VẬN HÀNH ĐƠN HÀNG LIVE & THU NGÂN
+            </span>
+          </div>
+          <h1 className="adm-page-title">Quản Lý Đơn Hàng Live ({orders.length})</h1>
+          <p className="adm-page-subtitle">
             Theo dõi luồng chế biến, xuất hóa đơn và xử lý thanh toán thời gian thực toàn chuỗi
           </p>
         </div>
 
         {/* View Switcher Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="adm-header-actions">
           <div
             style={{
-              backgroundColor: 'var(--bg-app)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              padding: '3px',
+              backgroundColor: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '4px',
               display: 'flex',
               gap: '4px',
             }}
           >
             <button
+              type="button"
               onClick={() => setViewMode('TABLE')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 12px',
-                borderRadius: 'var(--radius-sm)',
+                padding: '8px 16px',
+                borderRadius: '8px',
                 border: 'none',
                 background: viewMode === 'TABLE' ? '#ffffff' : 'transparent',
-                color: viewMode === 'TABLE' ? 'var(--primary)' : 'var(--text-muted)',
-                fontWeight: viewMode === 'TABLE' ? 700 : 500,
-                fontSize: '0.8125rem',
+                color: viewMode === 'TABLE' ? '#0f172a' : '#64748b',
+                fontWeight: 700,
+                fontSize: '0.85rem',
                 cursor: 'pointer',
-                boxShadow: viewMode === 'TABLE' ? 'var(--shadow-sm)' : 'none',
-                transition: 'all 0.15s ease',
+                boxShadow: viewMode === 'TABLE' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.2s ease',
               }}
             >
-              <List size={15} /> Bảng Thu Ngân
+              <List size={16} /> Bảng Thu Ngân
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('CARDS')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 12px',
-                borderRadius: 'var(--radius-sm)',
+                padding: '8px 16px',
+                borderRadius: '8px',
                 border: 'none',
                 background: viewMode === 'CARDS' ? '#ffffff' : 'transparent',
-                color: viewMode === 'CARDS' ? 'var(--primary)' : 'var(--text-muted)',
-                fontWeight: viewMode === 'CARDS' ? 700 : 500,
-                fontSize: '0.8125rem',
+                color: viewMode === 'CARDS' ? '#0f172a' : '#64748b',
+                fontWeight: 700,
+                fontSize: '0.85rem',
                 cursor: 'pointer',
-                boxShadow: viewMode === 'CARDS' ? 'var(--shadow-sm)' : 'none',
-                transition: 'all 0.15s ease',
+                boxShadow: viewMode === 'CARDS' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.2s ease',
               }}
             >
-              <LayoutGrid size={15} /> Thẻ Chi Tiết
+              <LayoutGrid size={16} /> Thẻ Chi Tiết
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── 4 KPI STATS MINI ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px',
-        }}
-      >
-        <StatCard
-          title="ĐƠN CẦN DUYỆT"
-          value={pendingCount}
-          change={pendingCount > 0 ? 'Cần duyệt ngay' : 'Đã xử lý hết'}
-          isPositive={pendingCount === 0}
-          icon={AlertTriangle}
-          iconBgColor={pendingCount > 0 ? 'var(--danger-bg)' : 'var(--success-bg)'}
-          iconColor={pendingCount > 0 ? 'var(--danger)' : 'var(--success)'}
-          subtitle="Chờ xác nhận vào bếp"
-        />
-        <StatCard
-          title="ĐANG NẤU BẾP"
-          value={preparingCount}
-          change="Bếp đang chạy"
-          isPositive={true}
-          icon={Utensils}
-          iconBgColor="var(--warning-bg)"
-          iconColor="var(--warning)"
-          subtitle="Đang chế biến trên KDS"
-        />
-        <StatCard
-          title="SẴN SÀNG TRẢ MÓN"
-          value={readyCount}
-          change="Sẵn sàng"
-          isPositive={true}
-          icon={CheckCircle}
-          iconBgColor="var(--info-bg)"
-          iconColor="var(--info)"
-          subtitle="Chờ phục vụ ra bàn"
-        />
-        <StatCard
-          title="DOANH THU ĐƠN HOÀN TẤT"
-          value={`${completedRevenue.toLocaleString('vi-VN')} đ`}
-          change="+15.2%"
-          isPositive={true}
-          icon={CreditCard}
-          iconBgColor="var(--primary-subtle)"
-          iconColor="var(--primary)"
-          subtitle="Đã thanh toán thực tế"
-        />
+      {/* ── 4 KPI STATS METRIC CARDS ── */}
+      <div className="adm-stats-grid">
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Đơn cần duyệt</span>
+            <div className={`adm-stat-icon ${pendingCount > 0 ? 'icon-rose' : 'icon-emerald'}`}>
+              <AlertTriangle size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: pendingCount > 0 ? '#dc2626' : '#059669' }}>
+            {pendingCount}
+          </div>
+          <div className="adm-stat-footer">
+            <span>Chờ duyệt vào bếp</span>
+            <span className={`adm-stat-pill ${pendingCount > 0 ? 'pill-danger' : 'pill-success'}`}>
+              {pendingCount > 0 ? 'Cần duyệt ngay' : 'Đã xử lý hết'}
+            </span>
+          </div>
+        </div>
+
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Đang nấu bếp</span>
+            <div className="adm-stat-icon icon-amber">
+              <Utensils size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: '#d97706' }}>
+            {preparingCount}
+          </div>
+          <div className="adm-stat-footer">
+            <span>Đang chế biến trên KDS</span>
+            <span className="adm-stat-pill pill-warning">Bếp đang chạy</span>
+          </div>
+        </div>
+
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Sẵn sàng trả món</span>
+            <div className="adm-stat-icon icon-emerald">
+              <CheckCircle size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: '#059669' }}>
+            {readyCount}
+          </div>
+          <div className="adm-stat-footer">
+            <span>Chờ phục vụ ra bàn</span>
+            <span className="adm-stat-pill pill-success">Sẵn sàng</span>
+          </div>
+        </div>
+
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Doanh thu hoàn tất</span>
+            <div className="adm-stat-icon icon-purple">
+              <CreditCard size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value" style={{ fontSize: '1.65rem' }}>
+            {completedRevenue.toLocaleString('vi-VN')} đ
+          </div>
+          <div className="adm-stat-footer">
+            <span>Đã thanh toán thực tế</span>
+            <span className="adm-stat-pill pill-purple">Hoàn tất</span>
+          </div>
+        </div>
       </div>
 
       {/* ── BỘ LỌC TÌM KIẾM & PHÂN LOẠI ── */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '18px 20px' }}>
+      <div className="adm-filter-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-          <div className="search-bar" style={{ width: '340px' }}>
-            <Search size={16} color="var(--text-muted)" />
+          <div className="adm-search-box" style={{ width: '340px' }}>
+            <Search size={16} className="adm-search-icon" />
             <input
               type="text"
-              className="search-input"
+              className="adm-search-input"
               placeholder="Tìm mã đơn (ORD-HN-8841), tên khách, số bàn..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -281,8 +304,7 @@ export const ChainOrdersManagement: React.FC = () => {
             <select
               value={orderTypeFilter}
               onChange={(e) => setOrderTypeFilter(e.target.value)}
-              className="form-select"
-              style={{ padding: '6px 12px', fontSize: '0.85rem', borderRadius: 'var(--radius-md)' }}
+              className="adm-select-control"
             >
               <option value="all">Tất Cả Hình Thức</option>
               <option value="dine_in">Ăn Tại Bàn (Dine-in)</option>
@@ -335,9 +357,9 @@ export const ChainOrdersManagement: React.FC = () => {
 
       {/* ── VIEW 1: BẢNG THU NGÂN COMPACT (TABLE VIEW) ── */}
       {viewMode === 'TABLE' && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+        <div className="adm-table-card">
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
+            <table className="adm-data-table" style={{ minWidth: '950px' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-app)', borderBottom: '1px solid var(--border-color)' }}>
                   <th style={{ padding: '14px 18px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>

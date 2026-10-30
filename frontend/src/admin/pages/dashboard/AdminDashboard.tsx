@@ -30,7 +30,7 @@ export const AdminDashboard: React.FC = () => {
   const occupiedTablesCount = tables.filter((t) => t.status === 'occupied').length;
   const bestSellers = menu_items.filter((item) => item.is_best_seller);
 
-  const savedStaffStr = localStorage.getItem('staff_user');
+  const savedStaffStr = localStorage.getItem('staff_user') || localStorage.getItem('user');
   let currentStaff: { full_name?: string; role?: string } | null = null;
   try {
     currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
@@ -127,89 +127,49 @@ export const AdminDashboard: React.FC = () => {
   const areaPath = `${linePath} L ${points[points.length - 1].x} ${svgHeight - paddingY} L ${points[0].x} ${svgHeight - paddingY} Z`;
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-      {/* ── TOP EXECUTIVE BANNER ── */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '24px 28px',
-          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-sm)',
-          flexWrap: 'wrap',
-          gap: '20px',
-        }}
-      >
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* ── TOP EXECUTIVE PAGE HEADER ── */}
+      <div className="adm-page-header">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '3px 10px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: 'var(--primary-subtle)',
-                color: 'var(--primary)',
-                fontSize: '0.75rem',
-                fontWeight: 800,
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-              }}
-            >
-              <Sparkles size={13} /> Trung Tâm Vận Hành Chuỗi HQ
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <Sparkles size={13} /> TRUNG TÂM VẬN HÀNH CHUỖI HQ
             </span>
             <span
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '3px 10px',
-                borderRadius: 'var(--radius-full)',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '20px',
                 backgroundColor: 'var(--success-bg)',
                 color: 'var(--success)',
-                fontSize: '0.75rem',
+                fontSize: '0.725rem',
                 fontWeight: 700,
+                border: '1px solid rgba(16, 185, 129, 0.25)',
               }}
             >
-              <span className="pulse-dot" style={{ backgroundColor: 'var(--success)' }} />
+              <span className="pulse-dot" style={{ backgroundColor: 'var(--success)', width: '6px', height: '6px' }} />
               Hệ Thống Trực Tuyến
             </span>
           </div>
-          <h2
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              margin: '0 0 6px 0',
-              color: 'var(--text-main)',
-              letterSpacing: '-0.3px',
-            }}
-          >
-            Chào mừng trở lại, {staffName} 👋
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+          <h1 className="adm-page-title">Chào mừng trở lại, {staffName} 👋</h1>
+          <p className="adm-page-subtitle">
             Hôm nay chi nhánh Hoàn Kiếm đang vận hành mượt mà với <strong>{totalOrders} đơn hàng</strong> và công suất bàn đạt{' '}
             <strong>{Math.round((occupiedTablesCount / (tables.length || 1)) * 100)}%</strong>.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div className="adm-header-actions">
           <button
-            className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            className="adm-btn-primary"
             onClick={() => navigate('/admin/menu')}
           >
             <UtensilsCrossed size={16} />
             <span>Quản Lý Thực Đơn</span>
           </button>
           <button
-            className="btn btn-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            className="adm-btn-secondary"
             onClick={() => navigate('/admin/tables')}
           >
             <Grid2x2 size={16} />
@@ -219,13 +179,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* ── 4 KPI STATS METRICS ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-        }}
-      >
+      <div className="adm-stats-grid">
         <StatCard
           title="TỔNG DOANH THU CA TRỰC"
           value={`${totalRevenue.toLocaleString('vi-VN')} đ`}
@@ -277,8 +231,9 @@ export const AdminDashboard: React.FC = () => {
           gap: '20px',
           padding: '24px 28px',
           backgroundColor: '#ffffff',
-          borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-sm)',
+          borderRadius: '16px',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
@@ -452,7 +407,7 @@ export const AdminDashboard: React.FC = () => {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '14px',
-            paddingTop: '12px',
+            paddingTop: '16px',
             borderTop: '1px solid var(--border-subtle)',
           }}
         >
@@ -528,7 +483,7 @@ export const AdminDashboard: React.FC = () => {
       {/* ── MAIN CONTENT SPLIT: TABLE MAP & ORDERS FEED ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px' }}>
         {/* Left Side: Live Table Map Overview */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
@@ -539,8 +494,8 @@ export const AdminDashboard: React.FC = () => {
               </p>
             </div>
             <button
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              className="adm-btn-secondary"
+              style={{ padding: '6px 14px', fontSize: '0.8125rem' }}
               onClick={() => navigate('/admin/tables')}
             >
               <span>Xem Sơ Đồ</span>
@@ -591,13 +546,13 @@ export const AdminDashboard: React.FC = () => {
         {/* Right Side: Live Orders Feed & Top Best Sellers */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Live Orders Widget */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Clock size={18} color="var(--primary)" />
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Đơn Hàng Mới Nhất</h3>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/orders')}>
+              <button className="adm-btn-secondary" style={{ padding: '6px 14px', fontSize: '0.8125rem' }} onClick={() => navigate('/admin/orders')}>
                 Xem Tất Cả ({orders.length})
               </button>
             </div>
@@ -642,13 +597,13 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Top Selling Dishes Widget */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <TrendingUp size={18} color="var(--success)" />
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Món Bán Chạy Nhất (Best Sellers)</h3>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/menu')}>
+              <button className="adm-btn-secondary" style={{ padding: '6px 14px', fontSize: '0.8125rem' }} onClick={() => navigate('/admin/menu')}>
                 Menu
               </button>
             </div>
@@ -707,4 +662,5 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+
 export default AdminDashboard;

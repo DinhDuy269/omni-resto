@@ -30,14 +30,6 @@ export interface CartItem {
   meal_periods?: string;
 }
 
-export interface VietQRInfo {
-  qr_image_url?: string;
-  amount: number;
-  bank_id?: string;
-  account_number?: string;
-  account_name?: string;
-  transfer_content?: string;
-}
 
 export interface TableSession {
   id: string;
@@ -57,7 +49,6 @@ export interface TableSession {
   active_order_number?: string;
   total_amount?: number;
   payment_status?: PaymentStatusType;
-  viet_qr?: VietQRInfo;
 }
 
 // ─── Order ────────────────────────────────────────────────────────────────────

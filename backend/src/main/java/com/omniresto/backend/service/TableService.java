@@ -31,6 +31,7 @@ public class TableService {
     private final OrderRepository orderRepository;
     private final com.omniresto.backend.config.OrderWebSocketHandler orderWebSocketHandler;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final ActionLogService actionLogService;
 
     @Transactional
     public List<TableResponse> getAllTables(TableStatus status) {
@@ -86,6 +87,7 @@ public class TableService {
             log.error("Failed to broadcast table status update for table {}", id, e);
         }
 
+        actionLogService.record("Sơ Đồ Bàn", "Đổi trạng thái bàn", "Bàn " + updated.getTableNo() + " đổi sang trạng thái " + status);
         return mapToResponse(updated);
     }
 
@@ -98,6 +100,7 @@ public class TableService {
         // Set fresh random secret token
         entity.setQrSecretToken("qr-token-" + entity.getId() + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
         TableEntity saved = tableRepository.save(entity);
+        actionLogService.record("Sơ Đồ Bàn", "Làm mới mã QR bàn", "Làm mới mã QR cho bàn: " + saved.getTableNo());
         return mapToResponse(saved);
     }
 
@@ -112,6 +115,7 @@ public class TableService {
                 .build();
         entity.setId(id);
         TableEntity saved = tableRepository.save(entity);
+        actionLogService.record("Sơ Đồ Bàn", "Làm mới mã QR bàn", "Làm mới mã QR cho bàn: " + saved.getTableNo());
         return mapToResponse(saved);
     }
 

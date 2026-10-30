@@ -27,7 +27,9 @@ import ClientCheckIn from '../client/pages/scan/ClientCheckIn';
 import { VnPayReturn } from '../client/pages/payment/VnPayReturn';
 import { VoucherManagement } from '../admin/pages/voucher/VoucherManagement';
 import CustomersPage from '../admin/pages/customers';
+import { ActionLogManagement } from '../admin/pages/logs/ActionLogManagement';
 import ClientGacha from '../client/pages/gacha/ClientGacha';
+import ReservationPage from '../client/pages/reservation/ReservationPage';
 import { AuthPage } from '../client/pages/auth/AuthPage';
 
 /** Normalizes uppercase or mixed-case paths (e.g. /Client -> /client) seamlessly */
@@ -39,8 +41,6 @@ const PathCaseNormalizer: React.FC = () => {
   }
   return null;
 };
-
-import ReservationPage from '../pages/customer/ReservationPage';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -66,6 +66,7 @@ export const AppRouter: React.FC = () => {
             {/* RBAC Protected: Chỉ Quản Trị Viên & Quản Lý Cửa Hàng */}
             <Route element={<AdminProtectedRoute allowedRoles={['admin', 'store_manager']} />}>
               <Route path="staff" element={<StaffManagement />} />
+              <Route path="logs" element={<ActionLogManagement />} />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="reports" element={<ReportsPage />} />
             </Route>

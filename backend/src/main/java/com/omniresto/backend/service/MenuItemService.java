@@ -39,6 +39,7 @@ public class MenuItemService {
     private final CloudStorageService cloudStorageService;
     private final OrderWebSocketHandler orderWebSocketHandler;
     private final ObjectMapper objectMapper;
+    private final ActionLogService actionLogService;
 
     public List<MenuItemResponse> getAllMenuItems(String period) {
         List<MenuItemEntity> items;
@@ -125,6 +126,7 @@ public class MenuItemService {
         MenuItemEntity saved = menuItemRepository.save(entity);
         MenuItemResponse res = mapToResponse(saved);
         broadcastMenuItemEvent("MENU_ITEM_CREATED", res);
+        actionLogService.record("Menu & Món Ăn", "Thêm món", "Thêm mới món: " + saved.getName() + " (Giá: " + saved.getBasePrice() + "đ)");
         return res;
     }
 
@@ -189,6 +191,7 @@ public class MenuItemService {
         MenuItemEntity updated = menuItemRepository.save(entity);
         MenuItemResponse res = mapToResponse(updated);
         broadcastMenuItemEvent("MENU_ITEM_UPDATED", res);
+        actionLogService.record("Menu & Món Ăn", "Cập nhật món", "Cập nhật thông tin món: " + updated.getName());
         return res;
     }
 
@@ -199,6 +202,7 @@ public class MenuItemService {
         MenuItemEntity updated = menuItemRepository.save(entity);
         MenuItemResponse res = mapToResponse(updated);
         broadcastMenuItemEvent("MENU_ITEM_STATUS_CHANGED", res);
+        actionLogService.record("Menu & Món Ăn", "Đổi trạng thái món", "Đổi trạng thái món " + updated.getName() + " sang " + status);
         return res;
     }
 
@@ -209,6 +213,7 @@ public class MenuItemService {
         MenuItemEntity updated = menuItemRepository.save(entity);
         MenuItemResponse res = mapToResponse(updated);
         broadcastMenuItemEvent("MENU_ITEM_DELETED", res);
+        actionLogService.record("Menu & Món Ăn", "Ngừng bán món", "Ngừng kinh doanh món: " + entity.getName());
         log.info("Đã chuyển món ăn ID {} sang trạng thái ngừng kinh doanh (Soft Delete)", id);
     }
 

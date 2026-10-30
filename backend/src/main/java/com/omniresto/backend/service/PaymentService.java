@@ -57,33 +57,7 @@ public class PaymentService {
     @Value("${omniresto.payment.webhook-secret:OmniRestoWebhookSecret2026}")
     private String webhookSecret = "OmniRestoWebhookSecret2026";
 
-    // Configurable VietQR merchant credentials
-    @Value("${vietqr.bank-id:MB}")
-    private String bankId = "MB";
 
-    @Value("${vietqr.account-number:0368295264}")
-    private String accountNumber = "0368295264";
-
-    @Value("${vietqr.account-name:NHAN HANG OMNIRESTO}")
-    private String accountName = "NHAN HANG OMNIRESTO";
-
-    @Value("${vietqr.template:compact2}")
-    private String vietqrTemplate = "compact2";
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class VietQRResponse {
-        private String orderId;
-        private String orderNumber;
-        private BigDecimal amount;
-        private String qrImageUrl;
-        private String bankId;
-        private String accountNumber;
-        private String accountName;
-        private String transferContent;
-    }
 
     @Data
     @Builder
@@ -125,36 +99,6 @@ public class PaymentService {
         return orderOpt.orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng: " + orderIdentifier));
     }
 
-    public VietQRResponse generateVietQR(String orderId) {
-        OrderEntity order = findOrder(orderId);
-
-        String transferContent = "OMNIRESTO " + order.getOrderNumber();
-        String encodedContent = URLEncoder.encode(transferContent, StandardCharsets.UTF_8);
-        String encodedAccountName = URLEncoder.encode(accountName, StandardCharsets.UTF_8);
-
-        long amount = order.getTotalAmount() != null ? order.getTotalAmount().longValue() : 0L;
-
-        String qrImageUrl = String.format(
-                "https://img.vietqr.io/image/%s-%s-%s.png?amount=%d&addInfo=%s&accountName=%s",
-                bankId,
-                accountNumber,
-                vietqrTemplate,
-                amount,
-                encodedContent,
-                encodedAccountName
-        );
-
-        return VietQRResponse.builder()
-                .orderId(order.getId())
-                .orderNumber(order.getOrderNumber())
-                .amount(order.getTotalAmount())
-                .qrImageUrl(qrImageUrl)
-                .bankId(bankId)
-                .accountNumber(accountNumber)
-                .accountName(accountName)
-                .transferContent(transferContent)
-                .build();
-    }
 
     public PaymentStatusResponse getPaymentStatus(String orderId) {
         OrderEntity order = findOrder(orderId);
@@ -303,7 +247,7 @@ public class PaymentService {
 
         PaymentSettlementResult settlement = completePayment(
                 orderIdentifier,
-                "VIETQR_WEBHOOK",
+                "ONLINE_WEBHOOK",
                 txRef,
                 amount,
                 PaymentMethod.qr_code,
@@ -340,7 +284,7 @@ public class PaymentService {
     public OrderResponse handlePaymentWebhook(String orderId, String transactionReference, Double amountPaid, String rawPayload) {
         completePayment(
                 orderId,
-                "VIETQR_WEBHOOK",
+                "ONLINE_WEBHOOK",
                 transactionReference,
                 amountPaid != null ? BigDecimal.valueOf(amountPaid) : BigDecimal.ZERO,
                 PaymentMethod.qr_code,

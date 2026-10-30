@@ -125,19 +125,22 @@ export const ReportsPage: React.FC = () => {
   };
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* ── HEADER ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="adm-page-header">
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            Báo Cáo & Phân Tích Doanh Thu Chuỗi
-          </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <TrendingUp size={13} /> PHÂN TÍCH TÀI CHÍNH & VẬN HÀNH CHUỖI
+            </span>
+          </div>
+          <h1 className="adm-page-title">Báo Cáo & Phân Tích Doanh Thu Chuỗi</h1>
+          <p className="adm-page-subtitle">
             Thông số tài chính, cơ cấu doanh thu theo kênh bán và đóng góp lợi nhuận từ thực đơn
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="adm-header-actions">
           {/* Range Selector */}
           <div
             style={{
@@ -159,7 +162,7 @@ export const ReportsPage: React.FC = () => {
                 key={tab.id}
                 onClick={() => setTimeRange(tab.id as any)}
                 style={{
-                  padding: '6px 12px',
+                  padding: '6px 14px',
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
                   background: timeRange === tab.id ? '#ffffff' : 'transparent',
@@ -167,7 +170,7 @@ export const ReportsPage: React.FC = () => {
                   fontWeight: timeRange === tab.id ? 700 : 500,
                   fontSize: '0.8125rem',
                   cursor: 'pointer',
-                  boxShadow: timeRange === tab.id ? 'var(--shadow-sm)' : 'none',
+                  boxShadow: timeRange === tab.id ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -177,7 +180,7 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           <button
-            className="btn btn-primary btn-sm"
+            className="adm-btn-primary"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             onClick={handleExportReport}
           >
@@ -188,7 +191,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* ── 4 KPI METRICS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+      <div className="adm-stats-grid">
         <StatCard
           title="TỔNG DOANH THU"
           value={`${(totalRevenue || 48500000).toLocaleString('vi-VN')} đ`}
@@ -227,14 +230,14 @@ export const ReportsPage: React.FC = () => {
           icon={UtensilsCrossed}
           iconBgColor="var(--success-bg)"
           iconColor="var(--success)"
-          subtitle="Phân bố qua 5 danh mục"
+          subtitle="Phân bố qua các danh mục"
         />
       </div>
 
       {/* ── 2 COLUMNS: KÊNH BÁN HÀNG & CƠ CẤU MÓN ĂN ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
         {/* Kênh bán hàng */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <PieChart size={18} color="var(--primary)" />
@@ -286,7 +289,7 @@ export const ReportsPage: React.FC = () => {
         </div>
 
         {/* Top 5 Món Bán Chạy Nhất */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Layers size={18} color="var(--purple)" />
@@ -305,16 +308,17 @@ export const ReportsPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
                   backgroundColor: 'var(--bg-app)',
+                  border: '1px solid var(--border-subtle)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span
                     style={{
-                      width: '24px',
-                      height: '24px',
+                      width: '26px',
+                      height: '26px',
                       borderRadius: '50%',
                       background: idx === 0 ? '#fef3c7' : '#f1f5f9',
                       color: idx === 0 ? '#b45309' : '#64748b',
@@ -351,4 +355,5 @@ export const ReportsPage: React.FC = () => {
     </div>
   );
 };
+
 export default ReportsPage;

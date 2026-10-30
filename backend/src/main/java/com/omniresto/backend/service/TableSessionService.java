@@ -47,20 +47,9 @@ public class TableSessionService {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final PaymentService paymentService;
     private final OrderWebSocketHandler orderWebSocketHandler;
+    private final ActionLogService actionLogService;
     private final ObjectMapper objectMapper;
 
-    // Configurable VietQR merchant credentials
-    @Value("${vietqr.bank-id:MB}")
-    private String bankId = "MB";
-
-    @Value("${vietqr.account-number:0368295264}")
-    private String accountNumber = "0368295264";
-
-    @Value("${vietqr.account-name:NHAN HANG OMNIRESTO}")
-    private String accountName = "NHAN HANG OMNIRESTO";
-
-    @Value("${vietqr.template:compact2}")
-    private String vietqrTemplate = "compact2";
 
     // Session lifetime default: 3 hours of inactivity
     public static final int SESSION_TIMEOUT_HOURS = 3;
@@ -241,7 +230,7 @@ public class TableSessionService {
     }
 
     /**
-     * Khách hàng hoặc Thu ngân yêu cầu thanh toán (Đóng băng hóa đơn & sinh VietQR cố định)
+     * Khách hàng hoặc Thu ngân yêu cầu thanh toán (Đóng băng hóa đơn & chờ thanh toán)
      */
     @Transactional
     public TableSessionResponse requestPayment(String sessionToken) {
@@ -545,33 +534,6 @@ public class TableSessionService {
             builder.totalAmount(order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO);
             builder.paymentStatus(order.getPaymentStatus());
 
-            // Nếu đang trong tiến trình yêu cầu thanh toán, tạo mã VietQR cố định
-            if (entity.getStatus() == TableSessionStatus.payment_requested && order.getTotalAmount() != null) {
-                String transferContent = "OMNIRESTO " + order.getOrderNumber();
-                String encodedContent = URLEncoder.encode(transferContent, StandardCharsets.UTF_8);
-                String encodedAccountName = URLEncoder.encode(accountName, StandardCharsets.UTF_8);
-                long amount = order.getTotalAmount().longValue();
-
-                String qrUrl = String.format(
-                        "https://img.vietqr.io/image/%s-%s-%s.png?amount=%d&addInfo=%s&accountName=%s",
-                        bankId,
-                        accountNumber,
-                        vietqrTemplate,
-                        amount,
-                        encodedContent,
-                        encodedAccountName
-                );
-
-                builder.vietQr(TableSessionResponse.VietQRInfo.builder()
-                        .qrImageUrl(qrUrl)
-                        .qrCode(qrUrl)
-                        .amount(order.getTotalAmount())
-                        .bankId(bankId)
-                        .accountNumber(accountNumber)
-                        .accountName(accountName)
-                        .transferContent(transferContent)
-                        .build());
-            }
         } else {
             builder.totalAmount(BigDecimal.ZERO);
         }

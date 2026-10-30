@@ -24,77 +24,31 @@ export const StatCard: React.FC<StatCardProps> = ({
   subtitle,
 }) => {
   return (
-    <div
-      className="card animate-fade-in hover-lift"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        padding: '20px 22px',
-        borderRadius: '14px',
-        border: '1px solid var(--border-color)',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>
-          {title}
-        </span>
+    <div className="adm-stat-card animate-fade-in">
+      <div className="adm-stat-header">
+        <span className="adm-stat-label">{title}</span>
         <div
+          className="adm-stat-icon"
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
             backgroundColor: iconBgColor,
             color: iconColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
           }}
         >
           <Icon size={20} />
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-        <span
-          style={{
-            fontSize: '1.85rem',
-            fontWeight: 800,
-            color: 'var(--text-main)',
-            letterSpacing: '-0.5px',
-            fontFeatureSettings: "'tnum' 1",
-          }}
-        >
-          {value}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '6px' }}>
+        <span className="adm-stat-value">{value}</span>
         {change && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              color: isPositive ? 'var(--success)' : 'var(--danger)',
-              backgroundColor: isPositive ? 'var(--success-bg)' : 'var(--danger-bg)',
-              border: `1px solid ${isPositive ? 'var(--success-border)' : 'var(--danger-border)'}`,
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-full)',
-            }}
-          >
-            {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+          <span className={`adm-stat-pill ${isPositive ? 'positive' : 'negative'}`}>
+            {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {change}
           </span>
         )}
       </div>
 
-      {subtitle && (
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          {subtitle}
-        </span>
-      )}
+      {subtitle && <div className="adm-stat-footer">{subtitle}</div>}
     </div>
   );
 };

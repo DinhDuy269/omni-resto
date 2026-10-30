@@ -17,7 +17,6 @@ import {
   CreditCard,
   QrCode,
   Banknote,
-  Copy,
   X,
   XCircle,
   Sparkles,
@@ -36,7 +35,6 @@ import { OrderStatusStepper } from '../../components/OrderStatusStepper';
 import { ServiceRequestModal } from '../../components/ServiceRequestModal';
 import type { PlacedOrder, VnPayPaymentInfo } from '../../../shared/types/client';
 import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
-import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
 import { createVnPayPayment, processVnPayDirectPayment } from '../../../shared/api/vnpayApi';
 import './ClientOrdersPage.css';
 
@@ -56,9 +54,8 @@ export const ClientOrdersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'batches' | 'all_dishes'>('batches');
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentTab, setPaymentTab] = useState<'vnpay' | 'qr' | 'cash'>('vnpay');
+  const [paymentTab, setPaymentTab] = useState<'vnpay' | 'cash'>('vnpay');
   const [vnpayInfo, setVnPayInfo] = useState<VnPayPaymentInfo | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // VNPAY Sandbox card inputs (set sẵn mặc định để kiểm thử nhanh)
@@ -272,7 +269,7 @@ export const ClientOrdersPage: React.FC = () => {
         placed_at: '19:45',
         estimated_minutes: 12,
         total_amount: 315000,
-        payment_method: 'qr_code',
+        payment_method: 'vnpay',
         items: [
           {
             id: 'item-1',
@@ -370,7 +367,7 @@ export const ClientOrdersPage: React.FC = () => {
                   Hóa đơn bàn đang đóng băng để thanh toán
                 </h4>
                 <p className="cop-frozen-desc">
-                  Số tiền đã được chốt cố định để quét mã VietQR. Bạn có thể mở khóa để tiếp tục gọi thêm món.
+                  Hóa đơn bàn đã được chốt số tiền để thanh toán. Bạn có thể mở khóa để tiếp tục gọi thêm món.
                 </p>
               </div>
             </div>
@@ -380,7 +377,7 @@ export const ClientOrdersPage: React.FC = () => {
                 onClick={() => setIsPaymentModalOpen(true)}
               >
                 <QrCode size={15} />
-                <span>Xem mã VietQR</span>
+                <span>Thanh toán ngay</span>
               </button>
               <button
                 className="cop-btn-unfreeze"
@@ -704,7 +701,7 @@ export const ClientOrdersPage: React.FC = () => {
                           Hình thức thanh toán:{' '}
                           <strong>
                             {order.payment_method === 'qr_code'
-                              ? 'Quét VietQR'
+                              ? 'VNPAY-QR'
                               : order.payment_method === 'vnpay_qr'
                               ? 'VNPAY'
                               : 'Tiền mặt/Tại quầy'}
@@ -932,7 +929,7 @@ export const ClientOrdersPage: React.FC = () => {
                     onClick={() => setIsPaymentModalOpen(true)}
                   >
                     <QrCode size={16} />
-                    <span>Xem mã VietQR</span>
+                    <span>Thanh toán ngay</span>
                   </button>
 
                   <button
@@ -1018,9 +1015,7 @@ export const ClientOrdersPage: React.FC = () => {
               <div className="cop-modal-total-num">
                 {totalTableAmount.toLocaleString('vi-VN')}đ
               </div>
-              <div className="cop-modal-total-hint">
-                * Hóa đơn được giữ nguyên số tiền để chuyển khoản VietQR chính xác 100%
-              </div>
+              
             </div>
 
             {/* Tabs Selector */}
@@ -1036,13 +1031,7 @@ export const ClientOrdersPage: React.FC = () => {
                 </span>
               </button>
 
-              <button
-                className={`cop-modal-tab-item ${paymentTab === 'qr' ? 'is-selected' : ''}`}
-                onClick={() => setPaymentTab('qr')}
-              >
-                <QrCode size={15} />
-                <span>VietQR</span>
-              </button>
+
 
               <button
                 className={`cop-modal-tab-item ${paymentTab === 'cash' ? 'is-selected' : ''}`}
@@ -1204,122 +1193,6 @@ export const ClientOrdersPage: React.FC = () => {
                             <span>Xác nhận thanh toán VNPAY ({totalTableAmount.toLocaleString('vi-VN')}đ)</span>
                           </>
                         )}
-                      </button>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Tab: VietQR Content */}
-            {paymentTab === 'qr' && (
-              <div style={{ textAlign: 'center' }}>
-                {(() => {
-                  const activeOrderNumber = table_session?.active_order_number || activeOrders[0]?.order_number || 'ORD-BILL';
-                  const transferContent = `OMNIRESTO ${activeOrderNumber}`;
-                  const qrUrl = table_session?.viet_qr?.qr_image_url ||
-                    generateVietQRUrl(totalTableAmount, transferContent);
-
-                  return (
-                    <div>
-                      <div
-                        style={{
-                          background: '#ffffff',
-                          padding: '14px',
-                          borderRadius: '16px',
-                          display: 'inline-block',
-                          border: '1px solid #e2e8f0',
-                          boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
-                          marginBottom: '16px',
-                        }}
-                      >
-                        <img
-                          src={qrUrl}
-                          alt="VietQR Payment"
-                          style={{ width: '220px', height: '220px', objectFit: 'contain', display: 'block' }}
-                        />
-                      </div>
-
-                      <div
-                        style={{
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '12px',
-                          padding: '14px 16px',
-                          textAlign: 'left',
-                          fontSize: '0.84rem',
-                          marginBottom: '16px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ color: '#64748b' }}>Ngân hàng:</span>
-                          <strong style={{ color: '#0f172a' }}>{table_session?.viet_qr?.bank_id || PAYMENT_CONFIG.bankName}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ color: '#64748b' }}>Số tài khoản:</span>
-                          <strong style={{ color: '#0f172a' }}>{table_session?.viet_qr?.account_number || PAYMENT_CONFIG.accountNumber}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ color: '#64748b' }}>Chủ tài khoản:</span>
-                          <strong style={{ color: '#0f172a' }}>{table_session?.viet_qr?.account_name || PAYMENT_CONFIG.accountName}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: '#64748b' }}>Nội dung:</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong style={{ color: '#ea580c' }}>{transferContent}</strong>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(transferContent);
-                                setIsCopied(true);
-                                setTimeout(() => setIsCopied(false), 2000);
-                              }}
-                              style={{
-                                background: '#ffffff',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '6px',
-                                padding: '3px 8px',
-                                cursor: 'pointer',
-                                fontSize: '0.74rem',
-                                color: '#475569',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontWeight: 700,
-                              }}
-                            >
-                              <Copy size={12} />
-                              {isCopied ? 'Đã chép' : 'Chép'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Simulated Webhook for Demonstration */}
-                      <button
-                        onClick={async () => {
-                          await confirmPaymentDemo('qr_code');
-                          setIsPaymentModalOpen(false);
-                          alert('🎉 Thanh toán VietQR thành công! Cảm ơn quý khách đã dùng bữa tại OmniResto.');
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '11px',
-                          borderRadius: '10px',
-                          background: '#ecfdf5',
-                          border: '1px solid #a7f3d0',
-                          color: '#047857',
-                          fontWeight: 800,
-                          fontSize: '0.84rem',
-                          cursor: 'pointer',
-                          marginBottom: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        <Zap size={14} strokeWidth={2.2} />
-                        <span>Giả lập: Webhook VietQR khớp tiền tự động (Test)</span>
                       </button>
                     </div>
                   );

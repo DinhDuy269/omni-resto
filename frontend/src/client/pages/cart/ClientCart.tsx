@@ -6,7 +6,6 @@ import { voucherApi } from '../../../shared/api/voucherApi';
 import type { VoucherInfo } from '../../../shared/types';
 import type { OrderMode, ClientPaymentMethod, VnPayPaymentInfo } from '../../../shared/types/client';
 import { VNPAY_SANDBOX_CONFIG } from '../../../shared/types/client';
-import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
 import { createVnPayPayment, processVnPayDirectPayment } from '../../../shared/api/vnpayApi';
 import { checkIsItemAvailableNow } from '../../utils/mealPeriodUtils';
 
@@ -132,7 +131,7 @@ export const ClientCart: React.FC = () => {
     }
   };
 
-  // Payment modal state (VNPAY-QR & VietQR)
+  // Payment modal state (VNPAY-QR)
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [vnpayInfo, setVnPayInfo] = useState<VnPayPaymentInfo | null>(null);
   const [currentOrder, setCurrentOrder] = useState<any>(null);
@@ -225,10 +224,16 @@ export const ClientCart: React.FC = () => {
         } catch (err: any) {
           console.warn('Lỗi tạo URL VNPAY:', err);
         }
-      } else if (payMethod === 'qr_code' || (orderMode === 'dine_in' && tableSession?.mode === 'pay_first')) {
+      } else if (orderMode === 'dine_in' && tableSession?.mode === 'pay_first') {
         setCurrentOrder(placed);
         setShowPaymentModal(true);
-        setTimeLeft(600);
+        setTimeLeft(900);
+        try {
+          const vnp = await createVnPayPayment(placed.id);
+          setVnPayInfo(vnp);
+        } catch (err: any) {
+          console.warn('Lỗi tạo URL VNPAY:', err);
+        }
       } else {
         navigate('/client/orders');
       }
@@ -263,7 +268,7 @@ export const ClientCart: React.FC = () => {
     }
   };
 
-  // Payment polling for QR Code (VNPAY-QR & VietQR)
+  // Payment polling for QR Code (VNPAY-QR)
   useEffect(() => {
     let timer: any;
     let poller: any;
@@ -944,15 +949,6 @@ export const ClientCart: React.FC = () => {
                     icon: QrCode,
                   },
                   {
-                    key: 'qr_code' as ClientPaymentMethod,
-                    label: 'Chuyển khoản VietQR',
-                    sublabel: 'Chuyển khoản qua số tài khoản nhà hàng',
-                    badge: null,
-                    badgeColor: '',
-                    badgeBg: '',
-                    icon: QrCode,
-                  },
-                  {
                     key: 'cash' as ClientPaymentMethod,
                     label: isDineIn ? 'Thanh toán tại bàn / Quầy' : 'Tiền mặt khi nhận',
                     sublabel: isDineIn ? 'Nhân viên thu tiền sau' : 'Thanh toán trực tiếp cho shipper',
@@ -1137,7 +1133,7 @@ export const ClientCart: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Payment Modal (VNPAY-QR Sandbox & VietQR) ── */}
+      {/* ── Payment Modal (VNPAY-QR Sandbox) ── */}
       {showPaymentModal && currentOrder && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
@@ -1363,72 +1359,8 @@ export const ClientCart: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem' }}>
-                    Quét mã VietQR thanh toán
-                  </span>
-                  <span style={{
-                    fontSize: '0.78rem', background: '#fee2e2', color: '#b91c1c',
-                    padding: '2px 8px', borderRadius: 99, fontWeight: 700,
-                  }}>
-                    ⏱️ {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-
-                <div style={{
-                  background: '#fafafa', border: '1px solid #f1f5f9', borderRadius: 14,
-                  padding: 12, marginBottom: 14, display: 'inline-block',
-                }}>
-                  <img
-                    src={generateVietQRUrl(currentOrder.totalAmount, `OMNIRESTO ${currentOrder.orderNumber}`)}
-                    alt="VietQR"
-                    style={{ width: 200, height: 200, objectFit: 'contain', margin: '0 auto', display: 'block' }}
-                  />
-                </div>
-
-                <div style={{
-                  fontSize: '0.825rem', color: '#475569', textAlign: 'left',
-                  background: '#f8fafc', padding: 12, borderRadius: 10, marginBottom: 16,
-                  display: 'flex', flexDirection: 'column', gap: 4,
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Số tiền:</span>
-                    <strong style={{ color: '#ea580c', fontSize: '0.95rem' }}>
-                      {currentOrder.totalAmount.toLocaleString('vi-VN')}đ
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Nội dung CK:</span>
-                    <strong style={{ color: '#0f172a' }}>OMNIRESTO {currentOrder.orderNumber}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Ngân hàng:</span>
-                    <span style={{ fontWeight: 600 }}>{PAYMENT_CONFIG.bankName}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Số tài khoản:</span>
-                    <span style={{ fontWeight: 600 }}>{PAYMENT_CONFIG.accountNumber}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Chủ tài khoản:</span>
-                    <span style={{ fontWeight: 600 }}>{PAYMENT_CONFIG.accountName}</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPaymentModal(false);
-                    navigate(`/client/orders`);
-                  }}
-                  style={{
-                    background: 'none', border: 'none', color: '#64748b',
-                    fontSize: '0.8rem', cursor: 'pointer', padding: 4,
-                  }}
-                >
-                  Đóng và theo dõi đơn hàng sau →
-                </button>
+              <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748b' }}>
+                <p>Đang khởi tạo cổng thanh toán VNPAY...</p>
               </div>
             )}
           </div>

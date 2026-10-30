@@ -30,7 +30,7 @@ public class PaymentTransactionEntity extends BaseEntity {
 
     @Column(name = "payment_gateway", nullable = false, length = 30)
     @Builder.Default
-    private String paymentGateway = "VIETQR";
+    private String paymentGateway = "VNPAY";
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

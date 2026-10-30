@@ -33,6 +33,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final TableRepository tableRepository;
     private final ReservationSseService sseService;
+    private final ActionLogService actionLogService;
 
     private static final Pattern MERGED_PATTERN = Pattern.compile("\\[MERGED:([^\\]]+)\\]");
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -185,6 +186,7 @@ public class ReservationService {
         ReservationEntity saved = reservationRepository.save(entity);
         ReservationResponse response = toResponse(saved);
         sseService.broadcastNewReservation(response);
+        actionLogService.record("Quản Lý Đặt Bàn", "Tạo đặt bàn", "Tạo đặt bàn cho khách: " + saved.getCustomerName() + " (" + saved.getPartySize() + " khách)");
         return response;
     }
 
@@ -290,6 +292,7 @@ public class ReservationService {
 
         ReservationResponse response = toResponse(res);
         sseService.broadcastReservationUpdated(response);
+        actionLogService.record("Quản Lý Đặt Bàn", "Xếp bàn", "Xếp bàn " + (res.getTable() != null ? res.getTable().getTableNo() : "") + " cho khách " + res.getCustomerName() + " (Mã: " + res.getReservationCode() + ")");
         return response;
     }
 
@@ -314,6 +317,7 @@ public class ReservationService {
 
         ReservationResponse response = toResponse(res);
         sseService.broadcastReservationUpdated(response);
+        actionLogService.record("Quản Lý Đặt Bàn", "Check-in nhận bàn", "Check-in nhận bàn cho khách: " + res.getCustomerName() + " (Mã: " + res.getReservationCode() + ")");
         return response;
     }
 
@@ -337,6 +341,7 @@ public class ReservationService {
 
         ReservationResponse response = toResponse(res);
         sseService.broadcastReservationUpdated(response);
+        actionLogService.record("Quản Lý Đặt Bàn", "Hủy đặt bàn", "Hủy lượt đặt bàn #" + res.getReservationCode() + " của khách " + res.getCustomerName() + (reason != null && !reason.isBlank() ? " (Lý do: " + reason + ")" : ""));
         return response;
     }
 

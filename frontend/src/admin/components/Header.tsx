@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bell, Store, Calendar, ChevronDown, User, Package, LogOut, HelpCircle, Zap } from 'lucide-react';
+import { Bell, Store, Calendar, ChevronDown, User, LogOut, Zap } from 'lucide-react';
 import { Modal } from '../../shared/components/Modal';
 import { useAdminStore } from '../store/adminStore';
 import './Header.css';
@@ -10,7 +9,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
-  const navigate = useNavigate();
   const { service_requests, resolveServiceRequest, clearAllServiceRequests, orders } = useAdminStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -26,13 +24,13 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
     day: 'numeric',
   });
 
-  const savedStaffStr = localStorage.getItem('staff_user');
-  let currentStaff: { full_name?: string; role?: string; email?: string } | null = null;
+  const savedStaffStr = localStorage.getItem('staff_user') || localStorage.getItem('user');
+  let currentStaff: { full_name?: string; fullName?: string; role?: string; email?: string } | null = null;
   try {
     currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
   } catch { }
-  const staffName = currentStaff?.full_name || 'Lê Minh Tuấn';
-  const staffRole = currentStaff?.role?.toUpperCase() || 'ADMIN';
+  const staffName = currentStaff?.full_name || currentStaff?.fullName || 'Chưa đăng nhập';
+  const staffRole = currentStaff?.role?.toUpperCase() || '';
   const initials = staffName
     .split(' ')
     .filter(Boolean)
@@ -44,9 +42,10 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
   const handleLogout = () => {
     setShowProfileDropdown(false);
     localStorage.removeItem('token');
-    localStorage.removeItem('customer');
+    localStorage.removeItem('user');
     localStorage.removeItem('staff_user');
-    navigate('/auth');
+    localStorage.removeItem('customer');
+    window.location.href = '/auth';
   };
 
   return (
@@ -282,23 +281,6 @@ export const Header: React.FC<HeaderProps> = ({ onQuickAction }) => {
                   <User size={16} color="var(--primary)" />
                   <span>Tài khoản của bạn</span>
                 </button>
-
-                <button
-                  className="dropdown-item"
-                  onClick={() => setShowProfileDropdown(false)}
-                >
-                  <Package size={16} color="var(--purple)" />
-                  <span>Gói dịch vụ HQ</span>
-                </button>
-
-                <button
-                  className="dropdown-item"
-                  onClick={() => setShowProfileDropdown(false)}
-                >
-                  <HelpCircle size={16} color="var(--info)" />
-                  <span>Cập nhật CCCD / Hướng dẫn</span>
-                </button>
-
                 <div className="dropdown-divider" />
 
                 <button

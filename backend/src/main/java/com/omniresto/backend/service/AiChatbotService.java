@@ -592,7 +592,7 @@ public class AiChatbotService {
      */
     public static boolean detectPaymentIntent(String norm) {
         if (norm == null) return false;
-        return norm.contains("thanh toan") || norm.contains("vietqr") || norm.contains("chuyen khoan") ||
+        return norm.contains("thanh toan") || norm.contains("chuyen khoan") ||
                 norm.contains("quet ma") || norm.contains("qr code") || norm.contains("tien mat") ||
                 norm.contains("the tin dung") || norm.contains("the atm") || norm.contains("momo") ||
                 norm.contains("vnpay") || norm.contains("zalopay") || norm.contains("online") ||
@@ -834,7 +834,7 @@ public class AiChatbotService {
 
         // Tiện ích wifi, thanh toán
         if (norm.contains("wifi") || norm.contains("mat khau") || norm.contains("pass") ||
-                norm.contains("vietqr") || norm.contains("thanh toan") || norm.contains("chuyen khoan")) {
+                norm.contains("thanh toan") || norm.contains("chuyen khoan")) {
             return true;
         }
 
@@ -2910,9 +2910,9 @@ public class AiChatbotService {
                     .limit(2)
                     .collect(Collectors.toList());
             reply = "Dạ nhà hàng có các loại thức uống pha chế thủ công thanh mát và cà phê đậm đà giúp giải nhiệt và cân bằng khẩu vị cực tốt ạ:";
-        } else if (norm.contains("vietqr") || norm.contains("thanh toan") || norm.contains("chuyen khoan")) {
+        } else if (norm.contains("thanh toan") || norm.contains("chuyen khoan")) {
             return AiChatResponse.builder()
-                    .reply("Dạ quý khách có thể thanh toán VietQR rất nhanh chóng:\n1. Chọn mục **'Đơn hàng'** trên menu.\n2. Bấm nút **'Quét mã VietQR'**, mã QR động với số tiền chính xác sẽ hiện ra.\n3. Quét trên app ngân hàng bất kỳ, hệ thống sẽ tự động ghi nhận thanh toán sau 2–3 giây ạ!")
+                    .reply("Dạ quý khách có thể thanh toán trực tuyến qua cổng VNPAY rất nhanh chóng:\n1. Chọn mục **'Đơn hàng'** trên menu.\n2. Bấm nút **'Thanh toán VNPAY'**, quét mã VNPAY-QR hoặc dùng app ngân hàng/thẻ để thanh toán an toàn.\n3. Sau khi hoàn tất, hệ thống sẽ tự động ghi nhận thanh toán sau 2–3 giây ạ!")
                     .recommendedDishes(Collections.emptyList())
                     .modelUsed("Rule-Based Assistant")
                     .build();
@@ -3034,14 +3034,10 @@ public class AiChatbotService {
      * Trả về mô tả các phương thức thanh toán được hỗ trợ tại OmniResto.
      */
     private String getPaymentMethodContext() {
-        return "1. VietQR (Quét mã QR động): Hỗ trợ toàn bộ app ngân hàng nội địa. "
-                + "Trong ứng dụng → Đơn hàng → Quét mã VietQR → Xác nhận tự động sau 2-3 giây.\n"
-                + "2. Chuyển khoản ngân hàng: STK sẽ được hiển thị trên hóa đơn.\n"
-                + "3. Tiền mặt: Thanh toán trực tiếp tại quầy hoặc đưa cho nhân viên phục vụ.\n"
-                + "4. Thẻ ngân hàng (ATM/Visa/Mastercard): Máy POS tại quầy thu ngân.\n"
-                + "5. Ví điện tử MoMo, ZaloPay, VNPay: Quét mã tại quầy thu ngân.\n"
-                + "Lưu ý: Thanh toán online qua ứng dụng OmniResto hỗ trợ VietQR và chuyển khoản. "
-                + "Thẻ tín dụng và ví điện tử thanh toán tại quầy.";
+        return "1. VNPAY-QR: Quét mã QR thanh toán qua ứng dụng ngân hàng và ví điện tử VNPAY.\n"
+                + "2. Tiền mặt: Thanh toán trực tiếp tại quầy thu ngân hoặc cho nhân viên phục vụ.\n"
+                + "3. Thẻ ngân hàng (ATM/Visa/Mastercard): Máy POS tại quầy thu ngân.\n"
+                + "Lưu ý: Thanh toán online qua ứng dụng OmniResto hỗ trợ cổng VNPAY an toàn và nhanh chóng.";
     }
 
     /**

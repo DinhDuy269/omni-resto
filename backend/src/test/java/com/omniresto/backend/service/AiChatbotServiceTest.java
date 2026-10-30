@@ -283,7 +283,7 @@ class AiChatbotServiceTest {
         // Phải đề cập voucher
         assertTrue(response.getReply().toLowerCase().contains("voucher") || response.getReply().toLowerCase().contains("ưu đãi"));
         // Phải đề cập phương thức thanh toán
-        assertTrue(response.getReply().toLowerCase().contains("thanh toán") || response.getReply().toLowerCase().contains("vietqr"));
+        assertTrue(response.getReply().toLowerCase().contains("thanh toán"));
         // Tuyệt đối không gợi ý món vi phạm dị ứng
         for (var dish : response.getRecommendedDishes()) {
             String nameLower = dish.getName().toLowerCase();
@@ -309,7 +309,7 @@ class AiChatbotServiceTest {
         // Phải đề cập voucher
         assertTrue(replyLower.contains("voucher") || replyLower.contains("ưu đãi"));
         // Phải đề cập phương thức thanh toán
-        assertTrue(replyLower.contains("thanh toán") || replyLower.contains("vietqr"));
+        assertTrue(replyLower.contains("thanh toán"));
         // KHÔNG được nhắc nhầm "quý khách dị ứng với" vì khách không khai báo dị ứng
         assertFalse(response.getReply().contains("✅ **Em đã ghi nhận quý khách dị ứng"));
         // Phải có món gợi ý
@@ -323,7 +323,7 @@ class AiChatbotServiceTest {
                 "  \"recommendation\": \"Combo Nướng Bò Mỹ và Lẩu\",\n" +
                 "  \"reason\": \"Món ăn ấm cúng rất hợp không khí đôi lứa.\",\n" +
                 "  \"voucher_details\": \"Giảm 10% cho khách đặt bàn trước.\",\n" +
-                "  \"payment_methods\": [\"VietQR\", \"Tiền mặt\", \"Thẻ tín dụng\"]\n" +
+                "  \"payment_methods\": [\"VNPAY\", \"Tiền mặt\", \"Thẻ tín dụng\"]\n" +
                 "}";
 
         java.util.Map<String, MenuItemEntity> itemMap = new java.util.HashMap<>();

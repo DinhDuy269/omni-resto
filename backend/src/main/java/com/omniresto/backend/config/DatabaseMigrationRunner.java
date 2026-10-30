@@ -29,6 +29,28 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         safeExecute("UPDATE `tables` SET `status` = LOWER(`status`)");
         safeExecute("UPDATE `orders` SET `status` = LOWER(`status`), `payment_status` = LOWER(`payment_status`)");
         safeExecute("UPDATE `order_items` SET `status` = LOWER(`status`)");
+
+        // Tự động tạo bảng action_logs để ghi vết nhật ký thao tác
+        safeExecute("""
+            CREATE TABLE IF NOT EXISTS `action_logs` (
+                `id` VARCHAR(36) PRIMARY KEY,
+                `user_id` VARCHAR(36) NULL,
+                `user_name` VARCHAR(100) NOT NULL,
+                `user_role` VARCHAR(30) NULL,
+                `screen` VARCHAR(100) NOT NULL,
+                `feature` VARCHAR(100) NOT NULL,
+                `action_type` VARCHAR(50) NOT NULL,
+                `description` TEXT NULL,
+                `status` VARCHAR(20) NOT NULL DEFAULT 'SUCCESS',
+                `ip_address` VARCHAR(50) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_action_logs_created_at (`created_at`),
+                INDEX idx_action_logs_screen (`screen`),
+                INDEX idx_action_logs_user_name (`user_name`),
+                INDEX idx_action_logs_action_type (`action_type`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """);
+
         log.info("✅ Schema self-healing patch completed.");
     }
 

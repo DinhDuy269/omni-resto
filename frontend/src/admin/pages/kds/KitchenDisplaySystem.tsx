@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChefHat, Clock, CheckCircle2, AlertCircle, Utensils, Sparkles, Wifi, Flame, AlertTriangle } from 'lucide-react';
+import { ChefHat, Clock, CheckCircle2, AlertCircle, Utensils, Sparkles, Wifi, Flame, AlertTriangle, Layers } from 'lucide-react';
 import { useAdminStore } from '../../store/adminStore';
 import type { OrderStatus } from '../../../shared/types/admin';
 import { useWebSocket } from '../../../shared/hooks/useWebSocket';
@@ -49,93 +49,120 @@ export const KitchenDisplaySystem: React.FC = () => {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* ── KITCHEN HEADER BAR ── */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-          background: 'var(--bg-surface)',
-          padding: '20px 24px',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border-color)',
-          boxShadow: 'var(--shadow-sm)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
-              color: '#ffffff',
-            }}
-          >
-            <ChefHat size={26} />
+      {/* ── KITCHEN UNIFIED PAGE HEADER ── */}
+      <div className="adm-page-header">
+        <div>
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <ChefHat size={13} /> TRUNG TÂM CHẾ BIẾN & ĐIỀU PHỐI BẾP (KDS)
+            </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                fontSize: '0.725rem',
+                fontWeight: 700,
+                background: isConnected ? 'var(--success-bg)' : 'var(--warning-bg)',
+                color: isConnected ? 'var(--success)' : 'var(--warning)',
+                border: `1px solid ${isConnected ? 'var(--success-border)' : 'var(--warning-border)'}`,
+              }}
+            >
+              <Wifi size={12} /> {isConnected ? 'Real-time Live' : 'Polling Sync'}
+            </span>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                Màn Hình Bếp Trực Quan (KDS)
-              </h2>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 8px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  background: isConnected ? 'var(--success-bg)' : 'var(--warning-bg)',
-                  color: isConnected ? 'var(--success)' : 'var(--warning)',
-                  border: `1px solid ${isConnected ? 'var(--success-border)' : 'var(--warning-border)'}`,
-                }}
-              >
-                <Wifi size={12} /> {isConnected ? 'Real-time Live' : 'Polling Sync'}
-              </span>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-              Điều phối tiến trình chế biến món ăn thời gian thực theo thứ tự vào bếp (FIFO)
-            </p>
-          </div>
+          <h1 className="adm-page-title">Màn Hình Bếp Trực Quan (KDS)</h1>
+          <p className="adm-page-subtitle">
+            Điều phối tiến trình chế biến món ăn thời gian thực theo thứ tự vào bếp (FIFO) và kiểm soát định mức phục vụ
+          </p>
         </div>
 
         {/* Status Filter Tabs */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="adm-header-actions">
           {[
-            { id: 'KITCHEN_ACTIVE', label: `Tất cả đơn bếp (${kitchenOrders.length})` },
-            { id: 'confirmed', label: `🔵 Chờ nấu (${confirmedCount})` },
-            { id: 'preparing', label: `🟡 Đang chế biến (${preparingCount})` },
-            { id: 'ready', label: `🟢 Sẵn sàng trả (${readyCount})` },
+            { id: 'KITCHEN_ACTIVE', label: `Tất Cả Đơn (${kitchenOrders.length})` },
+            { id: 'confirmed', label: `Chờ Nấu (${confirmedCount})` },
+            { id: 'preparing', label: `Đang Nấu (${preparingCount})` },
+            { id: 'ready', label: `Sẵn Sàng (${readyCount})` },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
-              className="btn btn-sm"
-              style={{
-                padding: '8px 14px',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                borderRadius: 'var(--radius-md)',
-                background: filterStatus === tab.id ? 'var(--primary)' : 'var(--bg-app)',
-                color: filterStatus === tab.id ? '#ffffff' : 'var(--text-body)',
-                border: `1px solid ${filterStatus === tab.id ? 'var(--primary)' : 'var(--border-color)'}`,
-                boxShadow: filterStatus === tab.id ? '0 2px 8px var(--primary-glow)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
+              className={filterStatus === tab.id ? 'adm-btn-primary' : 'adm-btn-secondary'}
+              style={{ padding: '8px 16px', fontSize: '0.85rem' }}
             >
               {tab.label}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* ── 4 KPI STATS METRICS ── */}
+      <div className="adm-stats-grid">
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Tổng Đơn Bếp</span>
+            <div className="adm-stat-icon icon-blue">
+              <Layers size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value">{kitchenOrders.length}</div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Đơn bếp đang trực tiếp phục vụ</span>
+            <span className="adm-stat-pill positive">Active</span>
+          </div>
+        </div>
+
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Hàng Đợi Chờ Nấu</span>
+            <div className="adm-stat-icon icon-rose">
+              <Clock size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: confirmedCount > 0 ? '#ef4444' : undefined }}>
+            {confirmedCount}
+          </div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Món mới vào bếp cần sơ chế</span>
+            <span className={`adm-stat-pill ${confirmedCount > 0 ? 'negative' : 'positive'}`}>
+              {confirmedCount > 5 ? 'Cao tải' : 'Bình thường'}
+            </span>
+          </div>
+        </div>
+
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Đang Nấu Trên Bếp</span>
+            <div className="adm-stat-icon icon-amber">
+              <Flame size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: '#d97706' }}>
+            {preparingCount}
+          </div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Đầu bếp đang xào nấu</span>
+            <span className="adm-stat-pill positive">In progress</span>
+          </div>
+        </div>
+
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Sẵn Sàng Trả Món</span>
+            <div className="adm-stat-icon icon-emerald">
+              <CheckCircle2 size={20} />
+            </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: '#10b981' }}>
+            {readyCount}
+          </div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Chờ phục vụ bưng ra bàn</span>
+            <span className="adm-stat-pill positive">Ready</span>
+          </div>
         </div>
       </div>
 
@@ -150,6 +177,9 @@ export const KitchenDisplaySystem: React.FC = () => {
             flexDirection: 'column',
             alignItems: 'center',
             gap: '12px',
+            borderRadius: '16px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
           }}
         >
           <Sparkles size={48} color="var(--primary)" style={{ opacity: 0.5 }} />
@@ -183,7 +213,7 @@ export const KitchenDisplaySystem: React.FC = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  borderRadius: 'var(--radius-lg)',
+                  borderRadius: '16px',
                   border: isPendingConfirm
                     ? '2px solid #3b82f6'
                     : isCooking
@@ -193,7 +223,7 @@ export const KitchenDisplaySystem: React.FC = () => {
                     ? '0 6px 20px rgba(245, 158, 11, 0.15)'
                     : isPendingConfirm
                     ? '0 6px 20px rgba(59, 130, 246, 0.15)'
-                    : 'var(--shadow-sm)',
+                    : '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
                   padding: '20px',
                   gap: '16px',
                   background: 'var(--bg-surface)',
@@ -435,4 +465,5 @@ export const KitchenDisplaySystem: React.FC = () => {
     </div>
   );
 };
+
 export default KitchenDisplaySystem;

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { actionLogApi } from '../../../shared/api/actionLogApi';
 import {
   Store,
   Wifi,
@@ -46,34 +47,40 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     try {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(form));
+      actionLogApi.record({ screen: 'Cấu Hình Hệ Thống', feature: 'Lưu cấu hình', action: 'Cập nhật cấu hình hệ thống: Phân mục [' + activeTab + ']' }).catch(() => {});
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
-    } catch (err) {
+    } catch {
       alert('Không thể lưu cài đặt vào bộ nhớ hệ thống.');
     }
   };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* ── HEADER ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      {/* ── UNIFIED PAGE HEADER ── */}
+      <div className="adm-page-header">
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            Cấu Hình Hệ Thống HQ
-          </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-            Thiết lập chính sách toàn chuỗi: Thuế VAT, Cổng thanh toán VietQR & VNPAY, Wifi khách và Trợ lý AI
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <Store size={13} /> THIẾT LẬP THƯƠNG HIỆU & HỆ THỐNG HQ
+            </span>
+          </div>
+          <h1 className="adm-page-title">Cấu Hình Hệ Thống HQ</h1>
+          <p className="adm-page-subtitle">
+            Thiết lập chính sách toàn chuỗi: Thuế VAT, Cổng thanh toán VNPAY, Wifi khách và Trợ lý AI
           </p>
         </div>
 
-        <button
-          className="btn btn-primary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}
-          onClick={handleSave}
-        >
-          <Save size={16} />
-          <span>Lưu Cấu Hình HQ</span>
-        </button>
+        <div className="adm-header-actions">
+          <button
+            className="adm-btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}
+            onClick={handleSave}
+          >
+            <Save size={16} />
+            <span>Lưu Cấu Hình HQ</span>
+          </button>
+        </div>
       </div>
 
       {savedSuccess && (
@@ -85,8 +92,8 @@ export const SettingsPage: React.FC = () => {
             background: 'var(--success-bg)',
             border: '1px solid var(--success-border)',
             color: 'var(--success)',
-            padding: '12px 18px',
-            borderRadius: 'var(--radius-md)',
+            padding: '14px 20px',
+            borderRadius: '12px',
             fontWeight: 700,
             fontSize: '0.9rem',
           }}
@@ -99,10 +106,10 @@ export const SettingsPage: React.FC = () => {
       {/* ── NAVIGATION TABS & FORM CONTAINER ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '24px', alignItems: 'flex-start' }}>
         {/* Left Side: Category Tabs */}
-        <div className="card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div className="card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
           {[
             { id: 'GENERAL', label: 'Thông Tin Thương Hiệu', icon: Store },
-            { id: 'PAYMENT', label: 'Cổng Thanh Toán (QR & VNPAY)', icon: CreditCard },
+            { id: 'PAYMENT', label: 'Cổng Thanh Toán VNPAY', icon: CreditCard },
             { id: 'TAX', label: 'Thuế VAT & Phí Dịch Vụ', icon: Receipt },
             { id: 'WIFI', label: 'Wifi Khách (Guest Wifi)', icon: Wifi },
             { id: 'AI', label: 'Trợ Lý AI & Tải Phục Vụ', icon: Bot },
@@ -118,7 +125,7 @@ export const SettingsPage: React.FC = () => {
                   alignItems: 'center',
                   gap: '10px',
                   padding: '12px 14px',
-                  borderRadius: 'var(--radius-md)',
+                  borderRadius: '10px',
                   border: 'none',
                   background: isActive ? 'var(--primary-subtle)' : 'transparent',
                   color: isActive ? 'var(--primary)' : 'var(--text-body)',
@@ -137,7 +144,7 @@ export const SettingsPage: React.FC = () => {
         </div>
 
         {/* Right Side: Form Body */}
-        <div className="card" style={{ padding: '28px' }}>
+        <div className="card" style={{ padding: '28px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
           {activeTab === 'GENERAL' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
@@ -178,41 +185,12 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'PAYMENT' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
-                Cấu Hình Cổng Thanh Toán VietQR & VNPAY
+                Cấu Hình Cổng Thanh Toán Trực Tuyến VNPAY
               </h3>
               <div style={{ background: 'var(--primary-subtle)', borderRadius: 'var(--radius-md)', padding: '14px 16px', fontSize: '0.85rem', color: 'var(--primary)' }}>
-                💳 <strong>VietQR MBBank:</strong> Tự động xuất mã QR động chuyển khoản ngân hàng gắn sẵn mã hóa đơn và số tiền.
+                💳 <strong>Cổng thanh toán VNPAY:</strong> Hỗ trợ thanh toán VNPAY-QR, Thẻ ATM nội địa, Thẻ quốc tế Visa/Mastercard và Ví điện tử.
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-body)' }}>Số Tài Khoản</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={form.accountNumber}
-                    onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-body)' }}>Tên Chủ Tài Khoản</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={form.accountName}
-                    onChange={(e) => setForm({ ...form, accountName: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-body)' }}>Ngân Hàng Thụ Hưởng</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={form.bankName}
-                    onChange={(e) => setForm({ ...form, bankName: e.target.value })}
-                  />
-                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-body)' }}>VNPAY Terminal Code (TMN)</label>
                   <input
@@ -220,6 +198,15 @@ export const SettingsPage: React.FC = () => {
                     className="form-input"
                     value={form.vnpayTmnCode}
                     onChange={(e) => setForm({ ...form, vnpayTmnCode: e.target.value })}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-body)' }}>VNPAY Hash Secret Key</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    value={form.vnpayHashSecret}
+                    onChange={(e) => setForm({ ...form, vnpayHashSecret: e.target.value })}
                   />
                 </div>
               </div>
@@ -317,4 +304,5 @@ export const SettingsPage: React.FC = () => {
     </div>
   );
 };
+
 export default SettingsPage;

@@ -24,6 +24,12 @@ apiClient.interceptors.request.use((config) => {
       const staffUser = JSON.parse(staffUserStr);
       if (staffUser?.role) {
         config.headers['X-Staff-Role'] = String(staffUser.role).toUpperCase();
+        if (staffUser?.full_name || staffUser?.fullName) {
+          config.headers['X-Staff-Name'] = encodeURIComponent(staffUser.full_name || staffUser.fullName);
+        }
+        if (staffUser?.id) {
+          config.headers['X-Staff-Id'] = staffUser.id;
+        }
       }
     } catch {
       // Ignore parse error

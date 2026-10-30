@@ -47,6 +47,7 @@ public class VoucherService {
     private final MenuItemRepository menuItemRepository;
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
+    private final ActionLogService actionLogService;
 
     @Transactional(readOnly = true)
     public List<VoucherResponse> getAllVouchers(String status) {
@@ -123,6 +124,7 @@ public class VoucherService {
 
         VoucherEntity saved = voucherRepository.save(entity);
         log.info("Đã tạo mới voucher thành công: [ID: {}, Code: {}]", saved.getId(), saved.getCode());
+        actionLogService.record("Khuyến Mãi & Voucher", "Tạo voucher", "Tạo voucher: " + saved.getCode() + " (" + saved.getName() + ")");
         return mapToResponse(saved);
     }
 
@@ -170,6 +172,7 @@ public class VoucherService {
 
         VoucherEntity updated = voucherRepository.save(entity);
         log.info("Đã cập nhật thông tin voucher: [ID: {}, Code: {}]", updated.getId(), updated.getCode());
+        actionLogService.record("Khuyến Mãi & Voucher", "Cập nhật voucher", "Cập nhật voucher: " + updated.getCode());
         return mapToResponse(updated);
     }
 
@@ -183,6 +186,7 @@ public class VoucherService {
             voucher.setStatus(newStatus);
             voucherRepository.save(voucher);
             log.info("Đã đổi trạng thái voucher [ID: {}] sang {}", id, newStatus);
+            actionLogService.record("Khuyến Mãi & Voucher", "Đổi trạng thái voucher", "Đổi trạng thái voucher " + voucher.getCode() + " sang " + newStatus);
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Trạng thái voucher không hợp lệ: " + status);
         }
@@ -197,9 +201,11 @@ public class VoucherService {
             voucher.setStatus(VoucherStatus.inactive);
             voucherRepository.save(voucher);
             log.info("Voucher [ID: {}] đã có {} lượt dùng -> chuyển sang trạng thái INACTIVE", id, voucher.getUsedQuantity());
+            actionLogService.record("Khuyến Mãi & Voucher", "Đổi trạng thái voucher", "Chuyển voucher " + voucher.getCode() + " sang không hoạt động");
         } else {
             voucherRepository.delete(voucher);
             log.info("Đã xóa hoàn toàn voucher chưa sử dụng [ID: {}]", id);
+            actionLogService.record("Khuyến Mãi & Voucher", "Xóa voucher", "Xóa voucher: " + voucher.getCode());
         }
     }
 

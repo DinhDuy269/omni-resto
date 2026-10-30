@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { reservationApi, type TableItem, type ReservationItem } from '../../api/reservationApi';
+import { reservationApi, type TableItem, type ReservationItem } from '../../../shared/api/reservationApi';
 import { 
   Users, Phone, User, Mail, 
   CheckCircle2, Clock, AlertCircle,

@@ -77,6 +77,7 @@ public class OrderService {
     private final VoucherRedemptionRepository voucherRedemptionRepository;
     private final VoucherService voucherService;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final ActionLogService actionLogService;
 
     @Setter
     @Value("${restaurant.business-hours.enforce:true}")
@@ -424,6 +425,8 @@ public class OrderService {
 
         OrderResponse response = mapToResponseWithItems(finalSaved, itemEntities);
         sendWebSocketEvent("ORDER_CREATED", response);
+        actionLogService.record("Quản Lý Đơn Hàng", "Tạo đơn hàng",
+                "Tạo mới đơn hàng #" + finalSaved.getOrderNumber() + " (Tổng tiền: " + finalSaved.getTotalAmount() + "đ)");
         return response;
     }
 
@@ -525,6 +528,8 @@ public class OrderService {
 
         // Bắn WebSocket thông báo Bếp & POS có ĐỢT GỌI MÓN MỚI vào bàn này
         sendWebSocketEvent("ORDER_ROUND_ADDED", response);
+        actionLogService.record("Quản Lý Đơn Hàng", "Gọi thêm món",
+                "Gọi thêm đợt " + nextRoundNo + " vào đơn #" + updated.getOrderNumber() + " (Tổng tiền: " + updated.getTotalAmount() + "đ)");
 
         return response;
     }
@@ -699,6 +704,13 @@ public class OrderService {
         OrderResponse response = mapToResponseWithItems(updated, items);
 
         sendWebSocketEvent("ORDER_STATUS_CHANGED", response);
+        if (status == OrderStatus.cancelled) {
+            actionLogService.record("Quản Lý Đơn Hàng", "Hủy đơn hàng", "Hủy đơn hàng #" + updated.getOrderNumber());
+        } else if (status == OrderStatus.completed) {
+            actionLogService.record("Quản Lý Đơn Hàng", "Hoàn tất đơn hàng", "Hoàn tất phục vụ đơn hàng #" + updated.getOrderNumber());
+        } else {
+            actionLogService.record("Quản Lý Đơn Hàng", "Đổi trạng thái đơn", "Đơn hàng #" + updated.getOrderNumber() + " chuyển sang " + status);
+        }
         return response;
     }
 
@@ -793,6 +805,8 @@ public class OrderService {
         OrderResponse response = mapToResponseWithItems(saved, items);
 
         sendWebSocketEvent("ORDER_PAYMENT_CONFIRMED", response);
+        actionLogService.record("Quản Lý Đơn Hàng", "Xác nhận thanh toán",
+                "Xác nhận thanh toán đơn #" + entity.getOrderNumber() + " (Phương thức: " + (entity.getPaymentMethod() != null ? entity.getPaymentMethod() : "Tiền mặt") + ", Tổng tiền: " + entity.getTotalAmount() + "đ)");
         if (autoComplete) {
             sendWebSocketEvent("ORDER_STATUS_CHANGED", response);
         }
@@ -820,6 +834,8 @@ public class OrderService {
 
         OrderResponse response = mapToResponseWithItems(savedOrder, allItems);
         sendWebSocketEvent("ORDER_ITEM_STATUS_CHANGED", response);
+        actionLogService.record("Màn Hình Bếp (KDS)", "Cập nhật món",
+                "Món '" + item.getItemName() + "' (Đơn #" + order.getOrderNumber() + ") chuyển sang trạng thái " + itemStatus);
         return response;
     }
 
@@ -905,6 +921,8 @@ public class OrderService {
 
         OrderResponse response = mapToResponseWithItems(updatedOrder, allItems);
         sendWebSocketEvent("ORDER_ITEM_CANCELLED", response);
+        actionLogService.record("Quản Lý Đơn Hàng", "Hủy món trong đơn",
+                "Hủy món '" + item.getItemName() + "' (SL: " + item.getQuantity() + ") thuộc đơn #" + updatedOrder.getOrderNumber() + " (Lý do: " + (reason != null && !reason.isBlank() ? reason : "Không nêu") + ")");
         return response;
     }
 

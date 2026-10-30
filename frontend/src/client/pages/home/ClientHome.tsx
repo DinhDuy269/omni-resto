@@ -410,7 +410,7 @@ export const ClientHome: React.FC = () => {
                 </div>
                 <h4 className="ch-step-title">Quét Mã QR Bàn Ăn</h4>
                 <p className="ch-step-desc">
-                  Thực khách ngồi vào bàn và quét mã VietQR để kích hoạt phiên bàn ăn cá nhân hóa ngay trên điện thoại.
+                  Thực khách ngồi vào bàn và quét mã QR tại bàn để kích hoạt phiên bàn ăn cá nhân hóa ngay trên điện thoại.
                 </p>
               </div>
 
@@ -432,7 +432,7 @@ export const ClientHome: React.FC = () => {
                 </div>
                 <h4 className="ch-step-title">Thanh Toán Không Chờ Đợi</h4>
                 <p className="ch-step-desc">
-                  Hóa đơn chốt đóng băng số tiền để chuyển khoản VietQR tự động hoặc quẹt thẻ POS tức thì tại bàn.
+                  Hóa đơn chốt đóng băng số tiền để thanh toán VNPAY-QR tự động hoặc quẹt thẻ POS tức thì tại bàn.
                 </p>
               </div>
             </div>

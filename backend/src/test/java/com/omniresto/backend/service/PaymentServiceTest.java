@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -34,31 +33,6 @@ class PaymentServiceTest {
 
     @InjectMocks
     private PaymentService paymentService;
-
-    @Test
-    @DisplayName("Should generate valid VietQR response with correctly formatted image URL")
-    void generateVietQR_Success() {
-        // Arrange
-        com.omniresto.backend.domain.OrderEntity orderEntity = com.omniresto.backend.domain.OrderEntity.builder()
-                .orderNumber("ORD-8888")
-                .status(OrderStatus.pending)
-                .paymentStatus(com.omniresto.backend.domain.enums.PaymentStatus.unpaid)
-                .totalAmount(BigDecimal.valueOf(250000))
-                .build();
-        orderEntity.setId("ord-100");
-
-        when(orderRepository.findById("ord-100")).thenReturn(Optional.of(orderEntity));
-
-        // Act
-        PaymentService.VietQRResponse qrResponse = paymentService.generateVietQR("ord-100");
-
-        // Assert
-        assertNotNull(qrResponse);
-        assertEquals("ord-100", qrResponse.getOrderId());
-        assertEquals("ORD-8888", qrResponse.getOrderNumber());
-        assertEquals(BigDecimal.valueOf(250000), qrResponse.getAmount());
-        assertTrue(qrResponse.getQrImageUrl().contains("https://img.vietqr.io/image/MB-0368295264-compact2.png"));
-    }
 
     @Test
     @DisplayName("Should process payment webhook and set order status to preparing")

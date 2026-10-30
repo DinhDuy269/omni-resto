@@ -7,9 +7,6 @@ import {
   Clock,
   ChefHat,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  QrCode,
   PlusCircle,
   Flame,
   Check,
@@ -18,7 +15,6 @@ import {
 import { useClientStore } from '../../store/clientStore';
 import { ServiceRequestModal } from '../../components/ServiceRequestModal';
 import type { PlacedOrderStatus } from '../../../shared/types/client';
-import { PAYMENT_CONFIG, generateVietQRUrl } from '../../../shared/config/paymentConfig';
 import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 
 const STEPS: { key: PlacedOrderStatus; label: string; icon: React.FC<{ size?: number; color?: string }> }[] = [
@@ -35,7 +31,6 @@ export const ClientOrderTracking: React.FC = () => {
   const { orders, placed_order, table_session, fetchOrderById } = useClientStore();
 
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  const [isQrAccordionOpen, setIsQrAccordionOpen] = useState(false);
 
   // Lắng nghe cập nhật thời gian thực từ Server qua WebSockets
   useWebSocket((event) => {
@@ -456,7 +451,7 @@ export const ClientOrderTracking: React.FC = () => {
             marginTop: 14, paddingTop: 12, borderTop: '1.5px dashed #e2e8f0',
           }}>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              Hình thức: <strong>{currentOrder.payment_method === 'qr_code' ? 'Quét QR' : 'Tiền mặt/Tại quầy'}</strong>
+              Hình thức: <strong>{currentOrder.payment_method === 'vnpay' || currentOrder.payment_method === 'vnpay_qr' ? 'VNPAY-QR' : 'Tiền mặt/Tại quầy'}</strong>
             </div>
             <div style={{ textAlign: 'right' }}>
               <span style={{ fontSize: '0.78rem', color: '#64748b', marginRight: 6 }}>Tổng cộng:</span>
@@ -473,69 +468,7 @@ export const ClientOrderTracking: React.FC = () => {
           </div>
         </div>
 
-        {/* ── 3. COLLAPSIBLE VIETQR PAYMENT (Tối giản: Mở khi cần) ── */}
-        {currentOrder.payment_method === 'qr_code' && !isCompleted && !isCancelled && (
-          <div style={{
-            background: '#ffffff',
-            borderRadius: 16,
-            border: '1px solid #fed7aa',
-            marginBottom: 20,
-            overflow: 'hidden',
-          }}>
-            <button
-              type="button"
-              onClick={() => setIsQrAccordionOpen(!isQrAccordionOpen)}
-              style={{
-                width: '100%', padding: '14px 18px',
-                background: '#fff7ed', border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: 'pointer', textAlign: 'left',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <QrCode size={18} color="#ea580c" />
-                <div>
-                  <strong style={{ fontSize: '0.88rem', color: '#9a3412', display: 'block' }}>
-                    Thanh toán nhanh qua VietQR
-                  </strong>
-                  <span style={{ fontSize: '0.75rem', color: '#c2410c' }}>
-                    {isQrAccordionOpen ? 'Bấm để thu gọn mã QR' : 'Bấm để hiển thị mã QR chuyển khoản'}
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ea580c' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                  {currentOrder.total_amount.toLocaleString('vi-VN')}đ
-                </span>
-                {isQrAccordionOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-              </div>
-            </button>
 
-            {isQrAccordionOpen && (
-              <div style={{ padding: '16px 20px', textAlign: 'center', background: '#fff' }}>
-                <div style={{
-                  display: 'inline-block', background: '#fff', padding: 8,
-                  borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                }}>
-                  <img
-                    src={generateVietQRUrl(currentOrder.total_amount, currentOrder.order_number)}
-                    alt="VietQR"
-                    style={{ width: 190, height: 190, borderRadius: 8, display: 'block' }}
-                  />
-                </div>
-                <div style={{ marginTop: 10, fontSize: '0.8rem', color: '#64748b' }}>
-                  Ngân hàng: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.bank_name}</strong> | STK: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.account_number}</strong>
-                </div>
-                <div style={{ marginTop: 4, fontSize: '0.8rem', color: '#64748b' }}>
-                  Chủ TK: <strong style={{ color: '#0f172a' }}>{PAYMENT_CONFIG.account_name}</strong>
-                </div>
-                <div style={{ marginTop: 4, fontSize: '0.8rem', color: '#64748b' }}>
-                  Nội dung CK: <strong style={{ color: '#ea580c' }}>{currentOrder.order_number}</strong>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── 4. STICKY QUICK ACTIONS (Tiện tay ngón cái) ── */}
         <div style={{

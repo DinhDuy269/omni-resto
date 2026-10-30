@@ -12,6 +12,7 @@ import {
   Flame,
   ChefHat,
   Ticket,
+  History,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
 import './Sidebar.css';
@@ -22,14 +23,15 @@ export const Sidebar: React.FC = () => {
     (o) => o.status === 'pending'
   ).length;
 
-  const savedStaffStr = localStorage.getItem('staff_user');
-  let currentStaff: { full_name?: string; role?: string } | null = null;
+  const token = localStorage.getItem('token');
+  const savedStaffStr = token ? (localStorage.getItem('staff_user') || localStorage.getItem('user')) : null;
+  let currentStaff: { full_name?: string; fullName?: string; role?: string } | null = null;
   try {
     currentStaff = savedStaffStr ? JSON.parse(savedStaffStr) : null;
   } catch {
     currentStaff = null;
   }
-  const userRole = currentStaff?.role?.toLowerCase() || 'staff';
+  const userRole = currentStaff?.role?.toLowerCase() || '';
 
   interface NavItem {
     label: string;
@@ -62,6 +64,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Hội Viên & Khách Hàng', path: '/admin/customers', icon: Users, roles: ['admin', 'store_manager'] },
         { label: 'Nhân Sự & Phân Quyền', path: '/admin/staff', icon: Users, roles: ['admin', 'store_manager'] },
+        { label: 'Nhật Ký Thao Tác', path: '/admin/logs', icon: History, roles: ['admin', 'store_manager'] },
         { label: 'Báo Cáo Doanh Thu', path: '/admin/reports', icon: BarChart3, roles: ['admin', 'store_manager'] },
         { label: 'Cấu Hình Hệ Thống', path: '/admin/settings', icon: Settings, roles: ['admin'] },
       ],

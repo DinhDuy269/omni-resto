@@ -222,7 +222,7 @@ export const ClientFooter: React.FC = () => {
 
             <div className="footer-newsletter-card">
               <p className="footer-newsletter-desc">
-                Trải nghiệm gọi món không chạm qua mã QR tại bàn, tư vấn món ngon cá nhân hóa cùng AI Sommelier và thanh toán VietQR tức thì.
+                Trải nghiệm gọi món không chạm qua mã QR tại bàn, tư vấn món ngon cá nhân hóa cùng AI Sommelier và thanh toán VNPAY & tiền mặt tức thì.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

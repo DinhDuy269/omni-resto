@@ -35,12 +35,20 @@ public class StaffKeyAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        String authHeader = request.getHeader("Authorization");
+        // Nếu client đã gửi JWT Bearer Token, ưu tiên tuyệt đối xác thực theo tài khoản người dùng thực
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String staffKey = request.getHeader("X-Staff-Key");
 
         // Kiểm tra xác thực bằng X-Staff-Key hợp lệ (cho POS, KDS, Upload và Admin Portal)
         if (staffKey != null && !staffKey.isBlank() && isKeyValid(staffKey, configuredStaffKey)) {
             String staffRoleHeader = request.getHeader("X-Staff-Role");
             String staffIdHeader = request.getHeader("X-Staff-Id");
+            String staffNameHeader = request.getHeader("X-Staff-Name");
             List<SimpleGrantedAuthority> authorities;
 
             boolean isWaiterOrStaff = (staffRoleHeader != null && (
@@ -60,23 +68,26 @@ public class StaffKeyAuthenticationFilter extends OncePerRequestFilter {
                     staffIdHeader.toUpperCase().contains("MANAGER") ||
                     staffIdHeader.toUpperCase().contains("MGR")));
 
-            if (isWaiterOrStaff && !isManager) {
-                authorities = List.of(new SimpleGrantedAuthority("ROLE_STAFF"));
+            boolean isAdmin = (staffRoleHeader != null && "ADMIN".equalsIgnoreCase(staffRoleHeader))
+                    || (staffIdHeader != null && staffIdHeader.toUpperCase().contains("ADMIN"));
+
+            if (isAdmin) {
+                authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_STAFF"),
+                        new SimpleGrantedAuthority("ROLE_STORE_MANAGER"),
+                        new SimpleGrantedAuthority("ROLE_ADMIN")
+                );
             } else if (isManager) {
                 authorities = List.of(
                         new SimpleGrantedAuthority("ROLE_STAFF"),
                         new SimpleGrantedAuthority("ROLE_STORE_MANAGER")
                 );
             } else {
-                authorities = List.of(
-                        new SimpleGrantedAuthority("ROLE_STAFF"),
-                        new SimpleGrantedAuthority("ROLE_STORE_MANAGER"),
-                        new SimpleGrantedAuthority("ROLE_ADMIN")
-                );
+                authorities = List.of(new SimpleGrantedAuthority("ROLE_STAFF"));
             }
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    "STAFF_AUTH_USER",
+                    staffNameHeader != null && !staffNameHeader.isBlank() ? staffNameHeader : "STAFF_AUTH_USER",
                     null,
                     authorities
             );

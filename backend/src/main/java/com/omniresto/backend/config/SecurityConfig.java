@@ -62,8 +62,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(this::configureAuthorizeHttpRequests)
-                .addFilterBefore(staffKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(staffKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -93,31 +93,36 @@ public class SecurityConfig {
                 // 2. User & Staff RBAC Management (UserController) - Chỉ Quản trị viên (ADMIN) & Quản lý (STORE_MANAGER)
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
-                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/users", "/api/users/**").hasRole("ADMIN")
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/users", "/api/users/**").hasAnyRole("ADMIN", "STORE_MANAGER")
 
                 // 3. Customer Admin Management (Admin only)
                 .requestMatchers(customerAdminApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER")
 
-                // 4. Menu Items: GET public, POST/PUT/PATCH/DELETE yêu cầu quyền Admin/Staff
+                // 4. Action Logs (Nhật ký thao tác) - Xem: Admin & Manager, Ghi: Staff
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/action-logs", "/api/action-logs/**").hasAnyRole("ADMIN", "STORE_MANAGER")
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/action-logs", "/api/action-logs/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
+
+                // 5. Menu Items: GET public, POST/PUT/PATCH/DELETE yêu cầu quyền Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/menu-items", "/api/menu-items/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/menu-items", "/api/menu-items/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 5. Category: GET public, POST/PUT/DELETE yêu cầu quyền Admin/Staff
+                // 6. Category: GET public, POST/PUT/DELETE yêu cầu quyền Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories", "/api/categories/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/categories", "/api/categories/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 6. Reservations: Khách đặt bàn online & tra cứu là public; quản trị yêu cầu Admin/Staff
+                // 7. Reservations: Khách đặt bàn online & tra cứu là public; quản trị yêu cầu Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/tables/reservations/online", "/api/reservations/online").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tables/reservations/track/**", "/api/reservations/track/**", "/api/tables/reservations/check-phone", "/api/reservations/check-phone").permitAll()
                 .requestMatchers(reservationApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 7. Table Sessions: Các thao tác thu ngân / nhân viên yêu cầu Admin/Staff
+                // 8. Table Sessions: Các thao tác thu ngân / nhân viên yêu cầu Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.POST,
                         "/api/table-sessions/verify",
                         "/api/table-sessions/confirm-payment",
@@ -126,28 +131,28 @@ public class SecurityConfig {
                 ).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(tableSessionApiPatterns()).permitAll()
 
-                // 8. Tables: GET public, POST/PATCH/DELETE yêu cầu quyền Admin/Staff
+                // 9. Tables: GET public, POST/PATCH/DELETE yêu cầu quyền Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tables", "/api/tables/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/tables", "/api/tables/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 9. Vouchers: GET /available & /validate public, quản trị yêu cầu quyền Admin/Staff
+                // 10. Vouchers: GET /available & /validate public, quản trị yêu cầu quyền Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/vouchers/available", "/api/vouchers/validate").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/vouchers/validate").permitAll()
                 .requestMatchers(voucherApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 10. Service Requests: Khách tại bàn gửi yêu cầu là public; xem & resolve yêu cầu Admin/Staff
+                // 11. Service Requests: Khách tại bàn gửi yêu cầu là public; xem & resolve yêu cầu Admin/Staff
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/service-requests").permitAll()
                 .requestMatchers(serviceRequestApiPatterns()).hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
 
-                // 11. Order Management: Khách hủy món PENDING; cập nhật khác yêu cầu Staff
+                // 12. Order Management: Khách hủy món PENDING; cập nhật khác yêu cầu Staff
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/orders/*/items/*/cancel").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/orders/**").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/orders/*/confirm-payment").hasAnyRole("ADMIN", "STORE_MANAGER", "STAFF")
                 .requestMatchers(orderApiPatterns()).permitAll()
 
-                // 12. Public Endpoints & Unified Auth (login, register, otp)
+                // 13. Public Endpoints & Unified Auth (login, register)
                 .requestMatchers(paymentApiPatterns()).permitAll()
                 .requestMatchers(aiApiPatterns()).permitAll()
                 .requestMatchers(authApiPatterns()).permitAll()

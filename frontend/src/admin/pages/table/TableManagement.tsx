@@ -228,23 +228,26 @@ export const TableManagement: React.FC = () => {
   return (
     <div className="table-mgmt-container">
       {/* 1. Header Toolbar */}
-      <div className="table-mgmt-header">
-        <div className="table-mgmt-header-left">
-          <div className="table-mgmt-title-row">
-            <h1 className="table-mgmt-title">Sơ Đồ Bàn Ăn & Phòng Tiệc</h1>
+      <div className="adm-page-header">
+        <div>
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <Building2 size={13} /> SƠ ĐỒ BÀN ĂN & PHÒNG TIỆC
+            </span>
             <span className="table-mgmt-live-pill">
               <span className="table-live-dot" /> Live Monitoring
             </span>
           </div>
-          <p className="table-mgmt-subtitle">
+          <h1 className="adm-page-title">Sơ Đồ Bàn Ăn & Phòng Tiệc</h1>
+          <p className="adm-page-subtitle">
             Giám sát trực quan trạng thái bàn ăn theo thời gian thực, điều phối đón tiếp và theo dõi tạm tính tại bàn
           </p>
         </div>
 
-        <div className="table-mgmt-header-actions">
+        <div className="adm-header-actions">
           <button
             type="button"
-            className="btn btn-secondary"
+            className="adm-btn-secondary"
             onClick={handleRefresh}
             disabled={isRefreshing}
             title="Đồng bộ dữ liệu bàn ăn từ máy chủ"
@@ -253,7 +256,7 @@ export const TableManagement: React.FC = () => {
             <span>Làm Mới</span>
           </button>
 
-          <button type="button" className="btn btn-primary" onClick={handleOpenAddModal}>
+          <button type="button" className="adm-btn-primary" onClick={handleOpenAddModal}>
             <Plus size={16} />
             <span>Thêm Bàn Mới</span>
           </button>

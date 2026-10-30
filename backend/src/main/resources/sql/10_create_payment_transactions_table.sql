@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
     transaction_reference VARCHAR(100) NOT NULL UNIQUE, -- Mã giao dịch ngân hàng / gateway
     amount_expected DECIMAL(15, 2) NOT NULL,
     amount_received DECIMAL(15, 2) NOT NULL,
-    payment_gateway VARCHAR(30) NOT NULL DEFAULT 'VIETQR',
+    payment_gateway VARCHAR(30) NOT NULL DEFAULT 'VNPAY',
     status VARCHAR(20) NOT NULL DEFAULT 'SUCCESS', -- SUCCESS, UNDERPAID, OVERPAID, FAILED
     raw_payload TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

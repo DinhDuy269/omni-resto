@@ -41,6 +41,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final ActionLogService actionLogService;
 
     // ─────────────────────────────────────────────────────────────
     // 1. ĐĂNG NHẬP THỐNG NHẤT
@@ -189,7 +190,9 @@ public class AuthService {
         CustomerEntity entity = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khách hàng: " + id));
         entity.setStatus(status);
-        return mapToCustomerResponse(customerRepository.save(entity));
+        CustomerEntity saved = customerRepository.save(entity);
+        actionLogService.record("Hội Viên & Khách Hàng", "Đổi trạng thái hội viên", "Đổi trạng thái khách hàng " + saved.getFullName() + " (" + saved.getPhone() + ") sang " + status);
+        return mapToCustomerResponse(saved);
     }
 
     private CustomerResponse mapToCustomerResponse(CustomerEntity entity) {

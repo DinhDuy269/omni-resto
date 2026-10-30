@@ -36,11 +36,6 @@ public class PaymentController {
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
-    @GetMapping("/vietqr/{orderId}")
-    public PaymentService.VietQRResponse getVietQR(@PathVariable String orderId) {
-        return paymentService.generateVietQR(orderId);
-    }
-
     @GetMapping("/status/{orderId}")
     public PaymentService.PaymentStatusResponse getPaymentStatus(@PathVariable String orderId) {
         return paymentService.getPaymentStatus(orderId);
@@ -148,7 +143,7 @@ public class PaymentController {
     }
 
     /**
-     * Webhook nhận thông báo biến động số dư / thanh toán từ ngân hàng (VietQR, SePay, Casso, MBBank...)
+     * Webhook nhận thông báo biến động thanh toán cổng trực tuyến
      * Bắt buộc xác thực nguồn thông qua Webhook Secret / HMAC-SHA256 Signature.
      */
     @PostMapping("/webhook")

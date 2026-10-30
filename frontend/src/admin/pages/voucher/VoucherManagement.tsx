@@ -137,30 +137,21 @@ export const VoucherManagement: React.FC = () => {
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
       {/* Page Action Header Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="adm-page-header">
         <div>
-          <h2 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Ticket size={24} color="var(--primary)" />
-            Quản Lý Khuyến Mãi & Voucher
-          </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-            Thiết lập mã giảm giá, kiểm soát lượt sử dụng và kích cầu doanh số
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <Ticket size={13} /> QUẢN TRỊ MARKETING & KHUYẾN MÃI
+            </span>
+          </div>
+          <h1 className="adm-page-title">Quản Lý Khuyến Mãi & Voucher</h1>
+          <p className="adm-page-subtitle">
+            Thiết lập mã giảm giá, kiểm soát lượt sử dụng và kích cầu doanh số toàn chuỗi
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <div className="search-bar" style={{ width: '280px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-app)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <Search size={16} color="var(--text-muted)" style={{ marginRight: '8px' }} />
-            <input
-              type="text"
-              style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', fontSize: '0.875rem' }}
-              placeholder="Tìm theo mã code hoặc tên..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <button className="btn btn-primary" onClick={handleOpenAddModal}>
+        <div className="adm-header-actions">
+          <button className="adm-btn-primary" onClick={handleOpenAddModal}>
             <Plus size={16} />
             <span>Thêm Khuyến Mãi</span>
           </button>
@@ -168,83 +159,92 @@ export const VoucherManagement: React.FC = () => {
       </div>
 
       {/* Executive KPI Stats Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(59, 130, 246, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tất Cả Voucher</div>
-            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text-main)', fontVariantNumeric: 'tabular-nums' }}>
-              {summaryCount.all} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>chương trình</span>
+      <div className="adm-stats-grid">
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Tất Cả Voucher</span>
+            <div className="adm-stat-icon icon-blue">
+              <Sparkles size={20} />
             </div>
+          </div>
+          <div className="adm-stat-value">{summaryCount.all}</div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Tổng số chiến dịch tạo lập</span>
+            <span className="adm-stat-pill positive">Chuỗi HQ</span>
           </div>
         </div>
 
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(16, 185, 129, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--success)' }}>
-            <CheckCircle2 size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Đang Hoạt Động</div>
-            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>
-              {summaryCount.active} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>hiệu lực</span>
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Đang Hoạt Động</span>
+            <div className="adm-stat-icon icon-emerald">
+              <CheckCircle2 size={20} />
             </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: '#10b981' }}>{summaryCount.active}</div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Khách hàng có thể áp dụng</span>
+            <span className="adm-stat-pill positive">Hiệu lực</span>
           </div>
         </div>
 
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(245, 158, 11, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--warning)' }}>
-            <PauseCircle size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tạm Dừng</div>
-            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--warning)', fontVariantNumeric: 'tabular-nums' }}>
-              {summaryCount.inactive} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>chiến dịch</span>
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Tạm Dừng</span>
+            <div className="adm-stat-icon icon-amber">
+              <PauseCircle size={20} />
             </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: '#d97706' }}>{summaryCount.inactive}</div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Tạm ngưng nhận ưu đãi</span>
+            <span className="adm-stat-pill negative">Tạm dừng</span>
           </div>
         </div>
 
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 20px' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(239, 68, 68, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}>
-            <Clock size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Đã Hết Hạn</div>
-            <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--danger)', fontVariantNumeric: 'tabular-nums' }}>
-              {summaryCount.expired} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>chiến dịch</span>
+        <div className="adm-stat-card">
+          <div className="adm-stat-header">
+            <span className="adm-stat-label">Đã Hết Hạn</span>
+            <div className="adm-stat-icon icon-rose">
+              <Clock size={20} />
             </div>
+          </div>
+          <div className="adm-stat-value" style={{ color: '#ef4444' }}>{summaryCount.expired}</div>
+          <div className="adm-stat-footer">
+            <span className="adm-stat-desc">Hết lượt hoặc quá hạn dùng</span>
+            <span className="adm-stat-pill negative">Hết hạn</span>
           </div>
         </div>
       </div>
 
-      {/* Summary Filter Tabs */}
-      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '12px 16px' }}>
+      {/* Summary Filter & Search Toolbar */}
+      <div className="adm-filter-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            className={`btn btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('all')}
-          >
-            Tất Cả ({summaryCount.all})
-          </button>
-          <button
-            className={`btn btn-sm ${filterStatus === 'active' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('active')}
-          >
-            Đang Hoạt Động ({summaryCount.active})
-          </button>
-          <button
-            className={`btn btn-sm ${filterStatus === 'inactive' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('inactive')}
-          >
-            Tạm Dừng ({summaryCount.inactive})
-          </button>
-          <button
-            className={`btn btn-sm ${filterStatus === 'expired' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilterStatus('expired')}
-          >
-            Đã Hết Hạn ({summaryCount.expired})
-          </button>
+          {[
+            { id: 'all', label: `Tất Cả (${summaryCount.all})` },
+            { id: 'active', label: `Đang Hoạt Động (${summaryCount.active})` },
+            { id: 'inactive', label: `Tạm Dừng (${summaryCount.inactive})` },
+            { id: 'expired', label: `Đã Hết Hạn (${summaryCount.expired})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              className={`btn btn-sm ${filterStatus === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFilterStatus(tab.id as any)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="adm-search-box" style={{ width: '320px' }}>
+          <Search size={16} className="adm-search-icon" />
+          <input
+            type="text"
+            className="adm-search-input"
+            placeholder="Tìm theo mã code hoặc tên..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 

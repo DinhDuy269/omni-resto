@@ -20,7 +20,7 @@ const QUICK_CHIPS: ChatPromptChip[] = [
   { id: 'chip-kid', icon: 'smile', label: 'Món thanh vị, không cay', prompt: 'Quán có những món nào vị ngọt thanh tự nhiên, không cay dễ ăn không ạ?' },
   { id: 'chip-combo', icon: 'users', label: 'Combo 3 - 4 người', prompt: 'Nhóm mình đi 3 đến 4 người thì nên gọi những món gì để ăn no và tròn vị?' },
   { id: 'chip-drink', icon: 'glass-water', label: 'Đồ uống & giải nhiệt', prompt: 'Quán có những loại thức uống hoặc món giải nhiệt nào đặc sắc?' },
-  { id: 'chip-qr', icon: 'credit-card', label: 'Thanh toán VietQR', prompt: 'Hướng dẫn tôi cách thanh toán qua quét mã VietQR tại bàn.' },
+  { id: 'chip-qr', icon: 'credit-card', label: 'Thanh toán VNPAY', prompt: 'Hướng dẫn tôi cách thanh toán qua cổng VNPAY hoặc tiền mặt.' },
 ];
 
 const INITIAL_GREETING: ChatMessage = {

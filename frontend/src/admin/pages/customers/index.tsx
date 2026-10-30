@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { fetchCustomers, updateCustomerStatus } from '../../../shared/api/customerApi';
 import type { CustomerResponse } from '../../../shared/types/customer';
 import { StatCard } from '../../components/StatCard';
-import { Users, Award, Sparkles, ShieldCheck, Search, Filter } from 'lucide-react';
+import { Users, Award, Sparkles, ShieldCheck, Search } from 'lucide-react';
 import './customers.css';
 
 const TIER_LABEL: Record<string, string> = {
@@ -83,17 +83,22 @@ export default function CustomersPage(): React.ReactElement {
   return (
     <div className="cm-wrap animate-fade-in">
       {/* ── HEADER ── */}
-      <header className="cm-head">
+      <div className="adm-page-header">
         <div>
-          <h1>Hội Viên & Khách Hàng Thân Thiết ({customers.length})</h1>
-          <p>
+          <div className="adm-header-badge-row">
+            <span className="adm-badge-category">
+              <Users size={13} /> QUẢN LÝ QUAN HỆ KHÁCH HÀNG (CRM)
+            </span>
+          </div>
+          <h1 className="adm-page-title">Hội Viên & Khách Hàng Thân Thiết ({customers.length})</h1>
+          <p className="adm-page-subtitle">
             Quản lý chương trình khách hàng thân thiết, điểm thưởng tích lũy và kiểm soát trạng thái tài khoản toàn chuỗi.
           </p>
         </div>
-      </header>
+      </div>
 
       {/* ── 4 KPI STATS ── */}
-      <div className="cm-stats-grid">
+      <div className="adm-stats-grid">
         <StatCard
           title="TỔNG HỘI VIÊN"
           value={customers.length}
@@ -137,11 +142,11 @@ export default function CustomersPage(): React.ReactElement {
       </div>
 
       {/* ── BỘ LỌC TÌM KIẾM ── */}
-      <div className="cm-filters">
-        <div className="cm-search-wrap">
-          <Search size={18} className="cm-search-icon" />
+      <div className="adm-filter-card" style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="adm-search-box" style={{ flex: 1, minWidth: '280px' }}>
+          <Search size={16} className="adm-search-icon" />
           <input
-            className="cm-search"
+            className="adm-search-input"
             placeholder="Tìm theo tên, email, số điện thoại, ID hội viên..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -149,10 +154,9 @@ export default function CustomersPage(): React.ReactElement {
           />
         </div>
 
-        <label className="cm-filter-label">
-          <Filter size={15} color="var(--text-muted)" />
-          <span>Hạng hội viên:</span>
-          <select className="cm-select" value={tier} onChange={(e) => setTier(e.target.value)}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Hạng hội viên:</span>
+          <select className="adm-select-control" value={tier} onChange={(e) => setTier(e.target.value)}>
             <option value="all">Tất cả hạng</option>
             {Object.entries(TIER_LABEL).map(([k, v]) => (
               <option key={k} value={k}>
@@ -160,16 +164,16 @@ export default function CustomersPage(): React.ReactElement {
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label className="cm-filter-label">
-          <span>Trạng thái:</span>
-          <select className="cm-select" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Trạng thái:</span>
+          <select className="adm-select-control" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="all">Tất cả</option>
             <option value="active">Đang hoạt động</option>
             <option value="inactive">Đã tạm khóa</option>
           </select>
-        </label>
+        </div>
       </div>
 
       {error && (
@@ -190,8 +194,8 @@ export default function CustomersPage(): React.ReactElement {
       )}
 
       {/* ── BẢNG DỮ LIỆU KHÁCH HÀNG ── */}
-      <div className="cm-table-card">
-        <table className="cm-table">
+      <div className="adm-table-card">
+        <table className="adm-data-table cm-table">
           <thead>
             <tr>
               <th>Hội Viên</th>

@@ -32,9 +32,13 @@ public class JwtService {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder();
+        if (extraClaims != null && !extraClaims.isEmpty()) {
+            builder.claims(extraClaims);
+        }
+
+        return builder
                 .subject(customerId)
-                .claims(extraClaims)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(signingKey)

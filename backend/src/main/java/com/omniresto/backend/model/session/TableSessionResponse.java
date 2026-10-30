@@ -38,21 +38,6 @@ public class TableSessionResponse {
     private BigDecimal totalAmount;
     private PaymentStatus paymentStatus;
 
-    // Chi tiết VietQR khi bàn ở trạng thái PAYMENT_REQUESTED
-    private VietQRInfo vietQr;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class VietQRInfo {
-        private String qrImageUrl;
-        private String qrCode;
-        private BigDecimal amount;
-        private String bankId;
-        private String accountNumber;
-        private String accountName;
-        private String transferContent;
-    }
 }
 

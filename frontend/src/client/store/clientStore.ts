@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { CartItem, CartItemOption, OrderMode, ClientOrderDraft, PlacedOrder, PlacedOrderStatus, TableSession, ClientPaymentMethod } from '../../shared/types/client';
 import { useAdminStore } from '../../admin/store/adminStore';
-import { PAYMENT_CONFIG, generateVietQRUrl } from '../../shared/config/paymentConfig';
 import { checkIsItemAvailableNow } from '../utils/mealPeriodUtils';
 
 const STORAGE_KEY = 'omniresto_client_orders';
@@ -440,23 +439,12 @@ export const useClientStore = create<ClientState>((set, get) => ({
       const totalAmount = activeOrder ? activeOrder.total_amount : 0;
       const orderNumber = activeOrder ? activeOrder.order_number : 'ORD-LOCAL';
 
-      const transferContent = `OMNIRESTO ${orderNumber}`;
-      const qrUrl = generateVietQRUrl(totalAmount, transferContent);
-
       finalSession = {
         ...currentSession,
         status: 'payment_requested',
         active_order_id: activeOrder?.id,
         active_order_number: orderNumber,
         total_amount: totalAmount,
-        viet_qr: {
-          qr_image_url: qrUrl,
-          amount: totalAmount,
-          bank_id: PAYMENT_CONFIG.bankId,
-          account_number: PAYMENT_CONFIG.accountNumber,
-          account_name: PAYMENT_CONFIG.accountName,
-          transfer_content: transferContent,
-        },
       };
     }
 
@@ -497,7 +485,6 @@ export const useClientStore = create<ClientState>((set, get) => ({
       finalSession = {
         ...currentSession,
         status: 'active',
-        viet_qr: undefined,
       };
     }
 
